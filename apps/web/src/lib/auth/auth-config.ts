@@ -7,7 +7,8 @@ import { env } from "@/env";
 import { ROUTES } from "@/config/routes";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { GOOGLE_OAUTH_SCOPE_STRING } from "@/lib/auth/google-scopes";
+import { AUTH_SESSION } from "@/lib/auth/auth-session";
+import { GOOGLE_LOGIN_AUTHORIZATION_PARAMS } from "@/lib/auth/google-oauth-params";
 import { gmailService } from "@/server/services/gmail.service";
 
 const googleProviders =
@@ -17,11 +18,7 @@ const googleProviders =
           clientId: env.GOOGLE_CLIENT_ID,
           clientSecret: env.GOOGLE_CLIENT_SECRET,
           authorization: {
-            params: {
-              scope: GOOGLE_OAUTH_SCOPE_STRING,
-              access_type: "offline",
-              prompt: "consent",
-            },
+            params: GOOGLE_LOGIN_AUTHORIZATION_PARAMS,
           },
         }),
       ]
@@ -91,7 +88,7 @@ export const authConfig: NextAuthConfig = {
       return session;
     },
   },
-  session: { strategy: "jwt" },
+  session: AUTH_SESSION,
   trustHost: true,
 };
 

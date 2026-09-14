@@ -4,6 +4,7 @@ import { google } from "googleapis";
 import { auth } from "@/lib/auth/auth-config";
 import { createGoogleLinkState } from "@/lib/auth/google-link-state";
 import { googleLinkOAuthRedirectUri } from "@/lib/auth/google-link-oauth-uri";
+import { GOOGLE_RECONNECT_AUTHORIZATION_PARAMS } from "@/lib/auth/google-oauth-params";
 import { GOOGLE_OAUTH_SCOPE_STRING } from "@/lib/auth/google-scopes";
 import { env } from "@/env";
 import { ROUTES } from "@/config/routes";
@@ -47,8 +48,7 @@ export async function GET(request: Request) {
   );
 
   const authUrl = oauth2.generateAuthUrl({
-    access_type: "offline",
-    prompt: "consent",
+    ...GOOGLE_RECONNECT_AUTHORIZATION_PARAMS,
     scope: GOOGLE_OAUTH_SCOPE_STRING.split(" "),
     state,
     include_granted_scopes: true,

@@ -2,6 +2,7 @@ import NextAuth from 'next-auth';
 import type { NextAuthConfig } from 'next-auth';
 
 import { ROUTES } from '@/config/routes';
+import { AUTH_SESSION } from '@/lib/auth/auth-session';
 
 /** Slim auth config for Edge middleware — no database imports. */
 export const middlewareAuthConfig: NextAuthConfig = {
@@ -25,7 +26,7 @@ export const middlewareAuthConfig: NextAuthConfig = {
       return true;
     },
   },
-  session: { strategy: 'jwt' },
+  session: AUTH_SESSION,
   trustHost: true,
 };
 
