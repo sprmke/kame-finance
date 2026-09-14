@@ -13,15 +13,14 @@ import {
   formatGoogleAuthError,
   isInvalidGrantError,
 } from "@/lib/google/google-oauth";
+import {
+  googleAccessTokenIsUsable,
+  mergeGoogleTokenCredentials,
+  type GoogleTokenCredentials,
+} from "@/lib/google/google-tokens";
 import { integrationService } from "@/server/services/integration.service";
 
-export type GoogleOAuthTokens = {
-  access_token?: string;
-  refresh_token?: string;
-  expiry_date?: number;
-  token_type?: string;
-  scope?: string;
-};
+export type GoogleOAuthTokens = GoogleTokenCredentials;
 
 export type GoogleAccountSummary = {
   id: string;
@@ -32,14 +31,7 @@ export type GoogleAccountSummary = {
   isDefault: boolean;
 };
 
-/** Refresh a little before real expiry so an in-flight pipeline never races the boundary. */
-const TOKEN_EXPIRY_SKEW_MS = 5 * 60 * 1000;
-
-function accessTokenIsUsable(tokens: GoogleOAuthTokens): boolean {
-  if (!tokens.access_token) return false;
-  if (!tokens.expiry_date) return false;
-  return tokens.expiry_date - TOKEN_EXPIRY_SKEW_MS > Date.now();
-}
+const refreshLocks = new Map<string, Promise<GoogleOAuthTokens>>();
 
 function accountTokens(account: {
   accessToken: string | null;
@@ -305,7 +297,7 @@ export const gmailService = {
             };
           }
           // A still-valid access token proves the grant is live; no network call needed.
-          if (accessTokenIsUsable(tokens)) return { ok: true as const };
+          if (googleAccessTokenIsUsable(tokens)) return { ok: true as const };
 
           try {
             await this.refreshAccountTokens(userId, row.id, tokens);
@@ -588,6 +580,26 @@ export const gmailService = {
     accountId: string,
     tokens: GoogleOAuthTokens,
   ): Promise<GoogleOAuthTokens> {
+    const key = `${userId}:${accountId}`;
+    const inFlight = refreshLocks.get(key);
+    if (inFlight) return inFlight;
+
+    const pending = this.refreshAccountTokensUnlocked(
+      userId,
+      accountId,
+      tokens,
+    ).finally(() => {
+      refreshLocks.delete(key);
+    });
+    refreshLocks.set(key, pending);
+    return pending;
+  },
+
+  async refreshAccountTokensUnlocked(
+    userId: string,
+    accountId: string,
+    tokens: GoogleOAuthTokens,
+  ): Promise<GoogleOAuthTokens> {
     if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
       throw new Error(
         "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be configured.",
@@ -603,14 +615,7 @@ export const gmailService = {
 
     try {
       const { credentials } = await oauth2.refreshAccessToken();
-      const next: GoogleOAuthTokens = {
-        ...tokens,
-        access_token: credentials.access_token ?? tokens.access_token,
-        refresh_token: credentials.refresh_token ?? tokens.refresh_token,
-        expiry_date: credentials.expiry_date ?? tokens.expiry_date,
-        token_type: credentials.token_type ?? tokens.token_type,
-        scope: credentials.scope ?? tokens.scope,
-      };
+        const next = mergeGoogleTokenCredentials({ ...tokens }, credentials);
       await this.persistTokensForAccount(userId, accountId, next);
       return next;
     } catch (error) {
@@ -649,7 +654,7 @@ export const gmailService = {
 
     const redirectUri = googleOAuthRedirectUri();
 
-    if (tokens.refresh_token && !accessTokenIsUsable(tokens)) {
+    if (tokens.refresh_token && !googleAccessTokenIsUsable(tokens)) {
       tokens = await this.refreshAccountTokens(
         userId,
         resolvedAccountId,
@@ -660,6 +665,7 @@ export const gmailService = {
     process.env.GMAIL_TOKEN_JSON = JSON.stringify({
       ...tokens,
       googleAccountId: resolvedAccountId,
+      userId,
     });
     process.env.GMAIL_OAUTH_CLIENT_ID = env.GOOGLE_CLIENT_ID;
     process.env.GMAIL_OAUTH_CLIENT_SECRET = env.GOOGLE_CLIENT_SECRET;
