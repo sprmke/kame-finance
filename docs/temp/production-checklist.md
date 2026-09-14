@@ -46,7 +46,7 @@ See **`docs/temp/supabase-setup.md`** for the full walkthrough.
 - [ ] Enable Gmail API and Google Calendar API
 - [ ] **OAuth consent screen → Publishing status = "In production"** (not "Testing"). While in Testing, refresh tokens for test users **expire after 7 days**, which silently kills SOA check / reminders for every linked account until manual reconnect — this was the root cause of the 2026-08 automation outage (see `docs/temp/scheduled-jobs-and-testing.md#incident-2026-08-runaway-retry-storm`). Sensitive scopes (`gmail.readonly`, `calendar.events`) will show an "unverified app" warning during consent for a personal-use app — expected, click through it.
 - [ ] Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Vercel
-- [ ] Sign in at `/login` — grants `gmail.readonly` + `calendar.events`
+- [ ] Sign in at `/login` — grants `gmail.readonly` + `calendar.events` (offline access; consent is not forced on every later visit). Use Settings → Reconnect if a linked mailbox’s refresh token dies.
 - [ ] After first sign-in, copy your user UUID from the DB for `TELEGRAM_DEFAULT_USER_ID` if using Telegram webhook
 
 ### Gmail (SOA)

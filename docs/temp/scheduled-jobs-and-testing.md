@@ -128,6 +128,8 @@ curl -sS -H "Authorization: Bearer $CRON_SECRET" \
 
 **Suspected upstream trigger:** Google refresh tokens were dying (`invalid_grant`) every 1–4 weeks across multiple linked accounts — the classic signature of a Google Cloud OAuth **consent screen still in "Testing" publishing status** (test-user refresh tokens auto-expire after 7 days). Verify in Google Cloud Console → APIs & Services → OAuth consent screen and move to "In production" if confirmed; `gmail.readonly`/`calendar.events` are sensitive scopes so Google will show an "unverified app" warning during consent until formally verified, which is expected for a personal-use app.
 
+**Also fixed in app code:** Gmail/Calendar clients used to call `refreshAccessToken()` on every API use and only stored the result in `process.env` (lost on the next serverless invocation). Combined with login `prompt=consent` minting a new refresh token on every sign-in, that could revoke the token cron still had in `accounts`. Login now uses `prompt=select_account`; reconnect/link still forces consent; refreshed tokens are persisted.
+
 **Prevention:** periodically re-run the verification query below; if `schedule <> '0 4 * * *'`, something modified the live function directly instead of going through the versioned snippet.
 
 ```sql
