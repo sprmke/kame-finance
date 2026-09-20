@@ -9,16 +9,27 @@ import {
 import { parseTransactionAmount } from "./transaction-utils";
 import type { SoaStatement } from "./soa-utils";
 
+export type PeriodTransaction = CategorizedTx & {
+  date: string | null;
+  issuerId: string;
+  bankLabel: string;
+  cardLast4: string;
+};
+
 export function flattenStatementTransactions(
   statements: SoaStatement[],
-): CategorizedTx[] {
+): PeriodTransaction[] {
   return statements.flatMap((statement) =>
     (statement.transactions ?? []).map((tx) => ({
       id: tx.id,
+      date: tx.date,
       description: tx.description,
       amount: tx.amount,
       categorySlug: tx.categorySlug,
       categoryLabel: tx.categoryLabel,
+      issuerId: statement.issuerId,
+      bankLabel: statement.bankLabel,
+      cardLast4: statement.cardLast4,
     })),
   );
 }

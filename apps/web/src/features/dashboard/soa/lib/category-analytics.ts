@@ -47,6 +47,17 @@ export function aggregateCategorySpend(
   return [...map.values()].sort((a, b) => b.total - a.total);
 }
 
+export function transactionsForCategory<T extends CategorizedTx>(
+  transactions: T[],
+  slug: string,
+): T[] {
+  return transactions.filter((tx) => {
+    const txSlug = (tx.categorySlug ?? CANNOT_ANALYZE_SLUG) as string;
+    if (txSlug !== slug) return false;
+    return parseTransactionAmount(tx.amount) > 0;
+  });
+}
+
 export function countUnanalyzed(transactions: CategorizedTx[]): number {
   return transactions.filter(
     (t) => (t.categorySlug ?? CANNOT_ANALYZE_SLUG) === CANNOT_ANALYZE_SLUG,

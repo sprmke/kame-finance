@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
+import { cn } from "@/lib/utils/cn";
 import { formatPhpAmount } from "@/lib/utils/format-money";
 import { CANNOT_ANALYZE_SLUG } from "@/lib/transactions/categories";
 
@@ -49,6 +50,8 @@ function buildDonutSlices(rows: CategorySpendRow[]): DonutSlice[] {
 type CategorySpendDonutProps = {
   rows: CategorySpendRow[];
   spendTotal: number;
+  selectedSlug?: string | null;
+  onSelectCategory?: (slug: string) => void;
 };
 
 function DonutSliceTooltip({
@@ -86,6 +89,8 @@ function DonutSliceTooltip({
 export function CategorySpendDonut({
   rows,
   spendTotal,
+  selectedSlug = null,
+  onSelectCategory,
 }: CategorySpendDonutProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const slices = buildDonutSlices(rows);
@@ -93,6 +98,10 @@ export function CategorySpendDonut({
   const animationKey = slices
     .map((slice) => `${slice.slug}:${Math.round(slice.value)}`)
     .join("|");
+  const selectedSlice =
+    slices.find((slice) => slice.slug === selectedSlug) ?? null;
+  const centerValue = selectedSlice?.value ?? spendTotal;
+  const selectedInChart = Boolean(selectedSlice);
 
   function updateHover(slice: DonutSlice | undefined, event: ReactMouseEvent) {
     if (!slice || !containerRef.current) {
@@ -118,7 +127,10 @@ export function CategorySpendDonut({
   return (
     <div
       ref={containerRef}
-      className="relative mx-auto h-64 w-full max-w-xs transition-opacity duration-700 ease-out sm:h-72"
+      className={cn(
+        "relative mx-auto h-64 w-full max-w-xs transition-opacity duration-700 ease-out sm:h-72",
+        onSelectCategory && "[&_.recharts-pie-sector]:cursor-pointer",
+      )}
     >
       {hover ? (
         <DonutSliceTooltip hover={hover} spendTotal={spendTotal} />
@@ -149,34 +161,53 @@ export function CategorySpendDonut({
             onMouseLeave={() => {
               setHover(null);
             }}
+            onClick={(_, index) => {
+              const slice = slices[index];
+              if (!slice || slice.slug === "other") return;
+              onSelectCategory?.(slice.slug);
+            }}
           >
-            {slices.map((slice) => (
-              <Cell
-                key={slice.name}
-                fill={slice.color}
-                opacity={hover && hover.slice.name !== slice.name ? 0.45 : 1}
-                className="transition-opacity duration-150"
-              />
-            ))}
+            {slices.map((slice) => {
+              const isSelected = selectedSlug === slice.slug;
+              const dimmed = selectedInChart
+                ? !isSelected
+                : Boolean(hover && hover.slice.name !== slice.name);
+              return (
+                <Cell
+                  key={slice.name}
+                  fill={slice.color}
+                  opacity={dimmed ? 0.35 : 1}
+                  className="transition-opacity duration-150"
+                />
+              );
+            })}
           </Pie>
         </PieChart>
       </ResponsiveContainer>
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-          Total
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
+        <span className="max-w-[9rem] truncate text-[11px] uppercase tracking-wide text-muted-foreground">
+          {selectedSlice?.name ?? "Total"}
         </span>
         <span
-          key={animationKey}
-          className="font-display text-xl font-bold tabular-nums tracking-tight transition-all duration-700 ease-out sm:text-2xl"
+          key={`${animationKey}:${selectedSlug ?? "all"}`}
+          className="font-display text-xl font-bold tabular-nums tracking-tight motion-safe:animate-fade-in sm:text-2xl"
         >
-          {formatPhpAmount(spendTotal)}
+          {formatPhpAmount(centerValue)}
         </span>
       </div>
     </div>
   );
 }
 
-export function CategorySpendLegend({ rows }: { rows: CategorySpendRow[] }) {
+export function CategorySpendLegend({
+  rows,
+  selectedSlug = null,
+  onSelectCategory,
+}: {
+  rows: CategorySpendRow[];
+  selectedSlug?: string | null;
+  onSelectCategory?: (slug: string) => void;
+}) {
   const slices = buildDonutSlices(rows).filter(
     (slice) => slice.slug !== CANNOT_ANALYZE_SLUG,
   );
@@ -184,20 +215,53 @@ export function CategorySpendLegend({ rows }: { rows: CategorySpendRow[] }) {
   if (!slices.length) return null;
 
   return (
-    <ul className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2">
-      {slices.map((slice) => (
-        <li
-          key={slice.name}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground"
-        >
-          <span
-            className="h-2 w-2 rounded-full"
-            style={{ backgroundColor: slice.color }}
-            aria-hidden
-          />
-          <span className="max-w-[8rem] truncate">{slice.name}</span>
-        </li>
-      ))}
+    <ul className="mt-4 flex flex-wrap justify-center gap-x-2 gap-y-2">
+      {slices.map((slice) => {
+        const isOther = slice.slug === "other";
+        const isSelected = selectedSlug === slice.slug;
+        const interactive = Boolean(onSelectCategory) && !isOther;
+
+        const content = (
+          <>
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: slice.color }}
+              aria-hidden
+            />
+            <span className="max-w-[8rem] truncate">{slice.name}</span>
+          </>
+        );
+
+        return (
+          <li key={slice.name}>
+            {interactive ? (
+              <button
+                type="button"
+                onClick={() => onSelectCategory?.(slice.slug)}
+                aria-pressed={isSelected}
+                className={cn(
+                  "inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-md px-1.5 text-xs",
+                  "text-muted-foreground transition-colors duration-150",
+                  "hover:bg-muted/60 hover:text-foreground",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  isSelected && "bg-muted text-foreground",
+                )}
+              >
+                {content}
+              </button>
+            ) : (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1.5 text-xs text-muted-foreground",
+                  isSelected && "text-foreground",
+                )}
+              >
+                {content}
+              </span>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }
