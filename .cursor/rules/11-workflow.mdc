@@ -295,7 +295,8 @@ perf(bookings): optimize list query
 ## Development Commands
 
 ```bash
-# Start development server
+# Start development server (Next.js on http://localhost:3005)
+# Cursor/VS Code: Terminal → Run Task → Start dev server
 bun run dev
 
 # Build for production
@@ -333,7 +334,7 @@ bun run format
 
 ```env
 # App
-NEXT_PUBLIC_APP_URL=http://localhost:3004
+NEXT_PUBLIC_APP_URL=http://localhost:3005
 
 # Database
 DATABASE_URL="postgresql://..."
@@ -403,7 +404,7 @@ When code is used by 2+ features, move it to shared:
 
 | Environment | Branch      | URL            |
 | ----------- | ----------- | -------------- |
-| Development | -           | localhost:3004 |
+| Development | -           | localhost:3005 |
 | Preview     | PR branches | \*.vercel.app  |
 | Production  | main        | app.domain.com |
 

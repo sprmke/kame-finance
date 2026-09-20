@@ -16,6 +16,9 @@ dist/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
 
 # OS
 .DS_Store

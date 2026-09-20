@@ -1,0 +1,199 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Dev: free ports",
+      "type": "shell",
+      "command": "bun run dev:free-ports",
+      "detail": "Stop stale listeners on :3005 (Next.js)",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Start dev server",
+      "dependsOn": ["Dev: free ports", "Start dev server (serve)"],
+      "dependsOrder": "sequence",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Start dev server (serve)",
+      "type": "shell",
+      "command": "bun run dev",
+      "detail": "Next.js http://localhost:3005",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/web",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "kame-finance",
+        "pattern": { "regexp": "." },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Local:\\s+http://localhost:3005/?"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": true
+      }
+    },
+    {
+      "label": "Dev: Local (full stack)",
+      "type": "shell",
+      "command": "bun run dev:local",
+      "detail": "Docker Postgres + schema/seed if needed + Next.js :3005",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "kame-finance-stack",
+        "pattern": { "regexp": "." },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "Local:\\s+http://localhost:3005/?"
+        }
+      },
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Dev: UI only (remote DB)",
+      "dependsOn": ["Dev: free ports", "Start dev server (serve)"],
+      "dependsOrder": "sequence",
+      "detail": "Next.js :3005 using DATABASE_URL from apps/web/.env.local (no Docker)",
+      "problemMatcher": []
+    },
+    {
+      "label": "Open: web app",
+      "type": "shell",
+      "command": "open http://localhost:3005",
+      "detail": "Kame Finance dashboard (local Next.js)",
+      "group": "none"
+    },
+    {
+      "label": "Setup: local",
+      "type": "shell",
+      "command": "bun run setup:local",
+      "detail": "Install, Docker Postgres, db:push, seed (does not start Next)",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "group": "none"
+    },
+    {
+      "label": "Docker: up",
+      "type": "shell",
+      "command": "bun run db:up",
+      "detail": "Start local Postgres on :5432",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "group": "none"
+    },
+    {
+      "label": "Docker: down",
+      "type": "shell",
+      "command": "bun run db:down",
+      "detail": "Stop local Postgres (keeps volume)",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "group": "none"
+    },
+    {
+      "label": "DB: push schema",
+      "type": "shell",
+      "command": "bun run db:push",
+      "detail": "drizzle-kit push from apps/web/.env.local",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "group": "none"
+    },
+    {
+      "label": "DB: migrate",
+      "type": "shell",
+      "command": "bun run db:migrate",
+      "detail": "Apply Drizzle migrations",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "group": "none"
+    },
+    {
+      "label": "DB: seed",
+      "type": "shell",
+      "command": "bun run db:seed",
+      "detail": "Print Google sign-in setup instructions",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "group": "none"
+    },
+    {
+      "label": "DB: studio",
+      "type": "shell",
+      "command": "bun run db:studio",
+      "detail": "Drizzle Studio against DATABASE_URL",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Quality: CI",
+      "type": "shell",
+      "command": "bun run ci:quality",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "/usr/local/bin:/opt/homebrew/bin:${env:HOME}/.bun/bin:${env:PATH}"
+        }
+      },
+      "group": "test",
+      "problemMatcher": ["$tsc"]
+    }
+  ]
+}

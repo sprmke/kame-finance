@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Chrome: Kame Finance",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:3005",
+      "webRoot": "${workspaceFolder}/apps/web"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Start dev server + Chrome",
+      "configurations": ["Chrome: Kame Finance"],
+      "preLaunchTask": "Start dev server"
+    },
+    {
+      "name": "Dev: Local (full stack) + Chrome",
+      "configurations": ["Chrome: Kame Finance"],
+      "preLaunchTask": "Dev: Local (full stack)"
+    }
+  ]
+}

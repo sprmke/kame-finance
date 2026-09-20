@@ -1,0 +1,18 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "files.associations": {
+    "*.mdc": "markdown"
+  },
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.preferences.importModuleSpecifier": "non-relative",
+  "eslint.workingDirectories": [
+    { "directory": "apps/web", "changeProcessCWD": true }
+  ],
+  "tailwindCSS.experimental.configFile": "apps/web/tailwind.config.ts",
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "npm.packageManager": "bun",
+  "npm.scriptRunner": "bun",
+  "npm.autoDetect": "off"
+}
