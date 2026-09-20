@@ -24,6 +24,8 @@ export function useGoogleLinkCallback(options?: UseGoogleLinkCallbackOptions) {
     if (status === "success") {
       toast.success("Google account connected");
       void utils.integrations.listGoogleAccounts.invalidate();
+      void utils.integrations.checkGoogleAuth.invalidate();
+      void utils.integrations.list.invalidate();
       options?.onSuccess?.(accountId);
     } else if (status === "error") {
       toast.error(message ?? "Google connect failed");

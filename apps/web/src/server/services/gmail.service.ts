@@ -267,12 +267,16 @@ export const gmailService = {
     try {
       const accountIds = await this.getGoogleAccountIdsForSoa(userId);
       if (accountIds.length === 0) {
-        return {
-          ok: false,
-          requiresReconnect: true,
-          message:
-            "Gmail is not connected. Connect a Google account in Settings.",
-        };
+        const connected = await this.isConnected(userId);
+        if (!connected) {
+          return {
+            ok: false,
+            requiresReconnect: true,
+            message:
+              "Gmail is not connected. Connect a Google account in Settings.",
+          };
+        }
+        return { ok: true };
       }
 
       const rows = await db.query.accounts.findMany({

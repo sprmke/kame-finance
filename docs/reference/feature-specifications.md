@@ -27,4 +27,4 @@ See `docs/temp/pay-credit-cards-migration.md` and `.cursor/rules/18-credit-cards
 
 - Reminders: generic engine with `relatedEntityType` / `relatedEntityId`
 - Automations: Supabase Cron + `automation_runs` logging
-- Integrations: per-user OAuth and webhook config. Google login requests offline Gmail/Calendar access without forcing consent on every visit; Settings reconnect / add-account uses `prompt=consent` so Google issues a refresh token. Access-token refresh is written back to `accounts` so cron (SOA check, payment reminders) does not depend on a browser session.
+- Integrations: per-user OAuth and webhook config. Google login requests offline Gmail/Calendar access without forcing consent on every visit; Settings reconnect / add-account uses `prompt=consent` so Google issues a refresh token. Access-token refresh is written back to `accounts` so cron (SOA check, payment reminders) does not depend on a browser session. **Run SOA** loads those tokens from `accounts` into the Gmail client (`prepareSoaWorkdir` + per-mailbox switcher) before searching mail — reconnecting Google is enough; a second login is not required for each run.

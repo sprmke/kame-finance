@@ -14,6 +14,12 @@ export async function prepareSoaWorkdir(userId: string): Promise<string> {
   process.env.CARDS_JSON = JSON.stringify(cards);
 
   await applyIntegrationsToEnv(userId);
+  const { gmailService } = await import("./gmail.service");
+  const defaultGoogleAccountId =
+    cards.find((card) => card.googleAccountId)?.googleAccountId ??
+    (await gmailService.getDefaultGoogleAccountId(userId));
+  await gmailService.applyTokensToEnv(userId, defaultGoogleAccountId);
+
   await mkdir(workDir, { recursive: true });
   await mkdir(join(workDir, "downloads"), { recursive: true });
   await mkdir(join(workDir, "output"), { recursive: true });

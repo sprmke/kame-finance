@@ -15,6 +15,10 @@ import {
   searchAndDownloadPdfs,
   type DownloadedPdf,
 } from "@/lib/soa/gmail-fetch";
+import {
+  createSoaGmailClientSlot,
+  switchSoaGmailClient,
+} from "@/lib/soa/gmail-client-switch";
 import { log, logBanner } from "@/lib/soa/logger";
 import { buildMonthContext, shiftMonthContext } from "@/lib/soa/month";
 import { resolveCardLast4FromSoaText } from "@/lib/soa/card-last4-from-text";
@@ -259,7 +263,20 @@ export async function runSoaSingleMonth(options: {
   log.kv("Output folder", monthOutputDir);
 
   log.header("Gmail · search & download");
-  let gmail = await getGmailClient();
+  const gmailSlot = createSoaGmailClientSlot<
+    Awaited<ReturnType<typeof getGmailClient>>
+  >();
+
+  async function ensureGmailClient(googleAccountId: string | null) {
+    return switchSoaGmailClient({
+      slot: gmailSlot,
+      googleAccountId,
+      beforeSwitch: beforeGmailSearch,
+      createClient: getGmailClient,
+    });
+  }
+
+  await ensureGmailClient(null);
   log.success("Gmail API client ready");
   const monthLabel = `${ctx.monthLong} ${ctx.year}`;
 
@@ -267,17 +284,6 @@ export async function runSoaSingleMonth(options: {
   const gmailSearches: SoaGmailSearchLog[] = [];
   const activeIssuerIds = new Set(cards.map((c) => c.issuer.toLowerCase()));
   const banksToSearch = banks.filter((b) => activeIssuerIds.has(b.id));
-  let activeGmailAccountId: string | null = null;
-
-  async function ensureGmailClient(googleAccountId: string | null) {
-    const nextAccountId = googleAccountId ?? null;
-    if (nextAccountId === activeGmailAccountId && gmail) return;
-    if (beforeGmailSearch) {
-      await beforeGmailSearch(nextAccountId);
-    }
-    gmail = await getGmailClient();
-    activeGmailAccountId = nextAccountId;
-  }
 
   for (const bank of banksToSearch) {
     await progress?.reporter.setGmailProgress(
@@ -294,7 +300,9 @@ export async function runSoaSingleMonth(options: {
     }
 
     for (const config of searchConfigs) {
-      await ensureGmailClient(config.googleAccountId ?? null);
+      const mailboxClient = await ensureGmailClient(
+        config.googleAccountId ?? null,
+      );
       const gctx = shiftMonthContext(ctx, config.offset);
       const q = config.soaSubject
         ? buildGmailQueryWithSubject(bank, gctx, config.soaSubject)
@@ -312,7 +320,7 @@ export async function runSoaSingleMonth(options: {
       }
       log.detail(`Query: ${q}`);
       const { pdfs, messageCount } = await searchAndDownloadPdfs({
-        gmail,
+        gmail: mailboxClient,
         query: q,
         bankId: bank.id,
         bankLabel: bank.label,

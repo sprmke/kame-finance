@@ -13,7 +13,10 @@ import { gmailService } from "./gmail.service";
 import { googleCalendarService } from "./google-calendar.service";
 import { integrationService } from "./integration.service";
 import { notificationService } from "./notification.service";
-import { prepareSoaWorkdir } from "./soa-workdir.service";
+import {
+  createSoaGmailAccountSwitcher,
+  prepareSoaWorkdir,
+} from "./soa-workdir.service";
 import { soaPeriodService, type SoaPeriodMode } from "./soa-period.service";
 import {
   soaPersistService,
@@ -235,6 +238,7 @@ async function runSoaDetailedInService(
   const { enumerateMonthsInclusive, lastNMonthsEndingAt } =
     await import("@/lib/soa/month");
   const { upsertFromSoaRows } = dueEntryUpsertService;
+  const beforeGmailSearch = createSoaGmailAccountSwitcher(userId);
 
   async function paidLabelForRows() {
     const dues = await db.query.dueEntries.findMany({
@@ -254,6 +258,7 @@ async function runSoaDetailedInService(
       month,
       year,
       skipBanner: true,
+      beforeGmailSearch,
       progress: reporter
         ? {
             monthIndex: 0,
@@ -337,6 +342,7 @@ async function runSoaDetailedInService(
       month,
       year,
       skipBanner: true,
+      beforeGmailSearch,
       progress: reporter
         ? {
             monthIndex: i,
