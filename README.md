@@ -1,4 +1,4 @@
-# KameOps
+# Kame Finance
 
 **A business automation platform for reminders, scheduled jobs, notifications, and integrations — with Philippine credit card SOA workflows as the first module.**
 
@@ -81,7 +81,7 @@ Track statement-of-account PDFs from Gmail, parse dues across multiple PH banks,
 | PDF / OCR | pdfjs-dist, qpdf-wasm, Tesseract.js, pdfkit                                                                     |
 | AI        | Gemini / Groq (receipt validation, SOA extraction, transaction categorization)                                  |
 | Monorepo  | [Turborepo](https://turbo.build/) + [Bun](https://bun.sh/)                                                      |
-| Hosting   | [Vercel](https://vercel.com/) — [kame-ops-web.vercel.app](https://kame-ops-web.vercel.app)                      |
+| Hosting   | [Vercel](https://vercel.com/) — [kame-finance-web.vercel.app](https://kame-finance-web.vercel.app)                      |
 | Toasts    | [Sonner](https://sonner.emilkowal.ski/)                                                                         |
 | Forms     | React Hook Form + Zod                                                                                           |
 

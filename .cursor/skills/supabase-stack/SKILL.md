@@ -1,6 +1,6 @@
 ---
 name: supabase-stack
-description: Supabase stack skill for KameOps using Supabase Postgres, Supabase Auth, Supabase Storage, Drizzle, and tRPC. Use when implementing auth, storage, DB integration, or platform-level backend decisions.
+description: Supabase stack skill for Kame Finance using Supabase Postgres, Supabase Auth, Supabase Storage, Drizzle, and tRPC. Use when implementing auth, storage, DB integration, or platform-level backend decisions.
 ---
 
 # Supabase Stack Skill

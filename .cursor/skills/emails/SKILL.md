@@ -5,7 +5,7 @@ description: Resend and React Email skill for transactional emails (invitations,
 
 # Emails Skill (Resend + React Email)
 
-This skill covers transactional emails for KameOps using Resend and React Email.
+This skill covers transactional emails for Kame Finance using Resend and React Email.
 
 ## Tech Stack
 
@@ -33,7 +33,7 @@ export function WelcomeEmail({ name = 'there' }: WelcomeEmailProps) {
   return (
     <Html>
       <Head />
-      <Preview>Welcome to KameOps</Preview>
+      <Preview>Welcome to Kame Finance</Preview>
       <Body style={main}>
         <Container style={container}>
           <Heading style={heading}>Welcome, {name}!</Heading>
@@ -60,15 +60,15 @@ const paragraph = { fontSize: '16px', lineHeight: '26px', color: '#484848' };
 ```typescript
 // Server-side (e.g. email.service.ts)
 import { Resend } from 'resend';
-import { WelcomeEmail } from '@kame-ops/emails';
+import { WelcomeEmail } from '@kame-finance/emails';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function sendWelcomeEmail(to: string, name: string) {
   const { data, error } = await resend.emails.send({
-    from: 'KameOps <noreply@yourdomain.com>',
+    from: 'Kame Finance <noreply@yourdomain.com>',
     to,
-    subject: 'Welcome to KameOps',
+    subject: 'Welcome to Kame Finance',
     react: WelcomeEmail({ name }),
   });
   if (error) throw new Error(error.message);

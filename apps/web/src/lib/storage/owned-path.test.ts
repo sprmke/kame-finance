@@ -12,7 +12,7 @@ describe("privateStoragePathBelongsToUser", () => {
     ).toBe(true);
     expect(
       privateStoragePathBelongsToUser(
-        `local:/tmp/kame-ops-soa/${userId}/file.pdf`,
+        `local:/tmp/kame-finance-soa/${userId}/file.pdf`,
         userId,
       ),
     ).toBe(true);

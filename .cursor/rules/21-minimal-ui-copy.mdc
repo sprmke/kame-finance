@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Minimal UI Copy
 
-KameOps UI should stay **clean and sparse**. Agents must not add explanatory text unless the user explicitly asks for copy.
+Kame Finance UI should stay **clean and sparse**. Agents must not add explanatory text unless the user explicitly asks for copy.
 
 ## Default: no new text
 
@@ -37,9 +37,9 @@ KameOps UI should stay **clean and sparse**. Agents must not add explanatory tex
 // ❌ BAD — unsolicited explanation
 <AuthPageShell
   title="Sign in with Google"
-  description="Grant Gmail and Calendar access so KameOps can automate your credit card SOA workflow"
+  description="Grant Gmail and Calendar access so Kame Finance can automate your credit card SOA workflow"
 >
-  <p>KameOps uses your Google account to fetch statement PDFs…</p>
+  <p>Kame Finance uses your Google account to fetch statement PDFs…</p>
   <Button>Continue with Google</Button>
 </AuthPageShell>
 

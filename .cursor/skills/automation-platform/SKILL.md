@@ -1,13 +1,13 @@
 ---
 name: automation-platform
-description: KameOps platform domain skill for reminders, cron automations, notifications, integrations, and user-scoped workflows. Use when building non-credit-card platform features or shared infrastructure.
+description: Kame Finance platform domain skill for reminders, cron automations, notifications, integrations, and user-scoped workflows. Use when building non-credit-card platform features or shared infrastructure.
 ---
 
-# KameOps Platform Skill
+# Kame Finance Platform Skill
 
 ## Domain Model
 
-KameOps is a **user-scoped automation platform**. Credit cards are one module; reminders and cron jobs are generic.
+Kame Finance is a **user-scoped automation platform**. Credit cards are one module; reminders and cron jobs are generic.
 
 ### Core entities
 

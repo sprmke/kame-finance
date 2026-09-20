@@ -1,6 +1,6 @@
 ---
 name: credit-cards
-description: Credit card SOA module for KameOps. Use when porting pay-credit-cards CLI logic.
+description: Credit card SOA module for Kame Finance. Use when porting pay-credit-cards CLI logic.
 ---
 
 # Credit Cards (Claude)

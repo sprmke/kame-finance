@@ -166,7 +166,7 @@ export const notificationService = {
             : "Summary PDF was sent to Telegram.",
         );
       } else {
-        lines.push("Summary PDF is available in KameOps.");
+        lines.push("Summary PDF is available in Kame Finance.");
       }
       await sendSlackWebhook(slack.webhookUrl, lines.join("\n"));
       result.slack = true;

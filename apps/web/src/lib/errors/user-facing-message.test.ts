@@ -6,7 +6,7 @@ describe("formatUserFacingErrorMessage", () => {
   test("simplifies google oauth errors", () => {
     expect(
       formatUserFacingErrorMessage(
-        "Google OAuth failed: invalid_grant (refresh token expired, revoked, or not valid for this OAuth client). Fix: sign out and sign in again with Google from the KameOps login page. Ensure the Google Cloud OAuth client redirect URI matches your app URL + /api/auth/callback/google.",
+        "Google OAuth failed: invalid_grant (refresh token expired, revoked, or not valid for this OAuth client). Fix: sign out and sign in again with Google from the Kame Finance login page. Ensure the Google Cloud OAuth client redirect URI matches your app URL + /api/auth/callback/google.",
       ),
     ).toBe(
       "Your Google sign-in expired or was revoked. Sign in again to restore Gmail access.",

@@ -1,5 +1,5 @@
 /**
- * Migrate legacy pay-credit-cards JSON state into KameOps Postgres.
+ * Migrate legacy pay-credit-cards JSON state into Kame Finance Postgres.
  *
  * Usage:
  *   LEGACY_DATA_DIR=/path/to/pay-credit-cards/data USER_ID=<uuid> bun run scripts/migrate-from-cli.ts

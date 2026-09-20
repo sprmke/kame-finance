@@ -3,7 +3,7 @@ const UUID_RE =
 
 /**
  * Manual-upload storage keys are `{folder}/{userId}/…` (Supabase) or
- * `…/kame-ops-{folder}/{userId}/…` (local). Reject anything else so a client
+ * `…/kame-finance-{folder}/{userId}/…` (local). Reject anything else so a client
  * cannot point processManualUpload at another user's object.
  */
 export function privateStoragePathBelongsToUser(
@@ -23,8 +23,8 @@ export function privateStoragePathBelongsToUser(
   if (storagePath.startsWith("local:")) {
     const localPath = storagePath.slice(6).replaceAll("\\", "/");
     return (
-      localPath.includes(`/kame-ops-soa/${userId}/`) ||
-      localPath.includes(`/kame-ops-receipts/${userId}/`)
+      localPath.includes(`/kame-finance-soa/${userId}/`) ||
+      localPath.includes(`/kame-finance-receipts/${userId}/`)
     );
   }
 

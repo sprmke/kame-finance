@@ -14,7 +14,7 @@ jobs:
         working-directory: apps/web
     env:
       SKIP_ENV_VALIDATION: "1"
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kame_ops
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kame_finance
       AUTH_SECRET: ci-test-auth-secret-at-least-32-characters-long
       NEXT_PUBLIC_APP_URL: http://localhost:3005
     steps:

@@ -1,14 +1,14 @@
 ---
-description: Global project context and documentation references for KameOps
+description: Global project context and documentation references for Kame Finance
 globs: **/*
 alwaysApply: true
 ---
 
-# KameOps - Project Context
+# Kame Finance - Project Context
 
 ## Overview
 
-**KameOps** is a **business automation and operations platform** for reminders, scheduled jobs, notifications, and workflow tracking. It started from personal credit-card SOA automation (`pay-credit-cards` CLI) and is designed to grow into a general-purpose ops tool for finance and other domains that need cron jobs, alerts, and integrations.
+**Kame Finance** is a **finance automation platform** for reminders, scheduled jobs, notifications, and workflow tracking. It started from personal credit-card SOA automation (`pay-credit-cards` CLI) and is designed to grow into a platform for credit cards, bills, and other domains that need cron jobs, alerts, and integrations.
 
 **Credit cards** are the first product module—not the whole product. Future modules (recurring bills, subscriptions, custom automations) should follow the same patterns without coupling to the CC module.
 

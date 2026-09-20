@@ -1,5 +1,5 @@
 {
-  "name": "kame-ops",
+  "name": "kame-finance",
   "version": "0.1.0",
   "private": true,
   "workspaces": [
@@ -9,9 +9,11 @@
     "setup:local": "bun run scripts/setup-local-dev.ts",
     "setup:supabase": "bun run scripts/setup-supabase.ts",
     "dev:local": "bun run scripts/setup-local-dev.ts --start",
+    "dev:free-ports": "bash scripts/dev/free-local-ports.sh",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "dev": "turbo run dev",
+    "ci:quality": "turbo run type-check lint test",
     "build": "turbo run build",
     "start": "turbo run start",
     "lint": "turbo run lint",
@@ -21,7 +23,7 @@
     "db:generate": "turbo run db:generate",
     "db:migrate": "turbo run db:migrate",
     "db:push": "turbo run db:push",
-    "db:seed": "turbo run db:seed --filter=@kame-ops/web",
+    "db:seed": "turbo run db:seed --filter=@kame-finance/web",
     "db:studio": "turbo run db:studio",
     "clean": "turbo run clean && rm -rf node_modules"
   },

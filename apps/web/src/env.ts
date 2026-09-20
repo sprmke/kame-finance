@@ -34,7 +34,7 @@ export const env = createEnv({
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
-    NEXT_PUBLIC_APP_NAME: z.string().default("KameOps"),
+    NEXT_PUBLIC_APP_NAME: z.string().default("Kame Finance"),
   },
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,

@@ -3,7 +3,7 @@ import {
   type ReminderIntervalMinutes,
 } from "@/lib/db/schema/credit-cards";
 
-const ADD_CARD_DRAFT_KEY = "kame-ops:credit-card-add-draft";
+const ADD_CARD_DRAFT_KEY = "kame-finance:credit-card-add-draft";
 
 export type AddCardDraft = {
   issuer: BankIssuer;

@@ -1,6 +1,6 @@
 ---
 name: automation-platform
-description: KameOps platform — reminders, cron, notifications. Use for shared automation features.
+description: Kame Finance platform — reminders, cron, notifications. Use for shared automation features.
 ---
 
 # Automation Platform (Claude)

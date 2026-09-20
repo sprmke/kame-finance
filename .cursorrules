@@ -1,8 +1,8 @@
-# KameOps - Cursor Rules
+# Kame Finance - Cursor Rules
 
 ## Project Context
 
-**KameOps** is a business automation platform (reminders, cron jobs, notifications, integrations) built with the same stack as Kame Homes: Next.js 16+, React 19+, TypeScript, Drizzle ORM, tRPC, Supabase Postgres/Auth/Storage, Bun, TanStack Query v5, TanStack Table v8, shadcn/ui.
+**Kame Finance** is a business automation platform (reminders, cron jobs, notifications, integrations) built with the same stack as Kame Homes: Next.js 16+, React 19+, TypeScript, Drizzle ORM, tRPC, Supabase Postgres/Auth/Storage, Bun, TanStack Query v5, TanStack Table v8, shadcn/ui.
 
 **Credit cards** (Philippine bank SOA automation) is the first **sub-module**, ported from `automated-tasks/pay-credit-cards`. The platform must stay extensible for other modules (bills, subscriptions, custom automations).
 

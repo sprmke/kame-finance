@@ -66,7 +66,7 @@ export const storageService = {
     }
 
     const localDirName =
-      folder === "receipts" ? "kame-ops-receipts" : `kame-ops-${folder}`;
+      folder === "receipts" ? "kame-finance-receipts" : `kame-finance-${folder}`;
     const dir = join(tmpdir(), localDirName, userId);
     await mkdir(dir, { recursive: true });
     const localPath = join(dir, `${Date.now()}-${safeName}`);
@@ -95,7 +95,7 @@ export const storageService = {
         );
       }
       const buf = Buffer.from(await data.arrayBuffer());
-      const downloadDir = join(tmpdir(), "kame-ops-downloads");
+      const downloadDir = join(tmpdir(), "kame-finance-downloads");
       await mkdir(downloadDir, { recursive: true });
       const tmpPath = join(downloadDir, objectKey.replace(/\//g, "_"));
       await writeFile(tmpPath, buf);

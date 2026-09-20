@@ -1,5 +1,5 @@
 ---
-description: KameOps monorepo and feature-based architecture
+description: Kame Finance monorepo and feature-based architecture
 globs: **/*
 alwaysApply: false
 ---
@@ -9,7 +9,7 @@ alwaysApply: false
 ## Monorepo Layout
 
 ```
-kame-ops/
+kame-finance/
 ├── apps/
 │   └── web/                    # Next.js app (dashboard)
 ├── packages/

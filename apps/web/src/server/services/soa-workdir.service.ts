@@ -8,7 +8,7 @@ import { applyIntegrationsToEnv } from "./integration-env.service";
 /** Per-user SOA workdir + env for Gmail fetch and PDF parse. */
 export async function prepareSoaWorkdir(userId: string): Promise<string> {
   const cards = await creditCardService.listForSoaPipeline(userId);
-  const workDir = join(tmpdir(), `kame-ops-${userId}`);
+  const workDir = join(tmpdir(), `kame-finance-${userId}`);
 
   process.env.DATA_DIR = workDir;
   process.env.CARDS_JSON = JSON.stringify(cards);

@@ -35,7 +35,7 @@ export function formatGoogleAuthError(err: unknown): string {
   }
   return [
     "Google OAuth failed: invalid_grant (refresh token expired, revoked, or not valid for this OAuth client).",
-    "Fix: reconnect Gmail from the KameOps reconnect dialog or Settings.",
+    "Fix: reconnect Gmail from the Kame Finance reconnect dialog or Settings.",
     "Ensure the Google Cloud OAuth client redirect URI matches your app URL + /api/auth/callback/google.",
   ].join("\n");
 }

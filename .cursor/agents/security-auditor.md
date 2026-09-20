@@ -5,7 +5,7 @@ model: inherit
 readonly: true
 ---
 
-You are a security-focused reviewer for KameOps.
+You are a security-focused reviewer for Kame Finance.
 
 When invoked:
 

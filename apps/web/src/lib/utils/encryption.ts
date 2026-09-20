@@ -8,6 +8,7 @@ import {
 const ALGORITHM = "aes-256-gcm";
 
 function deriveKey(secret: string): Buffer {
+  // Historical salt — do not rename. Existing encrypted secrets depend on it.
   return scryptSync(secret, "kame-ops-salt", 32);
 }
 

@@ -27,7 +27,7 @@ async function notifyReconnectRequired(
   jobType: string,
 ): Promise<void> {
   const text = [
-    `⚠️ *KameOps*: Google account needs to be reconnected.`,
+    `⚠️ *Kame Finance*: Google account needs to be reconnected.`,
     `"${automationJobTypeLabel(jobType)}" could not run.`,
     `Reconnect in Settings → Integrations.`,
   ].join(" ");

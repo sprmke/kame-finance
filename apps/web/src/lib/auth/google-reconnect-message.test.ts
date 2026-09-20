@@ -5,7 +5,7 @@ import { formatGoogleReconnectReason } from "./google-reconnect-message";
 describe("formatGoogleReconnectReason", () => {
   test("default when message is missing", () => {
     expect(formatGoogleReconnectReason(null)).toBe(
-      "KameOps can't read Gmail right now. Sign in with Google again to fetch statement emails.",
+      "Kame Finance can't read Gmail right now. Sign in with Google again to fetch statement emails.",
     );
   });
 

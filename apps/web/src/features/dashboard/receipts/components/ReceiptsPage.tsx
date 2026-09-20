@@ -31,7 +31,7 @@ import { ReceiptGroupToggle } from "./ReceiptGroupToggle";
 import { ReceiptPreviewDialog } from "./ReceiptPreviewDialog";
 import { ReceiptBatchUploadProgressDialog } from "@/components/shared/ReceiptBatchUploadProgressDialog";
 
-const GROUP_MODE_KEY = "kame-ops:receipts-group-mode";
+const GROUP_MODE_KEY = "kame-finance:receipts-group-mode";
 
 export function ReceiptsPage() {
   const [groupMode, setGroupMode] = useState<ReceiptGroupMode>("month");

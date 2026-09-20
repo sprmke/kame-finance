@@ -19,7 +19,7 @@ alwaysApply: false
 
 **Production:** Supabase **`pg_cron` + `pg_net`** and Vercel cron both fire **once daily** (`0 4 * * *` UTC = 12:00 PM Asia/Manila) → `GET /api/cron/dispatch` with `CRON_SECRET` from Vault. See **`docs/temp/scheduled-jobs-and-testing.md`**. Do **not** use every-minute cron — it burns Vercel Fluid CPU. The dispatcher runs due `automation_jobs` (per user timezone): `send_due_reminders` (default seeded daily 12:00 PM) and user-created `run_soa_pipeline` jobs—not macOS launchd.
 
-| Job type | Legacy CLI | KameOps |
+| Job type | Legacy CLI | Kame Finance |
 | -------- | ---------- | ------- |
 | SOA pipeline | `npm run start` / manual month | `run_soa_pipeline` automation or **Run SOA** UI |
 | Due reminders | `send-reminders` (launchd) | Default `send_due_reminders` automation; edit schedule on **Automations**; window/interval on **Credit Cards** |
@@ -52,7 +52,7 @@ Reminder send fingerprints live in `reminder_logs` (Postgres idempotency).
 
 ## Environment vs Database
 
-| Legacy | KameOps |
+| Legacy | Kame Finance |
 | ------ | ------- |
 | Global `.env` tokens | Per-user integration records |
 | `GEMINI_*`, `GROQ_*` env | Settings → `ai_api_keys` (encrypted, per user) |

@@ -5,7 +5,7 @@
 @layer base {
   :root {
     /* ========================================
-       KameOps — Finance & Automation SaaS
+       Kame Finance — Finance & Automation SaaS
        Warm amber / money palette
        ======================================== */
 
@@ -584,7 +584,7 @@
   }
 }
 
-/* Sonner — match KameOps card surfaces, subtle type accents */
+/* Sonner — match Kame Finance card surfaces, subtle type accents */
 [data-sonner-toaster] {
   --width: 22rem;
   font-family: inherit;

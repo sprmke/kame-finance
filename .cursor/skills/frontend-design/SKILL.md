@@ -1,6 +1,6 @@
 ---
 name: frontend-design
-description: Create distinctive, production-grade frontend interfaces with high design quality. Use when building web components, pages, or applications (landing pages, dashboards, React components, layouts) or when styling/beautifying UI. Generates creative, polished code that avoids generic AI aesthetics while respecting the KameOps design system where applicable.
+description: Create distinctive, production-grade frontend interfaces with high design quality. Use when building web components, pages, or applications (landing pages, dashboards, React components, layouts) or when styling/beautifying UI. Generates creative, polished code that avoids generic AI aesthetics while respecting the Kame Finance design system where applicable.
 ---
 
 # Frontend Design Skill
@@ -14,7 +14,7 @@ This skill guides creation of **distinctive, production-grade** frontend interfa
 - Marketing pages, guest-facing pages, or any surface where memorable design matters
 - When the ask implies "make it look great" or "professional and distinctive"
 
-**Within KameOps app (dashboard, all modules):** Respect the design system (`docs/product/design-system.md`). Use semantic tokens (`bg-background`, `text-foreground`, `primary`), DM Sans + Sora, warm amber/orange brand palette, and light/dark support. Apply this skill for _elevating_ those constraints (motion, composition, micro-interactions, visual hierarchy), not for replacing the system.
+**Within Kame Finance app (dashboard, all modules):** Respect the design system (`docs/product/design-system.md`). Use semantic tokens (`bg-background`, `text-foreground`, `primary`), DM Sans + Sora, warm amber/orange brand palette, and light/dark support. Apply this skill for _elevating_ those constraints (motion, composition, micro-interactions, visual hierarchy), not for replacing the system.
 
 **Marketing, landing, or net-new pages:** Full creative freedom within brand (amber/orange money theme, professional, approachable). Commit to a clear aesthetic direction and execute it boldly.
 
@@ -29,7 +29,7 @@ Choose a clear conceptual direction and implement it with precision. Bold and mi
 
 ## Aesthetics Guidelines
 
-- **Typography**: Prefer distinctive, characterful fonts. Avoid generic defaults (Arial, Inter) when you have freedom; for KameOps app use **Plus Jakarta Sans** and the type scale in the design system. For marketing/landing, pair a distinctive display font with a refined body font.
+- **Typography**: Prefer distinctive, characterful fonts. Avoid generic defaults (Arial, Inter) when you have freedom; for Kame Finance app use **Plus Jakarta Sans** and the type scale in the design system. For marketing/landing, pair a distinctive display font with a refined body font.
 - **Color & theme**: Cohesive palette. Use CSS variables. In app: `--primary`, `--background`, `--muted`, etc. and **always support light and dark**. For net-new pages, dominant colors with sharp accents outperform timid, even palettes.
 - **Motion**: Use animation for impact. Prefer CSS for simple effects; Framer Motion for React when available. One well-orchestrated load (e.g. staggered reveals with `animation-delay`) often beats scattered micro-interactions. Add scroll- and hover-driven motion where it adds clarity or delight.
 - **Spatial composition**: Consider asymmetry, overlap, grid-breaking elements, generous negative space or controlled density. Match layout to the chosen tone.
@@ -39,7 +39,7 @@ Choose a clear conceptual direction and implement it with precision. Bold and mi
 
 Match implementation complexity to the vision: maximalist designs need more elaborate code and effects; minimalist ones need restraint, precision, and care in spacing and type.
 
-## KameOps Context
+## Kame Finance Context
 
 - **UI copy**: Default to **no** page descriptions, helper paragraphs, or `CardDescription` unless the user asks for copy. See `.cursor/rules/21-minimal-ui-copy.mdc`.
 - **Design system**: `docs/product/design-system.md` – colors (amber/orange primary, money-green success), typography (DM Sans + Sora), spacing, radius, shadows, component patterns.

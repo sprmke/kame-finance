@@ -1,6 +1,6 @@
 ---
 name: integrations
-description: Third-party integrations for KameOps — Gmail, Google Calendar, Telegram Bot API, Slack webhooks. Use when connecting services, webhooks, or porting CLI integration behavior.
+description: Third-party integrations for Kame Finance — Gmail, Google Calendar, Telegram Bot API, Slack webhooks. Use when connecting services, webhooks, or porting CLI integration behavior.
 ---
 
 # Integrations Skill

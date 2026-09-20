@@ -73,11 +73,11 @@ export default async function HomePage() {
             Finance automation for operators
           </p>
           <h1 className="text-balance font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Run your money ops on autopilot —{" "}
+            Run your finances on autopilot —{" "}
             <span className="text-gradient">not another spreadsheet</span>
           </h1>
           <p className="text-pretty mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-            KameOps is your command center for credit card SOA processing,
+            Kame Finance is your command center for credit card SOA processing,
             due-date notifications, receipt AI validation, and workflow
             automations. Built for reliability when bills and deadlines cannot
             slip.

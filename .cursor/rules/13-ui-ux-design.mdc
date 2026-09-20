@@ -7,7 +7,7 @@ globs:
 alwaysApply: false
 ---
 
-# UI/UX Design Guidelines for KameOps
+# UI/UX Design Guidelines for Kame Finance
 
 ## Design Philosophy
 
@@ -28,7 +28,7 @@ Create interfaces that are **professional**, **intuitive**, and **delightful** t
 
 ### CRITICAL: All Components Must Support Both Themes
 
-Every page, component, screen, section, and UI element created for KameOps **MUST** support both light and dark themes. This is non-negotiable.
+Every page, component, screen, section, and UI element created for Kame Finance **MUST** support both light and dark themes. This is non-negotiable.
 
 ### Theme Implementation Rules
 

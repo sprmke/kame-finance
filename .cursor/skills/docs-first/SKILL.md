@@ -1,6 +1,6 @@
 ---
 name: docs-first
-description: Documentation-first workflow for KameOps. Use before implementing any feature: read docs/README.md and the relevant spec (product/user-flows, reference/feature-specifications, database/schema, reference/application-inventory) so implementation matches requirements.
+description: Documentation-first workflow for Kame Finance. Use before implementing any feature: read docs/README.md and the relevant spec (product/user-flows, reference/feature-specifications, database/schema, reference/application-inventory) so implementation matches requirements.
 ---
 
 # Docs-First Skill

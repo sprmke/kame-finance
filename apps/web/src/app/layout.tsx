@@ -8,7 +8,7 @@ import "@/env";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "KameOps", template: "%s | KameOps" },
+  title: { default: "Kame Finance", template: "%s | Kame Finance" },
   description:
     "Business automation platform for credit cards, reminders, and workflows.",
   metadataBase: new URL(

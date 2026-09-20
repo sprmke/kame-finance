@@ -6,7 +6,7 @@ import { UNLOCKED_PDF_PREFIX } from "@/server/services/pdf-unlock.service";
 
 /** Canonical per-user work dir (matches prepareSoaWorkdir). */
 export function soaWorkDir(userId: string): string {
-  return join(tmpdir(), `kame-ops-${userId}`);
+  return join(tmpdir(), `kame-finance-${userId}`);
 }
 
 /**
@@ -19,7 +19,7 @@ export function soaWorkDirCandidates(userId: string): string[] {
   };
 
   add(soaWorkDir(userId));
-  add(join("/tmp", `kame-ops-${userId}`));
+  add(join("/tmp", `kame-finance-${userId}`));
   if (process.env.DATA_DIR) add(process.env.DATA_DIR);
 
   return candidates;

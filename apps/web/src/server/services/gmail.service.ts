@@ -387,7 +387,7 @@ export const gmailService = {
     });
 
     if (existing && existing.userId !== userId) {
-      throw new Error("This Google account is linked to another KameOps user.");
+      throw new Error("This Google account is linked to another Kame Finance user.");
     }
 
     const refreshToken =

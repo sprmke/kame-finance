@@ -44,7 +44,7 @@ export function SoaListPage() {
   const utils = api.useUtils();
   const { data: periods, isLoading } = api.soa.listPeriods.useQuery();
   const { viewMode, setViewMode } = usePersistedViewMode(
-    "kame-ops:soa-view-mode",
+    "kame-finance:soa-view-mode",
   );
   const pagination = useListPagination(periods ?? [], 7);
 

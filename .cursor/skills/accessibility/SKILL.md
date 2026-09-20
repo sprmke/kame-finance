@@ -5,7 +5,7 @@ description: Accessibility skill for WCAG 2.1 AA compliance. Use when building o
 
 # Accessibility Skill (WCAG 2.1 AA)
 
-KameOps requires WCAG 2.1 AA compliance. Use this skill whenever you implement or review UI.
+Kame Finance requires WCAG 2.1 AA compliance. Use this skill whenever you implement or review UI.
 
 ## Principles
 

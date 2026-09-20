@@ -18,7 +18,7 @@ const TITLE_SIZE = {
 } as const;
 
 /**
- * Full KameOps wordmark with optional tagline.
+ * Full Kame Finance wordmark with optional tagline.
  */
 export function BrandLogo({
   href,
@@ -36,7 +36,7 @@ export function BrandLogo({
             TITLE_SIZE[size],
           )}
         >
-          Kame<span className="text-primary">Ops</span>
+          Kame <span className="text-primary">Finance</span>
         </span>
         {showTagline && (
           <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">

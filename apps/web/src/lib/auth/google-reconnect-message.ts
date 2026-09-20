@@ -21,7 +21,7 @@ function splitAccountScopedMessage(raw: string): {
 /** Plain-language reason for the reconnect Gmail modal. */
 export function formatGoogleReconnectReason(message: string | null): string {
   if (!message?.trim()) {
-    return "KameOps can't read Gmail right now. Sign in with Google again to fetch statement emails.";
+    return "Kame Finance can't read Gmail right now. Sign in with Google again to fetch statement emails.";
   }
 
   const { accountLabel, errorText } = splitAccountScopedMessage(message.trim());

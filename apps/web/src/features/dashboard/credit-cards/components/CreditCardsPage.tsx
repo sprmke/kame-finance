@@ -96,7 +96,7 @@ export function CreditCardsPage() {
   const utils = api.useUtils();
   const { data: cards, isLoading } = api.creditCards.list.useQuery();
   const { viewMode, setViewMode } = usePersistedViewMode(
-    "kame-ops:credit-cards-view-mode",
+    "kame-finance:credit-cards-view-mode",
   );
   const pagination = useListPagination(cards ?? [], 7);
 

@@ -1,5 +1,5 @@
 ---
-description: Authenticated dashboard UI patterns for KameOps
+description: Authenticated dashboard UI patterns for Kame Finance
 globs:
   - '**/features/dashboard/**'
   - '**/app/(dashboard)/**'
@@ -8,7 +8,7 @@ alwaysApply: false
 
 # Dashboard UI
 
-KameOps is **dashboard-first** (no large public marketing surface in v1). Guest-facing or embeddable UIs may come later for specific modules.
+Kame Finance is **dashboard-first** (no large public marketing surface in v1). Guest-facing or embeddable UIs may come later for specific modules.
 
 ## Layout
 

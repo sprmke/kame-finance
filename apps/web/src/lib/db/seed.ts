@@ -1,5 +1,5 @@
 async function seed() {
-  console.log("KameOps uses Google sign-in only. No seed user is created.");
+  console.log("Kame Finance uses Google sign-in only. No seed user is created.");
   console.log(
     "Configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local, then sign in at /login.",
   );

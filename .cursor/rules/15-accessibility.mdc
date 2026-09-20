@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Accessibility (WCAG 2.1 AA)
 
-All UI in KameOps must meet WCAG 2.1 AA. Apply these rules for every component and page.
+All UI in Kame Finance must meet WCAG 2.1 AA. Apply these rules for every component and page.
 
 ## Semantic HTML
 

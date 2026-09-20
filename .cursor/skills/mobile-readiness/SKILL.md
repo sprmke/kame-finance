@@ -1,6 +1,6 @@
 ---
 name: mobile-readiness
-description: Framework-agnostic mobile readiness skill for keeping KameOps backend, docs, and architecture prepared for a future mobile app without locking into React Native early.
+description: Framework-agnostic mobile readiness skill for keeping Kame Finance backend, docs, and architecture prepared for a future mobile app without locking into React Native early.
 ---
 
 # Mobile Readiness Skill

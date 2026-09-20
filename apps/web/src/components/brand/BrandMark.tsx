@@ -12,7 +12,7 @@ const SIZE_CLASSES = {
 } as const;
 
 /**
- * Compact KameOps mark — gradient tile with "K" monogram.
+ * Compact Kame Finance mark — gradient tile with "K" monogram.
  */
 export function BrandMark({ className, size = "md" }: BrandMarkProps) {
   return (

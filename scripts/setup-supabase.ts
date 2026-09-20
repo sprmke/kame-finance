@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Supabase bootstrap for KameOps (storage buckets + schema push).
+ * Supabase bootstrap for Kame Finance (storage buckets + schema push).
  *
  * Prerequisites — set in apps/web/.env.local:
  *   DATABASE_URL, DIRECT_URL (recommended), SUPABASE_URL,
@@ -99,8 +99,8 @@ async function ensureStorageBuckets(
   const supabaseUrl = env.SUPABASE_URL;
   const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
   const privateBucket =
-    env.SUPABASE_STORAGE_BUCKET_PRIVATE ?? "kame-ops-private";
-  const publicBucket = env.SUPABASE_STORAGE_BUCKET_PUBLIC ?? "kame-ops-public";
+    env.SUPABASE_STORAGE_BUCKET_PRIVATE ?? "kame-finance-private";
+  const publicBucket = env.SUPABASE_STORAGE_BUCKET_PUBLIC ?? "kame-finance-public";
 
   if (!supabaseUrl || !serviceKey) {
     fail(
@@ -167,7 +167,7 @@ async function checkConnectivity(env: Record<string, string>): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  console.log("KameOps — Supabase setup\n");
+  console.log("Kame Finance — Supabase setup\n");
 
   if (!existsSync(ENV_LOCAL)) {
     fail(

@@ -136,7 +136,7 @@ function SoaPeriodDetailBody({
     kind: "closed",
   });
   const { viewMode, setViewMode } = usePersistedViewMode(
-    "kame-ops:soa-view-mode",
+    "kame-finance:soa-view-mode",
   );
 
   const { openRun, runPipeline, runDialogProps } = useSoaRunDialog({

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Idempotent local dev bootstrap for KameOps.
+ * Idempotent local dev bootstrap for Kame Finance.
  *
  * Usage (from repo root):
  *   bun run setup:local           # install, docker, db push, seed
@@ -15,13 +15,13 @@ import { copyFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
+import { LOCAL_DEV_APP_URL } from "./dev/local-dev-port.mjs";
 import { commandExists, fail, log, parseEnvFile, run } from "./lib/setup-utils";
 
 const ROOT = join(import.meta.dir, "..");
 const WEB = join(ROOT, "apps/web");
 const ENV_LOCAL = join(WEB, ".env.local");
 const ENV_EXAMPLE = join(WEB, ".env.example");
-const LOCAL_DEV_APP_URL = "http://localhost:3005";
 
 const args = new Set(process.argv.slice(2));
 const shouldStart = args.has("--start");
@@ -72,7 +72,7 @@ function startPostgres(): void {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const health = spawnSync(
       "docker",
-      ["inspect", "--format", "{{.State.Health.Status}}", "kame-ops-postgres"],
+      ["inspect", "--format", "{{.State.Health.Status}}", "kame-finance-postgres"],
       { stdio: "pipe", encoding: "utf8" },
     );
     const status = health.stdout?.toString().trim();
@@ -92,7 +92,7 @@ function startPostgres(): void {
         "-U",
         "postgres",
         "-d",
-        "kame_ops",
+        "kame_finance",
       ],
       { cwd: ROOT, stdio: "pipe" },
     );
@@ -125,10 +125,13 @@ function printSuccess(env: Record<string, string>): void {
   );
   console.log("    bun run setup:local  # re-run if schema/env changed");
   console.log("    bun run dev:local    # full bootstrap + dev server");
+  console.log(
+    "    Terminal → Run Task → Start dev server   # Cursor/VS Code",
+  );
 }
 
 async function main(): Promise<void> {
-  console.log("KameOps — local dev setup\n");
+  console.log("Kame Finance — local dev setup\n");
 
   ensureEnvLocal();
 
@@ -161,7 +164,7 @@ async function main(): Promise<void> {
 
   if (shouldStart) {
     log("dev", "Starting development server…");
-    run("bun", ["run", "dev"], ROOT);
+    run("bun", ["run", "dev"], WEB);
   }
 }
 

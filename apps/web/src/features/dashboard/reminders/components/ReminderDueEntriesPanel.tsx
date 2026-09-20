@@ -35,7 +35,7 @@ import {
   type ReminderGroupMode,
 } from "../lib/reminder-utils";
 
-const GROUP_MODE_KEY = "kame-ops:reminders-group-mode";
+const GROUP_MODE_KEY = "kame-finance:reminders-group-mode";
 
 export function ReminderDueEntriesPanel() {
   const utils = api.useUtils();

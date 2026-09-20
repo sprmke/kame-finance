@@ -24,12 +24,12 @@ function createClient() {
 
 // Dev hot reloads re-evaluate this module; without a singleton each reload leaks a pool.
 const globalForDb = globalThis as unknown as {
-  __kameOpsDbClient?: ReturnType<typeof createClient>;
+  __kameFinanceDbClient?: ReturnType<typeof createClient>;
 };
 
-const client = globalForDb.__kameOpsDbClient ?? createClient();
+const client = globalForDb.__kameFinanceDbClient ?? createClient();
 if (process.env.NODE_ENV !== "production")
-  globalForDb.__kameOpsDbClient = client;
+  globalForDb.__kameFinanceDbClient = client;
 
 export const db = drizzle(client, { schema });
 export { schema };
