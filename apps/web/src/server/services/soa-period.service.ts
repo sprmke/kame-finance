@@ -14,6 +14,7 @@ import { loadDueEntryRows, loadSoaStatementRows } from "./user-rows.service";
 
 import { transactionCategoryService } from "./transaction-category.service";
 import { creditCardService } from "./credit-card.service";
+import { soaPersistService } from "./soa-persist.service";
 
 type CardColorLookup = Map<string, string | null>;
 
@@ -301,6 +302,7 @@ export const soaPeriodService = {
   },
 
   async listPeriods(userId: string) {
+    await soaPersistService.collapseDuplicateStatements(userId);
     await this.ensureBackfillFromStatements(userId);
 
     const [periods, statsInputs] = await Promise.all([
@@ -387,6 +389,8 @@ export const soaPeriodService = {
       where: and(eq(soaPeriods.id, periodId), eq(soaPeriods.userId, userId)),
     });
     if (!period) return null;
+
+    await soaPersistService.collapseDuplicateStatements(userId);
 
     const statements = await db.query.soaStatements.findMany({
       where: statementsInPeriodWhere(

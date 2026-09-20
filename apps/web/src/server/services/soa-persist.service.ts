@@ -1,14 +1,16 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
 import { creditCards, soaStatements, soaTransactions } from "@/lib/db/schema";
 import { parseDueDateToYmd } from "@/lib/due/parse-due-date";
 import { normalizeCardLast4 } from "@/lib/due/normalize";
+import { pickCanonicalSoaStatements } from "@/lib/soa/statement-identity";
 
 import {
   categorizeTransaction,
   transactionCategoryService,
 } from "./transaction-category.service";
+import { invalidateSoaStatementRows } from "./user-rows.service";
 
 type SoaRow = {
   bankLabel: string;
@@ -78,7 +80,13 @@ export const soaPersistService = {
       if (result === "unavailable") unavailable++;
     }
 
+    await collapseDuplicateStatements(userId);
+
     return { saved, updated, unavailable };
+  },
+
+  async collapseDuplicateStatements(userId: string) {
+    return collapseDuplicateStatements(userId);
   },
 };
 
@@ -91,9 +99,10 @@ type PersistRowResult = "saved" | "updated" | "skipped" | "unavailable";
  * name) matched by card instead. That let a placeholder saved on one run and
  * the real statement found on a later run resolve to two different lookups,
  * so the real row was INSERTed next to the placeholder instead of replacing
- * it — the duplicate "blank card + real card" rows in the SOA table. Keying
- * everything by the normalized card last-4 makes both paths converge on the
- * same row.
+ * it — the duplicate "blank card + real card" rows in the SOA table. Two Gmail
+ * messages for the same card (e.g. Metrobank MSOA + SOA) used to insert two
+ * fully parsed rows as well. Lookups now match every leftover row for the
+ * card+period, keep one, and delete the extras.
  */
 export function soaStatementLookupWhere(
   userId: string,
@@ -102,11 +111,31 @@ export function soaStatementLookupWhere(
 ) {
   return and(
     eq(soaStatements.userId, userId),
-    eq(soaStatements.issuerId, row.issuerId),
+    sql`lower(${soaStatements.issuerId}) = ${row.issuerId.toLowerCase()}`,
     eq(soaStatements.cardLast4, normalizeCardLast4(row.cardLast4)),
     eq(soaStatements.statementMonth, period.month),
     eq(soaStatements.statementYear, period.year),
   );
+}
+
+async function collapseDuplicateStatements(userId: string) {
+  const rows = await db.query.soaStatements.findMany({
+    where: eq(soaStatements.userId, userId),
+    orderBy: [desc(soaStatements.createdAt)],
+  });
+  const { keep, drop } = pickCanonicalSoaStatements(rows);
+  if (drop.length === 0) return { removed: 0, kept: keep.length };
+
+  await db
+    .delete(soaStatements)
+    .where(
+      inArray(
+        soaStatements.id,
+        drop.map((row) => row.id),
+      ),
+    );
+  invalidateSoaStatementRows();
+  return { removed: drop.length, kept: keep.length };
 }
 
 async function persistOneRow(
@@ -122,9 +151,22 @@ async function persistOneRow(
       normalizeCardLast4(c.last4) === cardLast4,
   );
 
-  const existing = await db.query.soaStatements.findFirst({
+  const matches = await db.query.soaStatements.findMany({
     where: soaStatementLookupWhere(userId, { ...row, cardLast4 }, period),
   });
+  const { keep, drop } = pickCanonicalSoaStatements(matches);
+  if (drop.length > 0) {
+    await db
+      .delete(soaStatements)
+      .where(
+        inArray(
+          soaStatements.id,
+          drop.map((match) => match.id),
+        ),
+      );
+    invalidateSoaStatementRows();
+  }
+  const existing = keep[0] ?? null;
 
   // Never let a "no SOA email found this run" placeholder erase a
   // previously saved real statement. Overwriting it would wipe the real

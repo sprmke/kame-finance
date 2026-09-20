@@ -1,9 +1,8 @@
-import { desc, eq, inArray, and } from "drizzle-orm";
+import { desc, eq, and } from "drizzle-orm";
 import { access, readFile } from "fs/promises";
 import { basename } from "path";
 
 import { buildOverviewPaidLabelFn } from "@/lib/soa/overview-paid-label";
-import { soaStatementIdentityKey } from "@/lib/soa/statement-identity";
 import { sniffUploadMime } from "@/lib/files/sniff-upload";
 import { db } from "@/lib/db";
 import { dueEntries, soaPeriods, soaStatements } from "@/lib/db/schema";
@@ -771,46 +770,7 @@ export const soaService = {
   },
 
   async dedupeStatements(userId: string) {
-    const rows = await db.query.soaStatements.findMany({
-      where: eq(soaStatements.userId, userId),
-      orderBy: [desc(soaStatements.createdAt)],
-    });
-
-    // One statement per (issuer, card, period). Rows are ordered newest-first,
-    // so the first row seen for a key wins by default — but a placeholder
-    // ("no SOA email found") never wins over a real, parsed statement even if
-    // it happens to be more recent, since that would erase real due-date data.
-    const bestByKey = new Map<string, (typeof rows)[number]>();
-
-    for (const row of rows) {
-      const key = soaStatementIdentityKey({
-        issuerId: row.issuerId,
-        cardLast4: row.cardLast4,
-        statementYear: row.statementYear,
-        statementMonth: row.statementMonth,
-      });
-      const current = bestByKey.get(key);
-      if (!current) {
-        bestByKey.set(key, row);
-        continue;
-      }
-      if (current.soaUnavailable && !row.soaUnavailable) {
-        bestByKey.set(key, row);
-      }
-    }
-
-    const keepIds = new Set([...bestByKey.values()].map((row) => row.id));
-    const deleteIds = rows
-      .filter((row) => !keepIds.has(row.id))
-      .map((row) => row.id);
-
-    if (deleteIds.length > 0) {
-      await db
-        .delete(soaStatements)
-        .where(inArray(soaStatements.id, deleteIds));
-    }
-
-    return { removed: deleteIds.length, kept: keepIds.size };
+    return soaPersistService.collapseDuplicateStatements(userId);
   },
 
   async clearHistory(userId: string) {
