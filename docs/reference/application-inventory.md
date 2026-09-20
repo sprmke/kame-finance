@@ -6,7 +6,7 @@
 
 | App | Path       | Description                               |
 | --- | ---------- | ----------------------------------------- |
-| Web | `apps/web` | KameOps dashboard (Next.js 15, port 3005) |
+| Web | `apps/web` | Kame Finance dashboard (Next.js 15, dedicated local port **3005**) |
 
 ## Routes
 
@@ -18,7 +18,7 @@
 | `/dashboard`                              | `dashboard/overview`                                                                                                               | Implemented           |
 | `/dashboard/credit-cards`                 | `dashboard/credit-cards`                                                                                                           | Implemented           |
 | `/dashboard/soa`                          | `dashboard/soa` — SOA period list (CRUD)                                                                                           | Implemented           |
-| `/dashboard/soa/[periodId]`               | `dashboard/soa` — period detail (Overview / Transactions / Analytics tabs)                                                         | Implemented           |
+| `/dashboard/soa/[periodId]`               | `dashboard/soa` — period detail (Overview / Transactions / Analytics tabs; Analytics category rows drill into transactions on the same card) | Implemented           |
 | `/dashboard/soa/[periodId]/[statementId]` | `dashboard/soa` — per-card statement + transactions                                                                                | Implemented           |
 | `/dashboard/reminders`                    | `dashboard/reminders` + `dashboard/automations` — due entries, mark paid, and scheduled jobs (payment reminders + SOA Gmail check) | Implemented           |
 | `/dashboard/automations`                  | Redirects to `/dashboard/reminders`                                                                                                | Redirect              |
@@ -30,7 +30,7 @@
 | Router                  | Procedures                                                                                                                                                                                                                                  | Status                                                                                                                                                                                                                                               |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `creditCards`           | list, get, create, update, delete                                                                                                                                                                                                           | Implemented — create/edit require recurring `dueDay`; list includes `googleAccountLabel`; `googleAccountId` per card for SOA Gmail routing                                                                                                           |
-| `soa`                   | listPeriods, getPeriod, getStatement, updatePeriod, deletePeriod, list, runPipeline, **getRunProgress**, **processManualUpload**, dedupe, clearHistory                                                                                      | Implemented — period detail has Overview / Transactions / Analytics tabs; `runPipeline` accepts optional `runId` for live progress polling; **processManualUpload** parses a stored PDF/image into persist/dues/analytics                            |
+| `soa`                   | listPeriods, getPeriod, getStatement, updatePeriod, deletePeriod, list, runPipeline, **getRunProgress**, **processManualUpload**, dedupe, clearHistory                                                                                      | Implemented — period detail has Overview / Transactions / Analytics tabs; `runPipeline` accepts optional `runId` for live progress polling; **processManualUpload** parses a stored PDF/image into persist/dues/analytics; **one statement per card per period** (leftover duplicates from older Gmail-message persist are collapsed on persist, period list, and period load) |
 | `transactionCategories` | listOptions, **listUserCategories**, **createCategory**, **deleteCategory**, listRules, createRule, updateRule, deleteRule, updateTransactionCategory, **getCategorizeProgress**, **categorizeStatementWithAi**, **categorizePeriodWithAi** | Implemented — built-in + user custom categories; add from SOA transaction picker or Settings; keyword rules + learned corrections; AI categorize with live progress                                                                                  |
 | `reminders`             | listDue, status, markPaid, markUnpaid, **getActionProgress**                                                                                                                                                                                | Implemented — due reminders run via default `send_due_reminders` automation; mark paid/unpaid with live progress polling                                                                                                                             |
 | `automations`           | list, create, update, setActive, delete, run, **getRunProgress**                                                                                                                                                                            | Implemented — `run` requires `processId` for live progress; reminders use `reminder_run_progress`, SOA uses `soa_run_progress`                                                                                                                       |
@@ -97,7 +97,7 @@
 | `soa-manual-upload.service.ts`  | Manual SOA upload: unlock/OCR/parse, bank + month detection, period alignment, persist + due upsert                                                                                                                                           |
 | `user-rows.service.ts`          | Per-request loaders for the user-scoped row sets most reads share (`due_entries`, `soa_statements`, `credit_cards`) plus their invalidate helpers                                                                                             |
 
-SOA pipeline lives in **`src/lib/soa/`** (Gmail fetch, bank parsers, summary PDF, calendar). Each active card resolves a `googleAccountId` (explicit or default); `runSoaSingleMonth` switches Gmail clients per issuer search config. Mark-paid, reminders, and due sync are native in `server/services/`. Workdir: `/tmp/kame-ops-{userId}/`. See `docs/temp/pay-credit-cards-migration.md`.
+SOA pipeline lives in **`src/lib/soa/`** (Gmail fetch, bank parsers, summary PDF, calendar). Each active card resolves a `googleAccountId` (explicit or default); `runSoaSingleMonth` switches Gmail clients per issuer search config. Mark-paid, reminders, and due sync are native in `server/services/`. Workdir: `/tmp/kame-finance-{userId}/`. See `docs/temp/pay-credit-cards-migration.md`.
 
 ## Data loading and caching
 
@@ -118,4 +118,23 @@ Dashboard pages are Server Components that call `prefetchForPage` and render ins
 | `apps/web` `db:seed`               | Prints Google sign-in setup instructions                                                                                      |
 | `scripts/setup-supabase.ts`        | Supabase storage buckets + `db:push` (`docs/temp/supabase-setup.md`)                                                          |
 | `scripts/migrate-from-cli.ts`      | Import `cards.json` + `due-reminders-state.json`                                                                              |
+| `scripts/dev/local-dev-port.mjs`   | Dedicated local Next.js port (`3005`) so Kame Finance can run beside kame-homes / kame-desk / kame-lends                           |
+| `scripts/dev/free-local-ports.sh`  | Stops stale listeners on `:3005` before `next dev` (so Next does not silently jump to 3006)                                   |
 | `apps/web` `scripts/perf-probe.ts` | Times the hot dashboard tRPC procedures against the real database (`bun --conditions=react-server run scripts/perf-probe.ts`) |
+
+## Cursor / VS Code run tasks
+
+`.vscode/tasks.json` (Terminal → Run Task). Default build task is **Start dev server**.
+
+| Task | What it runs |
+| ---- | ------------ |
+| Start dev server | Free `:3005` then `next dev` at http://localhost:3005 |
+| Dev: Local (full stack) | `bun run dev:local` (Docker Postgres + schema/seed + Next) |
+| Dev: UI only (remote DB) | Next only, using `apps/web/.env.local` |
+| Open: web app | Opens http://localhost:3005 |
+| Docker: up / down | Local Postgres |
+| DB: push / migrate / seed / studio | Drizzle against `DATABASE_URL` |
+| Quality: CI | `bun run ci:quality` (type-check, lint, test) |
+| Setup: local | Bootstrap without starting Next |
+
+Launch configs: **Start dev server + Chrome** and **Dev: Local (full stack) + Chrome**.

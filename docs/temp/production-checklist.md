@@ -1,6 +1,6 @@
 # Production Deployment Checklist
 
-Use this before deploying KameOps to Vercel + Supabase.
+Use this before deploying Kame Finance to Vercel + Supabase.
 
 ## Phase A — Staging (required)
 
@@ -8,7 +8,7 @@ Use this before deploying KameOps to Vercel + Supabase.
 
 See **`docs/temp/supabase-setup.md`** for the full walkthrough.
 
-- [ ] Create Supabase project (`kame-ops`, region `ap-southeast-1`)
+- [ ] Create Supabase project (`kame-finance`, region `ap-southeast-1`)
 - [ ] Set `DATABASE_URL` (pooler, port 6543) and `DIRECT_URL` (session, port 5432) in `.env.local`
 - [ ] Set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
 - [ ] Run `bun run setup:supabase` (storage buckets + `db:push`)
@@ -16,13 +16,13 @@ See **`docs/temp/supabase-setup.md`** for the full walkthrough.
 
 ### Vercel
 
-- [ ] **One project only** — e.g. `kame-ops-web` or `kame-ops`; delete or ignore duplicates to avoid env/domain drift
-- [ ] Link repo `sprmke/kame-ops`; **Root Directory** = `apps/web` (not repo root)
+- [ ] **One project only** — e.g. `kame-finance-web` or `kame-finance`; delete or ignore duplicates to avoid env/domain drift
+- [ ] Link repo `sprmke/kame-finance`; **Root Directory** = `apps/web` (not repo root)
 - [ ] Framework Preset = **Next.js** (auto when root is correct)
 - [ ] Set production env vars (see below)
 - [ ] Remove `SKIP_ENV_VALIDATION` in production
 - [ ] Deploy and verify `/login` + `/dashboard`
-- [x] Schedule automation dispatch via **Supabase pg_cron** (see **`docs/temp/scheduled-jobs-and-testing.md`**) — Vault secrets + `sync_kame_ops_automation_dispatch_cron_job()` on project `elfgaejqxipbyylhwgxx`
+- [x] Schedule automation dispatch via **Supabase pg_cron** (see **`docs/temp/scheduled-jobs-and-testing.md`**) — Vault secrets + `sync_kame_finance_automation_dispatch_cron_job()` on project `elfgaejqxipbyylhwgxx`
 - [x] Vercel daily fallback cron in `apps/web/vercel.json` (`0 4 * * *` UTC)
 
 ### Telegram
@@ -87,7 +87,7 @@ See **`docs/temp/supabase-setup.md`** for the full walkthrough.
 
 `apps/web/vercel.json` schedules the same route **once daily** at `0 4 * * *` UTC as a redundant Hobby-plan tick. Do **not** use `* * * * *` — that burns Fluid CPU. Dispatcher runs overdue jobs when `next_run_at` is in the past.
 
-Cron requests must include: `Authorization: Bearer <CRON_SECRET>` (stored in Supabase Vault as `kame_ops_cron_secret`).
+Cron requests must include: `Authorization: Bearer <CRON_SECRET>` (stored in Supabase Vault as `kame_finance_cron_secret`).
 
 User automations use friendly schedules (daily/weekly/monthly + time) stored in `automation_jobs.config.scheduleConfig`, evaluated in each user's timezone (`users.timezone`, default `Asia/Manila`).
 
@@ -105,7 +105,7 @@ Do **not** set Output Directory to `public` manually.
 
 `vercel.json` used Pages Router-style `functions` paths. App Router limits use `export const maxDuration` in each `route.ts` instead. Do not add a `functions` block for `src/app/api/**` routes.
 
-### Two Vercel projects (`kame-ops` vs `kame-ops-web`)
+### Two Vercel projects (`kame-finance` vs `kame-finance-web`)
 
 Use **one** production project. Copy env vars and domain to the project with **Root Directory = `apps/web`**. The other can be deleted or left unused.
 

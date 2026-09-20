@@ -21,7 +21,7 @@
 ### Missing SOA fallback
 
 1. Each card has a required recurring due day (1–31; shorter months use their last day).
-2. When no parsed SOA exists as the reminder window opens, KameOps creates an expected due entry.
+2. When no parsed SOA exists as the reminder window opens, Kame Finance creates an expected due entry.
 3. Dashboard, Telegram/Slack, and Google Calendar flag the missing SOA and direct the user to check email or the bank app.
 4. Expected entries cannot be marked paid because the amount is unknown.
 5. A later SOA replaces the expected entry with the bank-provided date and amounts.
@@ -29,9 +29,15 @@
 ### Manual SOA upload
 
 1. Open a period on **SOA** and choose **Upload** (PDF or image).
-2. KameOps detects bank, card, and statement month; AI fills gaps when parsers/OCR cannot.
+2. Kame Finance detects bank, card, and statement month; AI fills gaps when parsers/OCR cannot.
 3. Multi-month periods attach to the matching month. A mismatch vs the current period asks to attach here or save the detected month.
 4. The statement is stored like a Gmail SOA: totals, transactions, analytics, and due entries. Only cards you already added can be assigned.
+
+### SOA period analytics
+
+1. Open a period → **Analytics**.
+2. Click a category (or a distribution slice) to see that category’s transactions on the same card.
+3. **Back** (or Escape) returns to the breakdown.
 
 ## Reminders & schedule
 

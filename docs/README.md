@@ -1,6 +1,6 @@
-# KameOps — Documentation
+# Kame Finance — Documentation
 
-Central hub for **KameOps** documentation. Topic-based paths mirror Kame Homes (`property-management-app/docs`).
+Central hub for **Kame Finance** documentation. Topic-based paths mirror Kame Homes (`property-management-app/docs`).
 
 ## Quick links
 

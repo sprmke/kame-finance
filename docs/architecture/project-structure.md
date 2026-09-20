@@ -5,11 +5,12 @@ See also `.cursor/rules/02-architecture.mdc` for the canonical layout.
 ## Monorepo
 
 ```
-kame-ops/
-├── apps/web/                 # Next.js dashboard
+kame-finance/
+├── apps/web/                 # Next.js dashboard (local port 3005)
 ├── packages/                 # Shared packages (database, types, ui, emails, …)
 ├── docs/
-├── scripts/                  # CLI migration scripts
+├── scripts/                  # Local setup, port helpers, CLI migration
+├── .vscode/                  # Run tasks, launch configs, editor settings
 └── .cursor/                  # Rules, skills, hooks, agents
 ```
 

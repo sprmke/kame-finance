@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the recommended technology stack for **KameOps**, considering scalability, developer experience, and long-term maintainability.
+This document outlines the recommended technology stack for **Kame Finance**, considering scalability, developer experience, and long-term maintainability.
 
 ## Backend Platform Decision (2026-04)
 

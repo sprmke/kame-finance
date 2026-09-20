@@ -1,4 +1,4 @@
-# KameOps Design System
+# Kame Finance Design System
 
 Distinct **finance & automation** branding — warm amber/orange primary, money-green success, and warm stone neutrals. Intentionally separate from property-management (emerald/teal) aesthetics.
 
@@ -6,7 +6,7 @@ Distinct **finance & automation** branding — warm amber/orange primary, money-
 
 | Element          | Value                                                         |
 | ---------------- | ------------------------------------------------------------- |
-| Product name     | **KameOps** — "Ops" highlighted in primary orange             |
+| Product name     | **Kame Finance** — "Finance" highlighted in primary orange        |
 | Tone             | Professional SaaS, trustworthy, action-oriented               |
 | Primary metaphor | Money in motion — automation that pays attention to due dates |
 
@@ -59,7 +59,7 @@ Load via `apps/web/src/lib/fonts.ts` and `next/font/google`.
 
 1. **Theme**: All UI must support light and dark (`bg-background`, `text-foreground`, etc.).
 2. **No hardcoded emerald/teal** — use `--success` for positive states.
-3. **No Kame Homes copy** — product is KameOps only.
+3. **No Kame Homes copy** — product is Kame Finance only.
 4. **Minimal UI copy** — no unsolicited descriptions or helper paragraphs; add text only when requested (see `.cursor/rules/21-minimal-ui-copy.mdc`).
 5. **Charts**: Use `chart-1` … `chart-5` Tailwind colors for Recharts.
 

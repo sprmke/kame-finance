@@ -1,6 +1,6 @@
-# Supabase setup for KameOps
+# Supabase setup for Kame Finance
 
-Step-by-step guide to connect KameOps to **Supabase Postgres** and **Supabase Storage**.
+Step-by-step guide to connect Kame Finance to **Supabase Postgres** and **Supabase Storage**.
 
 > Auth stays on **Google OAuth via NextAuth** for now. Supabase Auth is a future migration — this setup uses Supabase only for database and file storage.
 
@@ -10,7 +10,7 @@ Step-by-step guide to connect KameOps to **Supabase Postgres** and **Supabase St
 
 1. Go to [supabase.com/dashboard](https://supabase.com/dashboard)
 2. **New project**
-   - Name: `kame-ops` (do not reuse unrelated projects)
+   - Name: `kame-finance` (do not reuse unrelated projects)
    - Database password: generate a strong password and **save it**
    - Region: **ap-southeast-1** (Singapore — closest to Philippines)
 3. Wait until the project status is **Active** (~2 minutes)
@@ -64,7 +64,7 @@ Use **URI** format. Replace `[PASSWORD]` with your database password (URL-encode
 Comment out local Docker `DATABASE_URL` and set Supabase values:
 
 ```env
-# DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kame_ops
+# DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kame_finance
 
 DATABASE_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true
 DIRECT_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres
@@ -72,8 +72,8 @@ DIRECT_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.su
 SUPABASE_URL=https://[REF].supabase.co
 SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
-SUPABASE_STORAGE_BUCKET_PUBLIC=kame-ops-public
-SUPABASE_STORAGE_BUCKET_PRIVATE=kame-ops-private
+SUPABASE_STORAGE_BUCKET_PUBLIC=kame-finance-public
+SUPABASE_STORAGE_BUCKET_PRIVATE=kame-finance-private
 ```
 
 Keep your existing `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`, and `ENCRYPTION_KEY`.
@@ -96,8 +96,10 @@ What the script does:
 
 | Step     | Action                                                              |
 | -------- | ------------------------------------------------------------------- |
-| Storage  | Creates `kame-ops-private` and `kame-ops-public` buckets if missing |
+| Storage  | Creates `kame-finance-private` and `kame-finance-public` buckets if missing |
 | Database | Runs `bun run db:push` against `DIRECT_URL`                         |
+
+Production already using `kame-ops-private` / `kame-ops-public`: keep those names in Vercel env until you copy objects into new buckets. The app uses `SUPABASE_STORAGE_BUCKET_*` as-is.
 
 Flags:
 
@@ -122,7 +124,7 @@ bun run dev
 ### Check data in Supabase
 
 - **Table Editor** — `users`, `accounts`, `credit_cards`, etc.
-- **Storage** — `kame-ops-private` → `receipts/{userId}/...`
+- **Storage** — `kame-finance-private` → `receipts/{userId}/...`
 
 ---
 
@@ -130,7 +132,7 @@ bun run dev
 
 | Mode       | `DATABASE_URL`            | Docker          |
 | ---------- | ------------------------- | --------------- |
-| Local only | `localhost:5432/kame_ops` | `bun run db:up` |
+| Local only | `localhost:5432/kame_finance` | `bun run db:up` |
 | Supabase   | Supabase pooler URL       | Not needed      |
 
 `bun run setup:local` skips Docker when `DATABASE_URL` is not localhost.

@@ -37,6 +37,7 @@
 ## Phase 6 — SOA analytics ✅
 
 - [x] Category spend charts on SOA period detail (Overview + Analytics tabs)
+- [x] Analytics category drill-down (in-card transactions + Back)
 - [x] Removed standalone `/dashboard/analytics` route (analytics live under each SOA period)
 
 ## Phase 7 — Telegram & calendar ✅ (mostly)
@@ -74,4 +75,6 @@ bun run db:push && bun run db:seed
 cd ../.. && bun run dev
 ```
 
-Open http://localhost:3005
+Open http://localhost:3005 (dedicated port — not 3000, so it can run beside kame-homes / kame-desk / kame-lends).
+
+Cursor / VS Code: **Terminal → Run Task → Start dev server**.

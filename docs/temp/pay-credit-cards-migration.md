@@ -1,16 +1,16 @@
-# pay-credit-cards → KameOps Migration
+# pay-credit-cards → Kame Finance Migration
 
 Temporary reference for porting the CLI at `automated-tasks/pay-credit-cards/`.
 
 ## State migration
 
-| Legacy                              | KameOps table                                  |
+| Legacy                              | Kame Finance table                                  |
 | ----------------------------------- | ---------------------------------------------- |
 | `CARDS_JSON` env                    | `credit_cards`                                 |
 | `due-reminders-state.json` → `dues` | `due_entries`                                  |
 | `due-reminders-state.json` → `sent` | `reminder_logs`                                |
 | `telegram-bot-state.json`           | Not needed (webhook replaces long-poll offset) |
-| `data/downloads/`, `data/output/`   | Supabase Storage + `/tmp/kame-ops-{userId}/`   |
+| `data/downloads/`, `data/output/`   | Supabase Storage + `/tmp/kame-finance-{userId}/`   |
 | `data/receipts/`                    | Supabase Storage + `receipts` table            |
 
 ## Behavior parity checklist
@@ -39,7 +39,7 @@ Temporary reference for porting the CLI at `automated-tasks/pay-credit-cards/`.
 
 ## Scheduling
 
-| Legacy                   | KameOps                                                          |
+| Legacy                   | Kame Finance                                                          |
 | ------------------------ | ---------------------------------------------------------------- |
 | launchd `poll-new-soa`   | **Run SOA** UI or `run_soa_pipeline` automation                  |
 | launchd `send-reminders` | Default `send_due_reminders` automation via `/api/cron/dispatch` |

@@ -2,7 +2,7 @@
 
 ## Goal
 
-Keep KameOps ready for a future mobile client without locking into React Native or any specific framework today.
+Keep Kame Finance ready for a future mobile client without locking into React Native or any specific framework today.
 
 ## Decision Status
 
