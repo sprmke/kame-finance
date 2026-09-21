@@ -3,6 +3,17 @@ import "./pdf-node-polyfill";
 import { createWorker, PSM } from "tesseract.js";
 
 import { rasterizePdfPages } from "@/server/lib/pdf-rasterize";
+import {
+  assertTesseractCoreAvailable,
+  findVendoredTesseractWasmDir,
+  resolveTesseractLangPath,
+  resolveTesseractWorkerPath,
+  soaOcrMaxPagesForRuntime,
+  soaOcrTimeoutMs,
+  tesseractCacheDir,
+  tesseractNeedsWasmRedirect,
+  withTimeout,
+} from "@/server/lib/tesseract-engine";
 
 /**
  * OCR fallback for any bank's SOA PDF — rasterize pages (pdf.js + canvas) then run
@@ -49,6 +60,41 @@ async function recognizeWithPsm(
   return normalizeSoaOcrChunk(data.text?.trim() ?? "");
 }
 
+async function createSoaOcrWorker() {
+  assertTesseractCoreAvailable();
+
+  const workerOptions: {
+    cachePath: string;
+    gzip: boolean;
+    errorHandler: (err: unknown) => void;
+    workerPath?: string;
+    langPath?: string;
+  } = {
+    cachePath: tesseractCacheDir(),
+    gzip: true,
+    errorHandler: (err: unknown) => {
+      console.warn("[soa-ocr] tesseract worker:", err);
+    },
+  };
+
+  if (tesseractNeedsWasmRedirect()) {
+    const workerPath = resolveTesseractWorkerPath();
+    const wasmDir = findVendoredTesseractWasmDir();
+    if (!workerPath || !wasmDir) {
+      throw new Error(
+        "Tesseract WASM is vendored but the Node worker wrapper is missing from the serverless bundle.",
+      );
+    }
+    process.env.TESSERACT_WASM_DIR = wasmDir;
+    workerOptions.workerPath = workerPath;
+  }
+
+  const langPath = resolveTesseractLangPath();
+  if (langPath) workerOptions.langPath = langPath;
+
+  return createWorker("eng", 1, workerOptions);
+}
+
 /**
  * Rasterize PDF pages to bitmaps (pdf.js + canvas), then Tesseract.
  * For higher quality on disk, use Apple Preview / ocrmypdf and parse manually — see docs/SETUP.md.
@@ -58,10 +104,15 @@ export async function ocrPdfToPlainText(
   password: string,
   options: SoaOcrOptions,
 ): Promise<string> {
-  const { maxPages, scale, psm, dualSparse } = options;
-  const worker = await createWorker("eng");
-  const parts: string[] = [];
-  try {
+  const timeoutMs = soaOcrTimeoutMs();
+  const maxPages = soaOcrMaxPagesForRuntime(options.maxPages);
+  const { scale, psm, dualSparse } = options;
+
+  let worker: Awaited<ReturnType<typeof createWorker>> | null = null;
+
+  const run = async () => {
+    worker = await createSoaOcrWorker();
+    const parts: string[] = [];
     for await (const pageBuf of rasterizePdfPages(
       pdfPath,
       password,
@@ -75,8 +126,20 @@ export async function ocrPdfToPlainText(
       }
       if (chunk) parts.push(chunk);
     }
+    return parts.join("\n\n");
+  };
+
+  try {
+    return await withTimeout(
+      run(),
+      timeoutMs,
+      `SOA OCR timed out after ${timeoutMs}ms`,
+    );
   } finally {
-    await worker.terminate();
+    if (worker) {
+      await worker.terminate().catch(() => {
+        /* already dead */
+      });
+    }
   }
-  return parts.join("\n\n");
 }

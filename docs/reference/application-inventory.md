@@ -47,7 +47,7 @@
 | `GET /api/auth/google/link/callback` | OAuth callback — upserts `accounts`, links selected credit cards, redirects to `callbackUrl` with status                                                                                                                                     | Implemented |
 | `POST /api/auth/register`            | Removed — use Google sign-in                                                                                                                                                                                                                 | —           |
 | `GET /api/cron/dispatch`             | Cron: run due `automation_jobs` + payment reminders (Bearer `CRON_SECRET`); **Supabase pg_cron** + Vercel both **once daily** (`0 4 * * *` UTC); overdue jobs run when `next_run_at` is past — see `docs/temp/scheduled-jobs-and-testing.md` | Implemented |
-| `GET /api/health/engines`            | Local prod verify: pdf/qpdf engine status (localhost only)                                                                                                                                                                                   | Implemented |
+| `GET /api/health/engines`            | Local prod verify: pdf/qpdf engine status (localhost only). Tesseract WASM is vendored separately via `prepare-server-native` and is not a preflight blocker.                                                                                | Implemented |
 | `GET /api/soa/pdf`                   | Stream SOA source or period summary PDF (auth); resolves storage paths or temp workdir                                                                                                                                                       | Implemented |
 | `POST /api/soa/manual-upload`        | Store a manually uploaded SOA PDF or image (auth); processing is `soa.processManualUpload`                                                                                                                                                   | Implemented |
 | `POST /api/webhooks/telegram`        | Telegram updates (text + receipt photos)                                                                                                                                                                                                     | Implemented |
@@ -121,6 +121,7 @@ Dashboard pages are Server Components that call `prefetchForPage` and render ins
 | `scripts/dev/local-dev-port.mjs`   | Dedicated local Next.js port (`3005`) so Kame Finance can run beside kame-homes / kame-desk / kame-lends                           |
 | `scripts/dev/free-local-ports.sh`  | Stops stale listeners on `:3005` before `next dev` (so Next does not silently jump to 3006)                                   |
 | `apps/web` `scripts/perf-probe.ts` | Times the hot dashboard tRPC procedures against the real database (`bun --conditions=react-server run scripts/perf-probe.ts`) |
+| `apps/web` `prepare-server-native` | Copies qpdf.wasm, Linux canvas `.node`, and Tesseract WASM/traineddata into `src/server/lib/native` for Vercel tracing |
 
 ## Cursor / VS Code run tasks
 

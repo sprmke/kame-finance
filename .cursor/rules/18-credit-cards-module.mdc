@@ -36,7 +36,8 @@ Order of operations (`lib/soa/run.ts`):
 4. Assess extracted text quality (`lib/soa/text-quality.ts`); auto-OCR fallback
    (`lib/soa/pdf-ocr.ts`) for **any** issuer when text looks unusable — override via
    `SOA_OCR_FORCE` / `SOA_OCR_DISABLE` (`lib/soa/ocr-env.ts`); legacy `BPI_OCR*` are
-   BPI-only aliases
+   BPI-only aliases. On Vercel, Tesseract WASM is vendored by `prepare-server-native`
+   and OCR is time-capped so a missing core cannot stall the run.
 5. Parse SOA fields + transactions
 6. Upsert `due_entries` via `due-entry-upsert.service`
 7. Write summary PDF (paid column from Postgres via `overview-paid-label`)

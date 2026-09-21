@@ -7,6 +7,8 @@ const repoRoot = path.join(__dirname, "../..");
 const nativeTraceGlobs = [
   "./src/server/lib/native/qpdf.wasm",
   "./src/server/lib/native/canvas.linux-x64-gnu.node",
+  "./src/server/lib/tesseract-node-worker.cjs",
+  "./src/server/lib/native/tesseract/**",
 ];
 
 const traceExcludeGlobs = ["**/node_modules/.bun/**"];
@@ -20,6 +22,7 @@ const nextConfig: NextConfig = {
     "pdfjs-dist",
     "pdfkit",
     "tesseract.js",
+    "tesseract.js-core",
     "@neslinesli93/qpdf-wasm",
   ],
   outputFileTracingIncludes: {

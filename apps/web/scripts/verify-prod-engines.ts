@@ -19,7 +19,11 @@ const skipBuild = process.env.SKIP_BUILD === "1";
 const REQUIRED_TRACE_SUFFIXES = [
   "src/server/lib/native/qpdf.wasm",
   "src/server/lib/native/canvas.linux-x64-gnu.node",
+  "src/server/lib/tesseract-node-worker.cjs",
 ];
+
+const REQUIRED_TESSERACT_WASM_SUFFIX =
+  "src/server/lib/native/tesseract/tesseract-core-relaxedsimd.wasm";
 
 type EngineHealth = {
   pdfEngineOk: boolean;
@@ -90,7 +94,15 @@ function assertTraceIncludesNativeAssets(): void {
       `Vercel trace would miss native assets: ${missing.join(", ")}`,
     );
   }
-  console.log("✓ tRPC lambda trace includes native pdf/qpdf assets");
+  const hasTesseractWasm = nft.files.some((file) =>
+    file.endsWith(REQUIRED_TESSERACT_WASM_SUFFIX),
+  );
+  if (!hasTesseractWasm) {
+    throw new Error(
+      `Vercel trace would miss ${REQUIRED_TESSERACT_WASM_SUFFIX}`,
+    );
+  }
+  console.log("✓ tRPC lambda trace includes native pdf/qpdf/tesseract assets");
 }
 
 async function waitForHealth(

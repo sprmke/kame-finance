@@ -43,6 +43,9 @@ Period detail **Upload** accepts PDF/image when the bank does not email SOA. Det
   `pickBetterSoaText` chooses OCR vs. original text; `SOA_OCR_FORCE` /
   `SOA_OCR_DISABLE` override per issuer or `all`; legacy `BPI_OCR*` vars remain
   BPI-only aliases. See `apps/web/.env.example`.
+  Serverless: `prepare-server-native` vendors `tesseract-core*.wasm` (NFT does not
+  trace those binaries from `node_modules`); missing WASM or `SOA_OCR_TIMEOUT_MS`
+  skips OCR and continues the run instead of hanging `getRunProgress`.
 - **Unavailable SOA**: set `soaUnavailable` flag; UI shows em dash in overview
 - **Multi-card completeness**: `run.ts` dedupes downloaded PDFs by `filePath`
   (attachment-level), not `messageId` — a single Gmail message can carry
