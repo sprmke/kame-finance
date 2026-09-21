@@ -221,7 +221,7 @@ async function persistOneRow(
         ...statementValues,
       })
       .returning();
-    statement = row_;
+    statement = row_ ?? null;
   }
 
   if (!statement) return "skipped";
