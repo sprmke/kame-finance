@@ -47,7 +47,22 @@ export function useSoaManualUpload(periodId: string, onSaved: () => void) {
   );
 
   function triggerFilePicker() {
-    fileRef.current?.click();
+    const input = fileRef.current;
+    if (!input || input.disabled) return;
+    // Prefer the native picker API when available; some browsers ignore
+    // input.click() when the control is display:none / not label-activated.
+    const withPicker = input as HTMLInputElement & {
+      showPicker?: () => void;
+    };
+    try {
+      if (typeof withPicker.showPicker === "function") {
+        withPicker.showPicker();
+        return;
+      }
+    } catch {
+      // Fall through to click() when showPicker is blocked.
+    }
+    input.click();
   }
 
   function resolveConfirm(decision: ConfirmDecision) {

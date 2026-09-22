@@ -190,28 +190,33 @@ function SoaPeriodDetailBody({
         title={period.label}
         actions={
           <div className="flex flex-wrap gap-2 items-center">
-            <input
-              ref={manualUpload.fileRef}
-              type="file"
-              accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
-              multiple
-              className="hidden"
-              onChange={manualUpload.handleFileInputChange}
-            />
             <Button
-              type="button"
+              asChild
               variant="outline"
-              onClick={() => manualUpload.triggerFilePicker()}
-              disabled={manualUpload.isPending || runPipeline.isPending}
-            >
-              {manualUpload.isPending ? (
-                <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-              ) : (
-                <Upload className="mr-2 w-4 h-4" />
+              className={cn(
+                (manualUpload.isPending || runPipeline.isPending) &&
+                  "pointer-events-none opacity-50",
               )}
-              {manualUpload.progressLabel
-                ? `Uploading ${manualUpload.progressLabel}`
-                : "Upload"}
+            >
+              <label className="cursor-pointer">
+                <input
+                  ref={manualUpload.fileRef}
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
+                  multiple
+                  className="sr-only"
+                  disabled={manualUpload.isPending || runPipeline.isPending}
+                  onChange={manualUpload.handleFileInputChange}
+                />
+                {manualUpload.isPending ? (
+                  <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="mr-2 w-4 h-4" />
+                )}
+                {manualUpload.progressLabel
+                  ? `Uploading ${manualUpload.progressLabel}`
+                  : "Upload"}
+              </label>
             </Button>
             <Button onClick={() => openRun()} disabled={runPipeline.isPending}>
               <Play className="mr-2 w-4 h-4" />
