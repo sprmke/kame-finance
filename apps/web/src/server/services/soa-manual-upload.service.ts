@@ -7,7 +7,7 @@ import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { soaPeriods } from "@/lib/db/schema";
+import { soaPeriods, type BankIssuer } from "@/lib/db/schema";
 import {
   isImageMime,
   isPdfMime,
@@ -18,6 +18,7 @@ import {
   enumerateCalendarMonths,
   isValidCalendarMonth,
   normalizeSoaDisplayDate,
+  parseSoaCalendarDate,
   type CalendarMonth,
 } from "@/lib/soa/calendar-month";
 import {
@@ -27,10 +28,8 @@ import {
 import { alignManualUploadMonth } from "@/lib/soa/manual-upload-align";
 import {
   applyMatchedCardMeta,
-  identityIsAssignedToKnownCard,
-  last4MatchesKnownCard,
   mergeAiIntoSoaRow,
-  resolveIssuerAndLast4,
+  resolveManualUploadIdentity,
   soaRowNeedsAiFill,
 } from "@/lib/soa/manual-upload-identity";
 import {
@@ -66,6 +65,43 @@ import { storageService } from "./storage.service";
 
 const CARD_UNKNOWN_MESSAGE =
   "Could not detect which card this statement belongs to.";
+
+function credentialsFromPipeline(
+  cards: Awaited<ReturnType<typeof creditCardService.listForSoaPipeline>>,
+): CardCredential[] {
+  return cards.map((c) => ({
+    issuer: c.issuer,
+    last4: c.last4,
+    password: c.password,
+    label: c.label,
+    fullPan: c.fullPan,
+    contactLine: c.contactLine,
+  }));
+}
+
+function dueDayFromSoaRow(row: SoaRow): number | null {
+  const d = parseSoaCalendarDate(row.dueDate);
+  if (!d) return null;
+  const day = d.getDate();
+  return day >= 1 && day <= 31 ? day : null;
+}
+
+async function ensureDetectedCard(
+  userId: string,
+  issuerId: string,
+  last4: string,
+  row: SoaRow,
+  pdfPassword: string,
+): Promise<{ created: boolean; restored: boolean }> {
+  const issuer = issuerId.toLowerCase() as BankIssuer;
+  return creditCardService.ensureForManualUpload(userId, {
+    issuer,
+    last4,
+    pdfPassword,
+    dueDay: dueDayFromSoaRow(row),
+    label: row.cardDisplayLabel?.trim() || undefined,
+  });
+}
 
 function rcbcGeomImproves(
   baseline: TransactionLine[],
@@ -117,19 +153,13 @@ function rowFromAi(
   };
 }
 
-function finalizeRow(row: SoaRow, cards: CardCredential[]): SoaRow | null {
+function finalizeRow(row: SoaRow, cards: CardCredential[]): SoaRow {
   const dated = {
     ...row,
     statementDate: normalizeSoaDisplayDate(row.statementDate),
     dueDate: normalizeSoaDisplayDate(row.dueDate),
   };
-  const withMeta = applyMatchedCardMeta(dated, cards);
-  if (
-    !identityIsAssignedToKnownCard(withMeta.issuerId, withMeta.cardLast4, cards)
-  ) {
-    return null;
-  }
-  return withMeta;
+  return applyMatchedCardMeta(dated, cards);
 }
 
 export type ManualUploadProcessInput = {
@@ -148,6 +178,7 @@ export type ManualUploadProcessResult =
       fileName: string;
       assignedMonth: CalendarMonth;
       outOfRange: boolean;
+      cardCreated: boolean;
       preview: ReturnType<typeof previewFromRow>;
     }
   | {
@@ -287,24 +318,8 @@ export const soaManualUploadService = {
         : ""
     }`;
 
-    const cards = await creditCardService.listForSoaPipeline(userId);
-    if (!cards.length) {
-      return {
-        status: "error",
-        fileName,
-        message: "Add a credit card before uploading a statement.",
-      };
-    }
-
-    const credentials: CardCredential[] = cards.map((c) => ({
-      issuer: c.issuer,
-      last4: c.last4,
-      password: c.password,
-      label: c.label,
-      fullPan: c.fullPan,
-      contactLine: c.contactLine,
-    }));
-
+    let cards = await creditCardService.listForSoaPipeline(userId);
+    let credentials = credentialsFromPipeline(cards);
     const knownForAi = cards.map((c) => ({
       issuer: c.issuer,
       last4: c.last4,
@@ -315,6 +330,8 @@ export const soaManualUploadService = {
     let usedAi = false;
     let row: SoaRow | null = null;
     let persistStoragePath = input.storagePath;
+    let unlockPassword = "";
+    let cardCreated = false;
 
     try {
       const localPath = await storageService.resolveLocalPath(
@@ -342,21 +359,13 @@ export const soaManualUploadService = {
           };
         }
         usedAi = true;
-        const identity = resolveIssuerAndLast4({
+        const identity = resolveManualUploadIdentity({
           text: `${ai.issuerId ?? ""} ${ai.cardLast4 ?? ""} ${ai.statementDate ?? ""}`,
           cards: credentials,
-          unlockLast4: last4MatchesKnownCard(ai.cardLast4 ?? "", credentials)
-            ? (ai.cardLast4 ?? "")
-            : "",
+          unlockLast4: "",
           ai,
         });
-        if (
-          !identityIsAssignedToKnownCard(
-            identity.issuerId,
-            identity.last4,
-            credentials,
-          )
-        ) {
+        if (!identity.issuerId || !identity.last4) {
           return {
             status: "error",
             fileName,
@@ -372,6 +381,7 @@ export const soaManualUploadService = {
         );
       } else if (isPdf) {
         const extracted = await extractPdfText(localPath, credentials);
+        unlockPassword = extracted.password;
         let ai: SoaAiExtractResult | null = null;
         if (!assessSoaTextQuality(extracted.text).looksUsable) {
           ai = await soaAiExtractService.extractFromText(
@@ -382,20 +392,14 @@ export const soaManualUploadService = {
           if (ai) usedAi = true;
         }
 
-        let identity = resolveIssuerAndLast4({
+        let identity = resolveManualUploadIdentity({
           text: extracted.text,
           cards: credentials,
           unlockLast4: extracted.unlockLast4,
           ai,
         });
 
-        if (
-          !identityIsAssignedToKnownCard(
-            identity.issuerId,
-            identity.last4,
-            credentials,
-          )
-        ) {
+        if (!identity.issuerId || !identity.last4) {
           if (!ai) {
             ai = await soaAiExtractService.extractFromText(
               userId,
@@ -404,7 +408,7 @@ export const soaManualUploadService = {
             );
             if (ai) usedAi = true;
           }
-          identity = resolveIssuerAndLast4({
+          identity = resolveManualUploadIdentity({
             text: extracted.text,
             cards: credentials,
             unlockLast4: extracted.unlockLast4,
@@ -412,13 +416,7 @@ export const soaManualUploadService = {
           });
         }
 
-        if (
-          !identityIsAssignedToKnownCard(
-            identity.issuerId,
-            identity.last4,
-            credentials,
-          )
-        ) {
+        if (!identity.issuerId || !identity.last4) {
           const page = await firstPdfPagePng(localPath, extracted.password);
           if (page) {
             const vision = await soaAiExtractService.extractFromImage(
@@ -430,7 +428,7 @@ export const soaManualUploadService = {
             if (vision) {
               usedAi = true;
               ai = vision;
-              identity = resolveIssuerAndLast4({
+              identity = resolveManualUploadIdentity({
                 text: extracted.text,
                 cards: credentials,
                 unlockLast4: extracted.unlockLast4,
@@ -440,13 +438,7 @@ export const soaManualUploadService = {
           }
         }
 
-        if (
-          !identityIsAssignedToKnownCard(
-            identity.issuerId,
-            identity.last4,
-            credentials,
-          )
-        ) {
+        if (!identity.issuerId || !identity.last4) {
           return {
             status: "error",
             fileName,
@@ -481,19 +473,13 @@ export const soaManualUploadService = {
           if (fill) {
             usedAi = true;
             row = mergeAiIntoSoaRow(row, fill);
-            const filledIdentity = resolveIssuerAndLast4({
+            const filledIdentity = resolveManualUploadIdentity({
               text: extracted.text,
               cards: credentials,
               unlockLast4: extracted.unlockLast4,
               ai: fill,
             });
-            if (
-              identityIsAssignedToKnownCard(
-                filledIdentity.issuerId,
-                filledIdentity.last4,
-                credentials,
-              )
-            ) {
+            if (filledIdentity.issuerId && filledIdentity.last4) {
               row.issuerId = filledIdentity.issuerId;
               row.bankLabel = bankLabelForIssuer(filledIdentity.issuerId);
               row.cardLast4 = filledIdentity.last4;
@@ -542,14 +528,19 @@ export const soaManualUploadService = {
       };
     }
 
+    const ensured = await ensureDetectedCard(
+      userId,
+      row.issuerId,
+      row.cardLast4,
+      row,
+      unlockPassword,
+    );
+    cardCreated = ensured.created || ensured.restored;
+
+    cards = await creditCardService.listForSoaPipeline(userId);
+    credentials = credentialsFromPipeline(cards);
+
     row = finalizeRow(row, credentials);
-    if (!row) {
-      return {
-        status: "error",
-        fileName,
-        message: CARD_UNKNOWN_MESSAGE,
-      };
-    }
 
     row.sourceEmailSubject = "Manual upload";
     row.sourceMessageId = messageId;
@@ -609,6 +600,7 @@ export const soaManualUploadService = {
       fileName,
       assignedMonth: persistMonth,
       outOfRange: aligned.outOfRange,
+      cardCreated,
       preview: previewFromRow(row, persistMonth, usedAi),
     };
   },

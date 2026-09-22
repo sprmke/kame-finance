@@ -12,16 +12,25 @@ export function dedupedStatementsMessage(count: number): string {
   return `${count} duplicates removed`;
 }
 
-export function manualSoaSavedMessage(saved: number, updated: number): string {
-  if (saved > 0 && updated > 0) {
-    return `${saved} added, ${updated} updated`;
-  }
-  if (updated > 0) {
-    return updated === 1
-      ? "Statement updated"
-      : `${updated} statements updated`;
-  }
-  if (saved === 1) return "Statement added";
-  if (saved > 1) return `${saved} statements added`;
-  return "Statement added";
+export function manualSoaSavedMessage(
+  saved: number,
+  updated: number,
+  cardCreated = 0,
+): string {
+  const statement =
+    saved > 0 && updated > 0
+      ? `${saved} added, ${updated} updated`
+      : updated > 0
+        ? updated === 1
+          ? "Statement updated"
+          : `${updated} statements updated`
+        : saved === 1
+          ? "Statement added"
+          : saved > 1
+            ? `${saved} statements added`
+            : "Statement added";
+
+  if (cardCreated <= 0) return statement;
+  if (cardCreated === 1) return `Card added · ${statement}`;
+  return `${cardCreated} cards added · ${statement}`;
 }

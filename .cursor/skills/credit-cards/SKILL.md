@@ -32,7 +32,7 @@ DB table `credit_cards` (replaces `CARDS_JSON`). Loaded via `creditCardService.l
 
 ## Manual SOA upload
 
-Period detail **Upload** accepts PDF/image when the bank does not email SOA. Detects issuer + last-4 **only if that last-4 exists on the user's cards**, picks the statement month inside a multi-month period, and prompts when the file is outside the current period. AI (`ai_api_keys`) fills fields parsers cannot read. Persist + due upsert reuse the Gmail pipeline. Uploads are MIME-sniffed; `storagePath` must belong to the user.
+Period detail **Upload** accepts PDF/image when the bank does not email SOA. Detects issuer + last-4 from the file (text/OCR/AI); if that card is not on the user’s list, **auto-creates** it via `creditCardService.ensureForManualUpload`, picks the statement month inside a multi-month period, and prompts when the file is outside the current period. AI (`ai_api_keys`) fills fields parsers cannot read. Persist + due upsert reuse the Gmail pipeline. Uploads are MIME-sniffed; `storagePath` must belong to the user.
 
 ## Parsing Notes
 

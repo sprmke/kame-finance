@@ -1,26 +1,98 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { z } from "zod";
 
+import { inferDueDayFromYmds } from "@/lib/credit-cards/expected-due";
 import { db } from "@/lib/db";
 import {
   BANK_ISSUERS,
+  BANK_ISSUER_LABELS,
   accounts,
   creditCards,
   normalizeCardColor,
+  soaStatements,
   soaSubjectForStorage,
   effectiveSoaSubject,
   type BankIssuer,
 } from "@/lib/db/schema";
+import { normalizeCardLast4 } from "@/lib/due/normalize";
 import { formatGoogleAccountLabel } from "@/lib/google/google-account-display";
 import { encryptSecret, tryDecryptSecret } from "@/lib/utils/encryption";
 import { cachedPerRequest } from "@/server/lib/request-cache";
 import { gmailService } from "@/server/services/gmail.service";
+import { invalidateCreditCardRows } from "@/server/services/user-rows.service";
 
 function stripEncryptedPassword<T extends { pdfPasswordEncrypted: string }>(
   card: T,
 ): Omit<T, "pdfPasswordEncrypted"> {
   const { pdfPasswordEncrypted: _encrypted, ...rest } = card;
   return rest;
+}
+
+function statementMatchesCard(
+  statement: {
+    soaUnavailable: boolean;
+    dueDateYmd: string | null;
+    creditCardId: string | null;
+    issuerId: string;
+    cardLast4: string;
+  },
+  card: { id: string; issuer: string; last4: string },
+): boolean {
+  if (statement.soaUnavailable || !statement.dueDateYmd) return false;
+  if (statement.creditCardId === card.id) return true;
+  return (
+    statement.issuerId.toLowerCase() === card.issuer.toLowerCase() &&
+    normalizeCardLast4(statement.cardLast4) ===
+      normalizeCardLast4(card.last4)
+  );
+}
+
+type SyncDueDaysOptions = {
+  /** When true, only cards that still have no due day are updated. */
+  fillNullOnly?: boolean;
+};
+
+async function syncDueDaysFromStatements(
+  userId: string,
+  options: SyncDueDaysOptions = {},
+): Promise<number> {
+  const fillNullOnly = options.fillNullOnly ?? false;
+  const [cards, statements] = await Promise.all([
+    db.query.creditCards.findMany({
+      where: and(eq(creditCards.userId, userId), isNull(creditCards.deletedAt)),
+    }),
+    db.query.soaStatements.findMany({
+      where: eq(soaStatements.userId, userId),
+    }),
+  ]);
+
+  let updated = 0;
+  for (const card of cards) {
+    if (fillNullOnly && card.dueDay != null) continue;
+
+    const ymds = statements
+      .filter((statement) => statementMatchesCard(statement, card))
+      .map((statement) => ({
+        ymd: statement.dueDateYmd!,
+        sort: `${String(statement.statementYear).padStart(4, "0")}-${String(statement.statementMonth).padStart(2, "0")}:${statement.dueDateYmd}`,
+      }))
+      .sort((a, b) => a.sort.localeCompare(b.sort))
+      .map((row) => row.ymd);
+
+    const inferred = inferDueDayFromYmds(ymds);
+    if (inferred == null || inferred === card.dueDay) continue;
+
+    await db
+      .update(creditCards)
+      .set({ dueDay: inferred, updatedAt: new Date() })
+      .where(
+        and(eq(creditCards.id, card.id), eq(creditCards.userId, userId)),
+      );
+    updated++;
+  }
+
+  if (updated > 0) invalidateCreditCardRows();
+  return updated;
 }
 
 const createCardSchema = z.object({
@@ -45,6 +117,8 @@ const createCardSchema = z.object({
 });
 
 export const creditCardService = {
+  syncDueDaysFromStatements,
+
   async resolveGoogleAccountId(
     userId: string,
     googleAccountId: string | null | undefined,
@@ -57,24 +131,33 @@ export const creditCardService = {
   },
 
   list: cachedPerRequest("creditCards.list", async (userId: string) => {
-    const [cards, defaultGoogleAccountId, googleAccountRows] =
-      await Promise.all([
-        db.query.creditCards.findMany({
-          where: and(
-            eq(creditCards.userId, userId),
-            isNull(creditCards.deletedAt),
-          ),
-          orderBy: (t, { asc }) => [asc(t.issuer), asc(t.last4)],
-        }),
-        gmailService.getDefaultGoogleAccountId(userId),
-        db.query.accounts.findMany({
-          where: and(
-            eq(accounts.userId, userId),
-            eq(accounts.provider, "google"),
-          ),
-          columns: { id: true, googleEmail: true, googleName: true },
-        }),
-      ]);
+    const loadCards = () =>
+      db.query.creditCards.findMany({
+        where: and(
+          eq(creditCards.userId, userId),
+          isNull(creditCards.deletedAt),
+        ),
+        orderBy: (t, { asc }) => [asc(t.issuer), asc(t.last4)],
+      });
+
+    let cards = await loadCards();
+    if (cards.some((card) => card.dueDay == null)) {
+      const filled = await syncDueDaysFromStatements(userId, {
+        fillNullOnly: true,
+      });
+      if (filled > 0) cards = await loadCards();
+    }
+
+    const [defaultGoogleAccountId, googleAccountRows] = await Promise.all([
+      gmailService.getDefaultGoogleAccountId(userId),
+      db.query.accounts.findMany({
+        where: and(
+          eq(accounts.userId, userId),
+          eq(accounts.provider, "google"),
+        ),
+        columns: { id: true, googleEmail: true, googleName: true },
+      }),
+    ]);
     const labelByAccountId = new Map(
       googleAccountRows.map((row) => [
         row.id,
@@ -155,7 +238,114 @@ export const creditCardService = {
       })
       .returning();
     if (!card) throw new Error("Failed to create card");
+    invalidateCreditCardRows();
     return stripEncryptedPassword(card);
+  },
+
+  /**
+   * Find an active card by issuer + last-4, or create one from SOA detection.
+   * Soft-deleted matches are restored. PDF password is optional (space placeholder
+   * when the upload unlocked without a password).
+   */
+  async ensureForManualUpload(
+    userId: string,
+    input: {
+      issuer: BankIssuer;
+      last4: string;
+      pdfPassword?: string;
+      dueDay?: number | null;
+      label?: string;
+    },
+  ): Promise<{ created: boolean; restored: boolean }> {
+    const last4 = normalizeCardLast4(input.last4);
+    const issuer = input.issuer;
+    const password =
+      input.pdfPassword?.trim() && input.pdfPassword.trim().length > 0
+        ? input.pdfPassword.trim()
+        : " ";
+
+    const active = await db.query.creditCards.findFirst({
+      where: and(
+        eq(creditCards.userId, userId),
+        eq(creditCards.issuer, issuer),
+        eq(creditCards.last4, last4),
+        isNull(creditCards.deletedAt),
+      ),
+    });
+    if (active) {
+      if (!active.isActive) {
+        await db
+          .update(creditCards)
+          .set({ isActive: true, updatedAt: new Date() })
+          .where(
+            and(eq(creditCards.id, active.id), eq(creditCards.userId, userId)),
+          );
+        invalidateCreditCardRows();
+      }
+      return { created: false, restored: false };
+    }
+
+    const softDeleted = await db.query.creditCards.findFirst({
+      where: and(
+        eq(creditCards.userId, userId),
+        eq(creditCards.issuer, issuer),
+        eq(creditCards.last4, last4),
+        isNotNull(creditCards.deletedAt),
+      ),
+      orderBy: (t, { desc }) => [desc(t.updatedAt)],
+    });
+    if (softDeleted) {
+      await db
+        .update(creditCards)
+        .set({
+          deletedAt: null,
+          isActive: true,
+          pdfPasswordEncrypted: encryptSecret(password),
+          dueDay:
+            softDeleted.dueDay ??
+            (input.dueDay != null &&
+            input.dueDay >= 1 &&
+            input.dueDay <= 31
+              ? input.dueDay
+              : null),
+          label:
+            softDeleted.label ??
+            input.label ??
+            `${BANK_ISSUER_LABELS[issuer]} •••• ${last4}`,
+          color: softDeleted.color ?? normalizeCardColor(null, issuer),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(creditCards.id, softDeleted.id),
+            eq(creditCards.userId, userId),
+          ),
+        );
+      invalidateCreditCardRows();
+      return { created: false, restored: true };
+    }
+
+    const googleAccountId = await this.resolveGoogleAccountId(userId, null);
+    const dueDay =
+      input.dueDay != null && input.dueDay >= 1 && input.dueDay <= 31
+        ? input.dueDay
+        : null;
+    await db.insert(creditCards).values({
+      userId,
+      issuer,
+      last4,
+      label: input.label ?? `${BANK_ISSUER_LABELS[issuer]} •••• ${last4}`,
+      pdfPasswordEncrypted: encryptSecret(password),
+      gmailMonthOffset: 0,
+      googleAccountId,
+      soaSubject: null,
+      dueDay,
+      color: normalizeCardColor(null, issuer),
+      reminderWindowDays: null,
+      reminderIntervalMinutes: 1440,
+    });
+    invalidateCreditCardRows();
+    return { created: true, restored: false };
   },
 
   async update(

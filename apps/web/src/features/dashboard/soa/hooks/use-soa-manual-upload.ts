@@ -89,6 +89,7 @@ export function useSoaManualUpload(periodId: string, onSaved: () => void) {
     setIsPending(true);
     let saved = 0;
     let updated = 0;
+    let cardsCreated = 0;
 
     try {
       for (const [index, file] of files.entries()) {
@@ -148,12 +149,13 @@ export function useSoaManualUpload(periodId: string, onSaved: () => void) {
           toast.error("Statement month still does not match this period.");
           continue;
         }
+        if (result.cardCreated) cardsCreated += 1;
         if (result.status === "updated") updated += 1;
         else saved += 1;
       }
 
       if (saved + updated > 0) {
-        toast.success(manualSoaSavedMessage(saved, updated));
+        toast.success(manualSoaSavedMessage(saved, updated, cardsCreated));
         onSaved();
       }
     } catch (error) {

@@ -60,3 +60,44 @@ export function formatExpectedDueDate(ymd: string): string {
     year: "numeric",
   });
 }
+
+/** Calendar day (1–31) from an ISO `YYYY-MM-DD` due date. */
+export function dueDayFromYmd(ymd: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
+  if (!match) return null;
+  const day = Number(match[3]);
+  return isValidDueDay(day) ? day : null;
+}
+
+/**
+ * Recurring due day from SOA history: most frequent calendar day.
+ * Ties go to the day that appears last in `ymds` (pass chronological order).
+ */
+export function inferDueDayFromYmds(ymds: readonly string[]): number | null {
+  const days: number[] = [];
+  for (const ymd of ymds) {
+    const day = dueDayFromYmd(ymd);
+    if (day != null) days.push(day);
+  }
+  if (days.length === 0) return null;
+
+  const counts = new Map<number, number>();
+  const lastIndex = new Map<number, number>();
+  days.forEach((day, index) => {
+    counts.set(day, (counts.get(day) ?? 0) + 1);
+    lastIndex.set(day, index);
+  });
+
+  const maxCount = Math.max(...counts.values());
+  let winner: number | null = null;
+  let winnerLast = -1;
+  for (const [day, count] of counts) {
+    if (count !== maxCount) continue;
+    const last = lastIndex.get(day) ?? -1;
+    if (winner == null || last > winnerLast) {
+      winner = day;
+      winnerLast = last;
+    }
+  }
+  return winner;
+}

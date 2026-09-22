@@ -6,6 +6,7 @@ import {
   last4MatchesKnownCard,
   mergeAiIntoSoaRow,
   resolveIssuerAndLast4,
+  resolveManualUploadIdentity,
 } from "./manual-upload-identity";
 
 const cards: CardCredential[] = [
@@ -132,5 +133,57 @@ describe("resolveIssuerAndLast4", () => {
       ai: null,
     });
     expect(result.last4).toBe("");
+  });
+});
+
+describe("resolveManualUploadIdentity", () => {
+  test("auto-detects unknown card from issuer + last-4 in text", () => {
+    const result = resolveManualUploadIdentity({
+      text: "RCBC Flex Visa Card ending 4455 Statement Date Mar 01, 2026",
+      cards,
+      unlockLast4: "0000",
+      ai: null,
+    });
+    expect(result).toEqual({
+      issuerId: "rcbc",
+      last4: "4455",
+      matchedKnownCard: false,
+    });
+  });
+
+  test("still matches an existing card preferentially", () => {
+    const result = resolveManualUploadIdentity({
+      text: "RCBC Flex Visa ending 8899",
+      cards,
+      unlockLast4: "0000",
+      ai: null,
+    });
+    expect(result).toEqual({
+      issuerId: "rcbc",
+      last4: "8899",
+      matchedKnownCard: true,
+    });
+  });
+
+  test("uses AI last-4 when text has no candidates", () => {
+    const result = resolveManualUploadIdentity({
+      text: "Metrobank Credit Card Statement",
+      cards: [],
+      unlockLast4: "0000",
+      ai: {
+        issuerId: "metrobank",
+        cardLast4: "3746",
+        statementDate: null,
+        dueDate: null,
+        minimumDue: null,
+        totalDue: null,
+        transactions: [],
+      },
+    });
+    expect(result).toEqual({
+      issuerId: "metrobank",
+      last4: "3746",
+      matchedKnownCard: false,
+    });
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   extractCardLast4Candidates,
+  pickDetectedCardLast4,
   resolveCardLast4FromSoaText,
 } from "./card-last4-from-text";
 
@@ -15,6 +16,29 @@ describe("extractCardLast4Candidates", () => {
   test("finds masked PAN", () => {
     const text = "Card number XXXX XXXX XXXX 5678";
     expect(extractCardLast4Candidates(text)).toContain("5678");
+  });
+});
+
+describe("pickDetectedCardLast4", () => {
+  test("returns a single candidate without known cards", () => {
+    expect(
+      pickDetectedCardLast4("Card ending 9001 Metrobank Statement"),
+    ).toBe("9001");
+  });
+
+  test("prefers AI when it matches one of several candidates", () => {
+    expect(
+      pickDetectedCardLast4(
+        "4741 3700 2517 0344 and ending 6607",
+        "6607",
+      ),
+    ).toBe("6607");
+  });
+
+  test("returns null when multiple candidates conflict without AI", () => {
+    expect(
+      pickDetectedCardLast4("4741 3700 2517 0344 and 4157 6400 6049 6607"),
+    ).toBeNull();
   });
 });
 

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  dueDayFromYmd,
   expectedDueDateCandidates,
   expectedDueDateYmd,
+  inferDueDayFromYmds,
   isValidDueDay,
 } from "./expected-due";
 
@@ -40,5 +42,51 @@ describe("expectedDueDateCandidates", () => {
       "2027-01-31",
       "2027-02-28",
     ]);
+  });
+});
+
+describe("dueDayFromYmd", () => {
+  it("reads the calendar day from an ISO due date", () => {
+    expect(dueDayFromYmd("2026-05-25")).toBe(25);
+    expect(dueDayFromYmd("2026-06-02")).toBe(2);
+  });
+
+  it("rejects malformed values", () => {
+    expect(dueDayFromYmd("May 25, 2026")).toBeNull();
+    expect(dueDayFromYmd("2026-05-00")).toBeNull();
+    expect(dueDayFromYmd("")).toBeNull();
+  });
+});
+
+describe("inferDueDayFromYmds", () => {
+  it("returns the only observed day", () => {
+    expect(inferDueDayFromYmds(["2026-04-27"])).toBe(27);
+  });
+
+  it("picks the most frequent day across months", () => {
+    expect(
+      inferDueDayFromYmds([
+        "2026-02-25",
+        "2026-03-25",
+        "2026-04-27",
+        "2026-05-25",
+      ]),
+    ).toBe(25);
+  });
+
+  it("breaks ties with the latest date", () => {
+    expect(
+      inferDueDayFromYmds([
+        "2026-02-02",
+        "2026-03-05",
+        "2026-05-04",
+        "2026-06-02",
+      ]),
+    ).toBe(2);
+  });
+
+  it("ignores unparseable dates", () => {
+    expect(inferDueDayFromYmds(["—", "2026-05-28", ""])).toBe(28);
+    expect(inferDueDayFromYmds([])).toBeNull();
   });
 });

@@ -162,6 +162,48 @@ function last4FromEmailSubject(
 }
 
 /**
+ * Pick a last-4 from SOA text / AI without requiring the card to already exist.
+ * Returns null when multiple candidates conflict and AI does not disambiguate.
+ */
+export function pickDetectedCardLast4(
+  text: string,
+  aiLast4?: string | null,
+  unlockLast4?: string,
+): string | null {
+  const candidates = extractCardLast4Candidates(text);
+  const aiDigits = String(aiLast4 ?? "").replace(/\D/g, "");
+  const ai =
+    aiDigits.length >= 4 ? normalizeCardLast4(aiDigits.slice(-4)) : "";
+
+  if (ai) {
+    if (candidates.length === 0 || candidates.includes(ai)) return ai;
+  }
+
+  if (candidates.length === 1) return candidates[0]!;
+
+  if (candidates.length > 1) {
+    // Prefer the first "ending in / last 4" style match when several PANs appear.
+    const endingRe =
+      /(?:ending|last\s+4|card\s+(?:no\.?|number))\s*(?:in|is|:)?\s*(?:\*{2,}\s*)?(\d{4})\b/gi;
+    let m: RegExpExecArray | null;
+    while ((m = endingRe.exec(text.replace(/\s+/g, " "))) !== null) {
+      const digits = normalizeCardLast4(m[1]!);
+      if (candidates.includes(digits)) return digits;
+    }
+    return null;
+  }
+
+  const unlockDigits = String(unlockLast4 ?? "").replace(/\D/g, "");
+  const unlock =
+    unlockDigits.length >= 4
+      ? normalizeCardLast4(unlockDigits.slice(-4))
+      : "";
+  if (unlock && unlock !== "0000") return unlock;
+
+  return null;
+}
+
+/**
  * Prefer the card last-4 printed on the SOA over the credential that unlocked the PDF.
  * Same-bank cards often share one PDF password; the first password in CARDS_JSON would
  * otherwise label every PDF with the same last-4.

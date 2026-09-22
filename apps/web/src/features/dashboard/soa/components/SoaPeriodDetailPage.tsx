@@ -153,6 +153,7 @@ function SoaPeriodDetailBody({
     void utils.soa.listPeriods.invalidate();
     void utils.reminders.listDue.invalidate();
     void utils.overview.stats.invalidate();
+    void utils.creditCards.list.invalidate();
   });
 
   const paidDues = useMemo(
@@ -198,6 +199,7 @@ function SoaPeriodDetailBody({
               onChange={manualUpload.handleFileInputChange}
             />
             <Button
+              type="button"
               variant="outline"
               onClick={() => manualUpload.triggerFilePicker()}
               disabled={manualUpload.isPending || runPipeline.isPending}

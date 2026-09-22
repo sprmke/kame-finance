@@ -6,6 +6,7 @@ import { parseDueDateToYmd } from "@/lib/due/parse-due-date";
 import { normalizeCardLast4 } from "@/lib/due/normalize";
 import { pickCanonicalSoaStatements } from "@/lib/soa/statement-identity";
 
+import { creditCardService } from "./credit-card.service";
 import {
   categorizeTransaction,
   transactionCategoryService,
@@ -81,6 +82,7 @@ export const soaPersistService = {
     }
 
     await collapseDuplicateStatements(userId);
+    await creditCardService.syncDueDaysFromStatements(userId);
 
     return { saved, updated, unavailable };
   },

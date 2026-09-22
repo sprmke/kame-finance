@@ -9,4 +9,11 @@ describe("manualSoaSavedMessage", () => {
     expect(manualSoaSavedMessage(2, 1)).toBe("2 added, 1 updated");
     expect(manualSoaSavedMessage(0, 2)).toBe("2 statements updated");
   });
+
+  test("mentions auto-added cards", () => {
+    expect(manualSoaSavedMessage(1, 0, 1)).toBe("Card added · Statement added");
+    expect(manualSoaSavedMessage(2, 0, 2)).toBe(
+      "2 cards added · 2 statements added",
+    );
+  });
 });

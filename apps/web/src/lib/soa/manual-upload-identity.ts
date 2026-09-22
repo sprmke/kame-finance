@@ -1,5 +1,8 @@
 import { normalizeCardLast4 } from "@/lib/due/normalize";
-import { resolveCardLast4FromSoaText } from "@/lib/soa/card-last4-from-text";
+import {
+  pickDetectedCardLast4,
+  resolveCardLast4FromSoaText,
+} from "@/lib/soa/card-last4-from-text";
 import { normalizeSoaDisplayDate } from "@/lib/soa/calendar-month";
 import {
   bankLabelForIssuer,
@@ -154,6 +157,55 @@ export function identityIsAssignedToKnownCard(
       c.issuer.toLowerCase() === issuer &&
       normalizeCardLast4(c.last4) === normalizeCardLast4(last4),
   );
+}
+
+/**
+ * Resolve bank + last-4 for a manual upload. Prefers a match against the user's
+ * existing cards; otherwise accepts an unambiguous detection from text/AI so the
+ * card can be auto-created.
+ */
+export function resolveManualUploadIdentity(input: {
+  text: string;
+  cards: CardCredential[];
+  unlockLast4: string;
+  ai: SoaAiExtractFields | null;
+}): { issuerId: string; last4: string; matchedKnownCard: boolean } {
+  const known = resolveIssuerAndLast4(input);
+  if (
+    identityIsAssignedToKnownCard(known.issuerId, known.last4, input.cards)
+  ) {
+    return {
+      issuerId: known.issuerId,
+      last4: known.last4,
+      matchedKnownCard: true,
+    };
+  }
+
+  const issuer =
+    detectIssuerFromSoaText(input.text) ??
+    parseIssuerId(input.ai?.issuerId) ??
+    parseIssuerId(known.issuerId);
+
+  const last4 =
+    pickDetectedCardLast4(
+      input.text,
+      input.ai?.cardLast4,
+      input.unlockLast4,
+    ) ?? "";
+
+  if (!issuer || !last4) {
+    return { issuerId: "", last4: "", matchedKnownCard: false };
+  }
+
+  return {
+    issuerId: issuer,
+    last4,
+    matchedKnownCard: identityIsAssignedToKnownCard(
+      issuer,
+      last4,
+      input.cards,
+    ),
+  };
 }
 
 export function normalizeSoaRowDates(row: SoaRow): SoaRow {
