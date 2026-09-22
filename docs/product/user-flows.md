@@ -20,7 +20,7 @@
 
 ### Missing SOA fallback
 
-1. Each card has a required recurring due day (1–31; shorter months use their last day).
+1. Each card has a required recurring due day (1–31; shorter months use their last day). Parsed SOA fills this from the card’s due-date history when it was left blank.
 2. When no parsed SOA exists as the reminder window opens, Kame Finance creates an expected due entry.
 3. Dashboard, Telegram/Slack, and Google Calendar flag the missing SOA and direct the user to check email or the bank app.
 4. Expected entries cannot be marked paid because the amount is unknown.
@@ -29,9 +29,10 @@
 ### Manual SOA upload
 
 1. Open a period on **SOA** and choose **Upload** (PDF or image).
-2. Kame Finance detects bank, card, and statement month; AI fills gaps when parsers/OCR cannot.
-3. Multi-month periods attach to the matching month. A mismatch vs the current period asks to attach here or save the detected month.
-4. The statement is stored like a Gmail SOA: totals, transactions, analytics, and due entries. Only cards you already added can be assigned.
+2. Kame Finance detects bank, card last-4, and statement month; AI fills gaps when parsers/OCR cannot.
+3. If the detected card is not in **Credit cards** yet, it is added automatically (due day from the SOA when available; set the PDF password later in Cards if Gmail unlock is needed).
+4. Multi-month periods attach to the matching month. A mismatch vs the current period asks to attach here or save the detected month.
+5. The statement is stored like a Gmail SOA: totals, transactions, analytics, and due entries.
 
 ### SOA period analytics
 

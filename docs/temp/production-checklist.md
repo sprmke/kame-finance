@@ -63,7 +63,7 @@ See **`docs/temp/supabase-setup.md`** for the full walkthrough.
 - [ ] Error monitoring (Sentry or Vercel logs alerts)
 - [ ] Formal Drizzle migrations instead of `db:push` only
 - [ ] Apply `0000_exotic_masque.sql` + `0001_tired_katie_power.sql` (or `bun run db:migrate`) — `0001` dedupes `due_entries` before adding the unique index
-- [ ] Set recurring **due day** (1–31) on every active card — required for missing-SOA fallback; cards with `due_day` NULL are skipped until edited (`SELECT id, label FROM credit_cards WHERE due_day IS NULL AND deleted_at IS NULL`)
+- [ ] Recurring **due day** (1–31) is required for missing-SOA fallback. Cards with `due_day` NULL are skipped until SOA history fills them or they are edited (`SELECT id, label FROM credit_cards WHERE due_day IS NULL AND deleted_at IS NULL`)
 
 ## Required production env vars
 

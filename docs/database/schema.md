@@ -5,7 +5,7 @@
 ## Core tables (planned)
 
 - `users` — profile extension for Supabase Auth users
-- `credit_cards` — card credentials, required-on-save recurring `due_day` (1–31 fallback when SOA is missing), encrypted PDF password, optional `soa_subject`, and `color`
+- `credit_cards` — card credentials, required-on-save recurring `due_day` (1–31 fallback when SOA is missing; also filled from parsed SOA due-date history), encrypted PDF password, optional `soa_subject`, and `color`. Manual SOA upload can auto-create a row when issuer + last-4 are detected on a new statement.
 - `soa_statements`, `soa_transactions` — parsed SOA data (Gmail or manual upload; file in `pdf_storage_path`)
 - `user_transaction_categories` — per-user custom category slugs/labels (e.g. AI-created)
 - `due_entries` — payment due tracking; `source` is `soa` or preventive `expected`
