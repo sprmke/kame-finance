@@ -2,10 +2,11 @@ import { z } from "zod";
 
 import { TRPCError } from "@trpc/server";
 
+import { BANK_ISSUERS } from "@/lib/db/schema/credit-cards";
 import { protectedProcedure, router } from "@/server/trpc";
 import { creditCardService } from "@/server/services/credit-card.service";
 
-const bankIssuerSchema = z.enum(["metrobank", "rcbc", "bpi", "unionbank"]);
+const bankIssuerSchema = z.enum(BANK_ISSUERS);
 
 const reminderFieldsSchema = {
   reminderWindowDays: z.number().int().min(0).max(60).optional().nullable(),

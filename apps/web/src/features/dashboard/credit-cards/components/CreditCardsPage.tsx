@@ -55,7 +55,6 @@ import { api } from "@/lib/api/client";
 import { normalizeCardLast4 } from "@/lib/due/normalize";
 import { useListPagination } from "@/lib/hooks/use-list-pagination";
 import {
-  BANK_ISSUERS,
   DEFAULT_CARD_COLORS,
   DEFAULT_SOA_SUBJECTS,
   defaultSoaSubject,
@@ -74,6 +73,7 @@ import {
   DEFAULT_REMINDER_WINDOW_DAYS,
   formatReminderSummary,
 } from "@/lib/reminders/reminder-labels";
+import { BankIssuerSelect } from "./BankIssuerSelect";
 import { CreditCardsTable } from "./CreditCardsTable";
 import { CardColorPicker } from "./CardColorPicker";
 import { CreditCardsLoadingView } from "./CreditCardsLoadingView";
@@ -808,30 +808,16 @@ function CardForm({
         id={`google-account-${creditCardId ?? "add"}`}
       />
       <div className="space-y-2">
-        <Label>Bank</Label>
-        <Select
-          key={issuer}
+        <Label htmlFor={`bank-${creditCardId ?? "add"}`}>Bank</Label>
+        <BankIssuerSelect
+          id={`bank-${creditCardId ?? "add"}`}
           value={issuer}
-          onValueChange={(v) => {
-            const next = normalizeBankIssuer(v);
+          onValueChange={(next) => {
             setIssuer(next);
             setSoaSubject(defaultSoaSubject(next));
             setColor(DEFAULT_CARD_COLORS[next]);
           }}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select bank">
-              {formatBankIssuer(issuer)}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {BANK_ISSUERS.map((i) => (
-              <SelectItem key={i} value={i}>
-                {formatBankIssuer(i)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
       </div>
       <div className="space-y-2">
         <Label>Label</Label>

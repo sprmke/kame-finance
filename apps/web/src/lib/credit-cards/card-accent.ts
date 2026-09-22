@@ -6,9 +6,8 @@ import {
   type BankIssuer,
 } from "@/lib/db/schema/credit-cards";
 
-export const ISSUER_ACCENTS: Record<
-  BankIssuer,
-  { dot: string; badge: string; border: string }
+export const ISSUER_ACCENTS: Partial<
+  Record<BankIssuer, { dot: string; badge: string; border: string }>
 > = {
   metrobank: {
     dot: "bg-[hsl(var(--chart-1))]",
@@ -49,10 +48,15 @@ export type ResolvedCardAccent = {
 };
 
 export function issuerAccent(issuerId: string) {
-  if (issuerId in ISSUER_ACCENTS) {
-    return ISSUER_ACCENTS[issuerId as BankIssuer];
-  }
-  return ISSUER_ACCENTS.bpi;
+  const accent = ISSUER_ACCENTS[issuerId as BankIssuer];
+  if (accent) return accent;
+  return (
+    ISSUER_ACCENTS.bpi ?? {
+      dot: "bg-primary",
+      badge: "bg-primary/10 text-primary border-primary/25",
+      border: "border-l-4 border-l-primary",
+    }
+  );
 }
 
 export function displayCardColor(
