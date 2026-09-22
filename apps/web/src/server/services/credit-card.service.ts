@@ -30,7 +30,7 @@ function stripEncryptedPassword<T extends { pdfPasswordEncrypted: string }>(
 
 function statementMatchesCard(
   statement: {
-    soaUnavailable: boolean;
+    soaUnavailable: boolean | null;
     dueDateYmd: string | null;
     creditCardId: string | null;
     issuerId: string;
