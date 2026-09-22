@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { BANK_ISSUER_LABELS, BANK_ISSUERS } from "@/lib/db/schema/credit-cards";
+
 import type {
   BankDefinition,
   CardCredential,
@@ -86,46 +88,46 @@ export function loadCardCredentials(): CardCredential[] {
   }
 }
 
-export const banks: BankDefinition[] = [
-  {
-    id: "metrobank",
-    label: "Metrobank",
-    buildQuery: (ctx: GmailMonthContext) =>
-      [
-        'subject:"Metrobank Credit Card MSOA Statement of Account"',
-        `(${ctx.monthNum2} OR "${ctx.monthLong}" OR "${ctx.monthShort}")`,
-        `"${ctx.year}"`,
-      ].join(" "),
-  },
-  {
-    id: "rcbc",
-    label: "RCBC",
-    buildQuery: (ctx) =>
-      [
-        'subject:"FLEX VISA eStatement"',
-        `("${ctx.monthShort} ${ctx.year}" OR "${ctx.monthLong} ${ctx.year}")`,
-      ].join(" "),
-  },
-  {
-    id: "bpi",
-    label: "BPI",
-    buildQuery: (ctx) =>
-      [
-        'subject:("BPI Credit Card Electronic Statement" OR "Electronic Statement of Account")',
-        `("${ctx.monthShort} ${ctx.year}" OR "${ctx.monthLong} ${ctx.year}")`,
-      ].join(" "),
-  },
-  {
-    id: "unionbank",
-    label: "Unionbank",
-    buildQuery: (ctx) =>
-      [
-        'subject:("REWARDS VISA PLATINUM" OR "REWARDS VISA")',
-        "2600",
-        `("${ctx.monthLong} ${ctx.year}" OR "${ctx.monthShort} ${ctx.year}")`,
-      ].join(" "),
-  },
-];
+function genericSoaQuery(label: string, ctx: GmailMonthContext): string {
+  const escaped = label.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return [
+    `subject:("${escaped}" (statement OR eStatement OR "e-Statement" OR SOA OR "Statement of Account"))`,
+    `("${ctx.monthShort} ${ctx.year}" OR "${ctx.monthLong} ${ctx.year}")`,
+  ].join(" ");
+}
+
+const SPECIFIC_QUERIES: Record<string, (ctx: GmailMonthContext) => string> = {
+  metrobank: (ctx) =>
+    [
+      'subject:"Metrobank Credit Card MSOA Statement of Account"',
+      `(${ctx.monthNum2} OR "${ctx.monthLong}" OR "${ctx.monthShort}")`,
+      `"${ctx.year}"`,
+    ].join(" "),
+  rcbc: (ctx) =>
+    [
+      'subject:"FLEX VISA eStatement"',
+      `("${ctx.monthShort} ${ctx.year}" OR "${ctx.monthLong} ${ctx.year}")`,
+    ].join(" "),
+  bpi: (ctx) =>
+    [
+      'subject:("BPI Credit Card Electronic Statement" OR "Electronic Statement of Account")',
+      `("${ctx.monthShort} ${ctx.year}" OR "${ctx.monthLong} ${ctx.year}")`,
+    ].join(" "),
+  unionbank: (ctx) =>
+    [
+      'subject:("REWARDS VISA PLATINUM" OR "REWARDS VISA")',
+      "2600",
+      `("${ctx.monthLong} ${ctx.year}" OR "${ctx.monthShort} ${ctx.year}")`,
+    ].join(" "),
+};
+
+export const banks: BankDefinition[] = BANK_ISSUERS.map((id) => ({
+  id,
+  label: BANK_ISSUER_LABELS[id],
+  buildQuery:
+    SPECIFIC_QUERIES[id] ??
+    ((ctx) => genericSoaQuery(BANK_ISSUER_LABELS[id], ctx)),
+}));
 
 export function buildGmailQuery(
   bank: BankDefinition,

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { BANK_ISSUERS } from "@/lib/db/schema/credit-cards";
 import type { AiApiKeyVerifyResult } from "@/lib/ai/types";
 import type {
   CreditCardReceiptAiResult,
@@ -167,6 +168,8 @@ Expected payment target (if this receipt should match it):
 `
     : "";
 
+  const issuerIds = BANK_ISSUERS.join("|");
+
   return `You are validating a Philippine credit card payment receipt screenshot or PDF.
 The payer may use GCash, Maya, MariBank, BDO, Metrobank, BPI, RCBC, Unionbank, or other bank/e-wallet apps to pay a credit card bill.
 
@@ -185,7 +188,7 @@ Analyze the image and return ONLY valid JSON (no markdown) with this exact shape
   "card_last4": "1234 or null",
   "amount_php": number or null,
   "amount_raw": "PHP 5,000.00 or null",
-  "bank_or_wallet": "gcash|maya|metrobank|bpi|rcbc|unionbank|bdo|maribank|other|null",
+  "bank_or_wallet": "gcash|maya|${issuerIds}|other|null",
   "payment_date": "YYYY-MM-DD or null",
   "reference_number": "string or null"
 }

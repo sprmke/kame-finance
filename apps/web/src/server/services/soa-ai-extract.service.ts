@@ -1,5 +1,6 @@
 import "server-only";
 
+import { BANK_ISSUERS } from "@/lib/db/schema/credit-cards";
 import {
   parseSoaAiExtractJson,
   type SoaAiExtractResult,
@@ -34,10 +35,12 @@ function buildPrompt(
     )
     .join("\n");
 
+  const issuerIds = BANK_ISSUERS.map((id) => `"${id}"`).join(" | ");
+
   return `You extract Philippine credit-card statement of account (SOA) fields.
 Return JSON only:
 {
-  "issuer_id": "metrobank" | "rcbc" | "bpi" | "unionbank" | null,
+  "issuer_id": ${issuerIds} | null,
   "card_last4": "1234 or null",
   "statement_date": "Mon DD, YYYY or null",
   "due_date": "Mon DD, YYYY or null",
@@ -47,7 +50,7 @@ Return JSON only:
 }
 
 Rules:
-- issuer_id must be one of the four banks or null.
+- issuer_id must be one of those bank ids or null.
 - Prefer matching card_last4 to these known cards when possible:
 ${cardLines || "- (none)"}
 - Amounts are PHP. No currency symbol.

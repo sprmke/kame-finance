@@ -1,10 +1,74 @@
 import {
   BANK_ISSUER_LABELS,
-  BANK_ISSUERS,
+  parseBankIssuerId,
   type BankIssuer,
 } from "@/lib/db/schema/credit-cards";
 
 const ISSUER_PATTERNS: { id: BankIssuer; patterns: RegExp[] }[] = [
+  {
+    id: "uniondigital-bank",
+    patterns: [/\buniondigital\b/i, /union\s+digital\s+bank/i],
+  },
+  {
+    id: "cimb-bank-philippines",
+    patterns: [/\bcimb\b/i],
+  },
+  {
+    id: "gotyme-bank",
+    patterns: [/\bgotyme\b/i, /go\s*tyme/i],
+  },
+  {
+    id: "uno-digital-bank",
+    patterns: [/\buno\s+digital\b/i, /\buno\s+bank\b/i],
+  },
+  {
+    id: "tonik-bank",
+    patterns: [/\btonik\b/i],
+  },
+  {
+    id: "maribank",
+    patterns: [/\bmaribank\b/i, /\bmari\s+bank\b/i],
+  },
+  {
+    id: "asia-united-bank",
+    patterns: [/\basia\s+united\b/i, /\baub\b/i],
+  },
+  {
+    id: "bank-of-commerce",
+    patterns: [/bank\s+of\s+commerce/i, /\bbocom\b/i],
+  },
+  {
+    id: "robinsons-bank",
+    patterns: [/robinsons?\s+bank/i],
+  },
+  {
+    id: "eastwest-bank",
+    patterns: [/\beastwest\b/i, /east\s+west\s+bank/i],
+  },
+  {
+    id: "security-bank",
+    patterns: [/security\s+bank/i],
+  },
+  {
+    id: "land-bank",
+    patterns: [/\blandbank\b/i, /land\s+bank/i],
+  },
+  {
+    id: "psbank",
+    patterns: [/\bpsbank\b/i, /\bps\s+bank\b/i],
+  },
+  {
+    id: "chinabank",
+    patterns: [/\bchinabank\b/i, /china\s+bank/i, /china\s+banking/i],
+  },
+  {
+    id: "pnb",
+    patterns: [/\bpnb\b/i, /philippine\s+national\s+bank/i],
+  },
+  {
+    id: "bdo",
+    patterns: [/\bbdo\b/i, /bdo\s+unibank/i],
+  },
   {
     id: "metrobank",
     patterns: [/\bmetrobank\b/i, /\bmfree\b/i, /\bmsoa\b/i],
@@ -45,21 +109,13 @@ export function detectIssuerFromSoaText(text: string): BankIssuer | null {
 }
 
 export function bankLabelForIssuer(issuerId: string): string {
-  const id = issuerId.toLowerCase();
-  if ((BANK_ISSUERS as readonly string[]).includes(id)) {
-    return BANK_ISSUER_LABELS[id as BankIssuer];
-  }
+  const id = parseBankIssuerId(issuerId);
+  if (id) return BANK_ISSUER_LABELS[id];
   return issuerId;
 }
 
 export function parseIssuerId(
   raw: string | null | undefined,
 ): BankIssuer | null {
-  const id = String(raw ?? "")
-    .trim()
-    .toLowerCase();
-  if ((BANK_ISSUERS as readonly string[]).includes(id)) {
-    return id as BankIssuer;
-  }
-  return null;
+  return parseBankIssuerId(raw);
 }
