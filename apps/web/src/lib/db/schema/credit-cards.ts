@@ -15,8 +15,124 @@ import {
 
 import { accounts, users } from "./users";
 
-export const BANK_ISSUERS = ["metrobank", "rcbc", "bpi", "unionbank"] as const;
-export type BankIssuer = (typeof BANK_ISSUERS)[number];
+/**
+ * Philippine credit-card issuers. List and grouping match Kame Homes
+ * `PH_PAYMENT_PROVIDERS` banks + digital banks (e-wallets omitted — they are
+ * not card issuers). IDs stay kebab-case so existing `bpi` / `metrobank` /
+ * `rcbc` / `unionbank` rows keep working.
+ */
+export type BankIssuerGroup = "digital_bank" | "bank";
+
+export const BANK_ISSUER_GROUP_ORDER: readonly BankIssuerGroup[] = [
+  "digital_bank",
+  "bank",
+];
+
+export const BANK_ISSUER_GROUP_LABELS: Record<BankIssuerGroup, string> = {
+  digital_bank: "Digital banks",
+  bank: "Traditional banks",
+};
+
+export const PH_BANK_ISSUERS = [
+  { id: "maribank", label: "MariBank", group: "digital_bank" },
+  { id: "gotyme-bank", label: "GoTyme Bank", group: "digital_bank" },
+  {
+    id: "uniondigital-bank",
+    label: "UnionDigital Bank",
+    group: "digital_bank",
+  },
+  { id: "tonik-bank", label: "Tonik Bank", group: "digital_bank" },
+  { id: "uno-digital-bank", label: "UNO Digital Bank", group: "digital_bank" },
+  {
+    id: "cimb-bank-philippines",
+    label: "CIMB Bank Philippines",
+    group: "digital_bank",
+  },
+  { id: "bdo", label: "BDO", group: "bank" },
+  { id: "bpi", label: "BPI", group: "bank" },
+  { id: "metrobank", label: "Metrobank", group: "bank" },
+  { id: "unionbank", label: "Unionbank", group: "bank" },
+  { id: "land-bank", label: "Land Bank of the Philippines", group: "bank" },
+  { id: "security-bank", label: "Security Bank", group: "bank" },
+  { id: "rcbc", label: "RCBC", group: "bank" },
+  { id: "chinabank", label: "Chinabank", group: "bank" },
+  { id: "pnb", label: "PNB", group: "bank" },
+  { id: "eastwest-bank", label: "EastWest Bank", group: "bank" },
+  { id: "psbank", label: "PSBank", group: "bank" },
+  { id: "robinsons-bank", label: "Robinsons Bank", group: "bank" },
+  { id: "asia-united-bank", label: "Asia United Bank", group: "bank" },
+  { id: "bank-of-commerce", label: "Bank of Commerce", group: "bank" },
+] as const;
+
+export type BankIssuer = (typeof PH_BANK_ISSUERS)[number]["id"];
+
+export const BANK_ISSUERS = PH_BANK_ISSUERS.map((entry) => entry.id) as [
+  BankIssuer,
+  ...BankIssuer[],
+];
+
+const BANK_ISSUER_SET = new Set<string>(BANK_ISSUERS);
+
+export const BANK_ISSUER_LABELS: Record<BankIssuer, string> =
+  Object.fromEntries(
+    PH_BANK_ISSUERS.map((entry) => [entry.id, entry.label]),
+  ) as Record<BankIssuer, string>;
+
+const BANK_ISSUER_ALIASES: Record<string, BankIssuer> = {
+  "bdo unibank": "bdo",
+  bdo: "bdo",
+  "bank of the philippine islands": "bpi",
+  "union bank": "unionbank",
+  unionbank: "unionbank",
+  "land bank": "land-bank",
+  landbank: "land-bank",
+  "land bank of the philippines": "land-bank",
+  securitybank: "security-bank",
+  "east west bank": "eastwest-bank",
+  eastwest: "eastwest-bank",
+  "eastwest bank": "eastwest-bank",
+  "china bank": "chinabank",
+  "china banking": "chinabank",
+  "philippine national bank": "pnb",
+  "ps bank": "psbank",
+  "robinson bank": "robinsons-bank",
+  "robinsons bank": "robinsons-bank",
+  "asia united": "asia-united-bank",
+  aub: "asia-united-bank",
+  "bank of commerce": "bank-of-commerce",
+  bocom: "bank-of-commerce",
+  gotyme: "gotyme-bank",
+  "gotyme bank": "gotyme-bank",
+  uniondigital: "uniondigital-bank",
+  "union digital": "uniondigital-bank",
+  "union digital bank": "uniondigital-bank",
+  tonik: "tonik-bank",
+  "tonik bank": "tonik-bank",
+  uno: "uno-digital-bank",
+  "uno digital": "uno-digital-bank",
+  "uno digital bank": "uno-digital-bank",
+  cimb: "cimb-bank-philippines",
+  "cimb bank": "cimb-bank-philippines",
+  "cimb bank philippines": "cimb-bank-philippines",
+  mari: "maribank",
+  maribank: "maribank",
+};
+
+export function isBankIssuer(value: string): value is BankIssuer {
+  return BANK_ISSUER_SET.has(value);
+}
+
+export function issuersByGroup(
+  group: BankIssuerGroup,
+): (typeof PH_BANK_ISSUERS)[number][] {
+  return PH_BANK_ISSUERS.filter((entry) => entry.group === group);
+}
+
+export function bankIssuerGroup(issuer: string): BankIssuerGroup | null {
+  const id = parseBankIssuerId(issuer);
+  if (!id) return null;
+  return PH_BANK_ISSUERS.find((entry) => entry.id === id)?.group ?? null;
+}
 
 /** Minutes between reminder pings while inside the due window. */
 export const REMINDER_INTERVALS = [
@@ -43,35 +159,59 @@ export function normalizeReminderIntervalMinutes(
   );
 }
 
-export const BANK_ISSUER_LABELS: Record<BankIssuer, string> = {
-  metrobank: "Metrobank",
-  rcbc: "RCBC",
-  bpi: "BPI",
-  unionbank: "Unionbank",
-};
-
 export function formatBankIssuer(issuer: string): string {
-  if (issuer in BANK_ISSUER_LABELS) {
-    return BANK_ISSUER_LABELS[issuer as BankIssuer];
-  }
+  const id = parseBankIssuerId(issuer);
+  if (id) return BANK_ISSUER_LABELS[id];
   return issuer;
 }
 
-export function normalizeBankIssuer(issuer: string): BankIssuer {
-  const normalized = issuer.trim().toLowerCase();
-  if ((BANK_ISSUERS as readonly string[]).includes(normalized)) {
-    return normalized as BankIssuer;
+export function parseBankIssuerId(
+  raw: string | null | undefined,
+): BankIssuer | null {
+  const trimmed = String(raw ?? "").trim();
+  if (!trimmed) return null;
+  if (isBankIssuer(trimmed)) return trimmed;
+
+  const lower = trimmed.toLowerCase();
+  if (isBankIssuer(lower)) return lower;
+
+  const collapsed = lower.replace(/\s+/g, " ");
+  if (collapsed in BANK_ISSUER_ALIASES) {
+    return BANK_ISSUER_ALIASES[collapsed]!;
   }
-  return "bpi";
+
+  const slug = collapsed.replace(/\s+/g, "-");
+  if (isBankIssuer(slug)) return slug;
+  if (slug in BANK_ISSUER_ALIASES) {
+    return BANK_ISSUER_ALIASES[slug]!;
+  }
+
+  const byLabel = PH_BANK_ISSUERS.find(
+    (entry) => entry.label.toLowerCase() === collapsed,
+  );
+  return byLabel?.id ?? null;
+}
+
+export function normalizeBankIssuer(issuer: string): BankIssuer {
+  return parseBankIssuerId(issuer) ?? "bpi";
 }
 
 /** Default Gmail SOA subject line per bank (form default + SOA search). */
-export const DEFAULT_SOA_SUBJECTS: Record<BankIssuer, string> = {
+const SOA_SUBJECT_OVERRIDES: Partial<Record<BankIssuer, string>> = {
   metrobank: "Metrobank Credit Card MSOA Statement of Account",
   rcbc: "FLEX VISA eStatement",
   bpi: "BPI Credit Card Electronic Statement of Account",
   unionbank: "REWARDS VISA PLATINUM Credit Card e-Statement",
 };
+
+export const DEFAULT_SOA_SUBJECTS: Record<BankIssuer, string> =
+  Object.fromEntries(
+    BANK_ISSUERS.map((id) => [
+      id,
+      SOA_SUBJECT_OVERRIDES[id] ??
+        `${BANK_ISSUER_LABELS[id]} Credit Card Statement of Account`,
+    ]),
+  ) as Record<BankIssuer, string>;
 
 export function defaultSoaSubject(issuer: BankIssuer): string {
   return DEFAULT_SOA_SUBJECTS[issuer];
@@ -107,10 +247,26 @@ export function soaSubjectForStorage(
 
 /** Default accent colors for new cards (hex). */
 export const DEFAULT_CARD_COLORS: Record<BankIssuer, string> = {
-  metrobank: "#00156D",
-  rcbc: "#3884D9",
+  maribank: "#EE4D2D",
+  "gotyme-bank": "#00C853",
+  "uniondigital-bank": "#F7931E",
+  "tonik-bank": "#FF3B7A",
+  "uno-digital-bank": "#5B2CFF",
+  "cimb-bank-philippines": "#ED1C24",
+  bdo: "#0033A0",
   bpi: "#B11116",
+  metrobank: "#00156D",
   unionbank: "#F7931E",
+  "land-bank": "#006B3F",
+  "security-bank": "#E31837",
+  rcbc: "#3884D9",
+  chinabank: "#003DA5",
+  pnb: "#002B5C",
+  "eastwest-bank": "#FF6600",
+  psbank: "#00A651",
+  "robinsons-bank": "#0066B3",
+  "asia-united-bank": "#E31C23",
+  "bank-of-commerce": "#1B4F72",
 };
 
 const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/;
