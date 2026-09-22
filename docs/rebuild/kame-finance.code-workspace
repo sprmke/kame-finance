@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../kame-homes"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.mdc": "markdown"
+		},
+		"typescript.tsdk": "node_modules/typescript/lib",
+		"typescript.enablePromptUseWorkspaceTsdk": true,
+		"tailwindCSS.experimental.configFile": "apps/web/tailwind.config.ts",
+		"terminal.integrated.defaultProfile.osx": "zsh"
+	}
+}
