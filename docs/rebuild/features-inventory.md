@@ -34,19 +34,19 @@
 
 ## 3. Credit cards
 
-| ID  | Feature                             | Notes                                                                                                                                                 |
-| --- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C1  | List / create / edit / delete cards | Full CRUD                                                                                                                                             |
-| C2  | Issuers                             | Kame Homes PH banks + digital banks (20). Dedicated SOA parsers remain Metrobank, RCBC, BPI, Unionbank; others use generic parse + AI / manual upload |
-| C3  | Card identity                       | Last-4, label, optional PAN, contact line                                                                                                             |
-| C4  | PDF password                        | Encrypted at rest; never returned in API                                                                                                              |
-| C5  | Recurring due day                   | Required 1–31; backfill from SOA history when blank                                                                                                   |
-| C6  | Gmail account per card              | Multi-inbox routing                                                                                                                                   |
-| C7  | Gmail month offset                  | Search prior month when bank timing differs                                                                                                           |
-| C8  | Custom SOA email subject            | Optional Gmail filter                                                                                                                                 |
-| C9  | Card color                          | UI accent                                                                                                                                             |
-| C10 | Active / inactive                   | Disable without delete                                                                                                                                |
-| C11 | Per-card reminder tuning            | Window days, interval minutes, notes                                                                                                                  |
+| ID  | Feature                             | Notes                                                                                                                                                                                                                 |
+| --- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1  | List / create / edit / delete cards | Full CRUD                                                                                                                                                                                                             |
+| C2  | Issuers                             | Maya (e-wallet) + Kame Homes PH digital + traditional banks (21). Dedicated SOA parsers remain Metrobank, RCBC, BPI, Unionbank; Maya has tailored Gmail subject search; others use generic parse + AI / manual upload |
+| C3  | Card identity                       | Last-4, label, optional PAN, contact line                                                                                                                                                                             |
+| C4  | PDF password                        | Encrypted at rest; never returned in API                                                                                                                                                                              |
+| C5  | Recurring due day                   | Required 1–31; backfill from SOA history when blank                                                                                                                                                                   |
+| C6  | Gmail account per card              | Multi-inbox routing                                                                                                                                                                                                   |
+| C7  | Gmail month offset                  | Search prior month when bank timing differs                                                                                                                                                                           |
+| C8  | Custom SOA email subject            | Optional Gmail filter                                                                                                                                                                                                 |
+| C9  | Card color                          | UI accent                                                                                                                                                                                                             |
+| C10 | Active / inactive                   | Disable without delete                                                                                                                                                                                                |
+| C11 | Per-card reminder tuning            | Window days, interval minutes, notes                                                                                                                                                                                  |
 
 ---
 

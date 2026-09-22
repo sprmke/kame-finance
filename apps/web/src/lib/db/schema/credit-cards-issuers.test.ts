@@ -30,7 +30,8 @@ describe("PH bank issuers", () => {
     }
   });
 
-  it("groups match Kame Homes digital + traditional banks", () => {
+  it("groups match Kame Homes e-wallet (card issuers), digital + traditional banks", () => {
+    expect(issuersByGroup("ewallet").map((e) => e.label)).toEqual(["Maya"]);
     expect(issuersByGroup("digital_bank").map((e) => e.label)).toEqual([
       "MariBank",
       "GoTyme Bank",
@@ -64,6 +65,8 @@ describe("PH bank issuers", () => {
     expect(parseBankIssuerId("GoTyme Bank")).toBe("gotyme-bank");
     expect(parseBankIssuerId("Land Bank of the Philippines")).toBe("land-bank");
     expect(parseBankIssuerId("UnionBank")).toBe("unionbank");
+    expect(parseBankIssuerId("PayMaya")).toBe("maya");
+    expect(parseBankIssuerId("Maya Black Credit Card")).toBe("maya");
     expect(parseBankIssuerId("not-a-bank")).toBeNull();
     expect(isBankIssuer("bpi")).toBe(true);
     expect(isBankIssuer("hsbc")).toBe(false);
@@ -79,6 +82,7 @@ describe("PH bank issuers", () => {
     expect(formatBankIssuer("land-bank")).toBe("Land Bank of the Philippines");
     expect(defaultSoaSubject("bpi")).toContain("BPI");
     expect(defaultSoaSubject("bdo")).toContain("BDO");
+    expect(defaultSoaSubject("maya")).toContain("Maya Black");
   });
 
   it("create/update validation accepts every catalog issuer", () => {

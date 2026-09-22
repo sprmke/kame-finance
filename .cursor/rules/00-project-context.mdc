@@ -29,7 +29,7 @@ alwaysApply: true
 - **SOA pipeline**: Gmail fetch → PDF unlock/parse → summary PDF → state upsert
 - **Due tracking**: Minimum/total due, paid status, interest charges
 - **Mark paid**: UI, Telegram webhook, receipt AI validation (ported from CLI)
-- **Banks (PH)**: Register any issuer from the Kame Homes PH bank list (digital + traditional). Dedicated SOA parsers: Metrobank, RCBC, BPI, Unionbank
+- **Banks (PH)**: Register issuers from `PH_BANK_ISSUERS` (Maya e-wallet + Kame Homes digital + traditional banks). Dedicated SOA parsers: Metrobank, RCBC, BPI, Unionbank
 
 ### Legacy reference
 

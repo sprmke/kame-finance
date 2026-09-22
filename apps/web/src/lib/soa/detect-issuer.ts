@@ -6,6 +6,15 @@ import {
 
 const ISSUER_PATTERNS: { id: BankIssuer; patterns: RegExp[] }[] = [
   {
+    id: "maya",
+    patterns: [
+      /\bmaya\s+black\b/i,
+      /\bmaya\s+credit\s+card\b/i,
+      /\bpaymaya\b/i,
+      /\bmaya\s+bank\b/i,
+    ],
+  },
+  {
     id: "uniondigital-bank",
     patterns: [/\buniondigital\b/i, /union\s+digital\s+bank/i],
   },

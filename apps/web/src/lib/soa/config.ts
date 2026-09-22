@@ -97,6 +97,12 @@ function genericSoaQuery(label: string, ctx: GmailMonthContext): string {
 }
 
 const SPECIFIC_QUERIES: Record<string, (ctx: GmailMonthContext) => string> = {
+  maya: (ctx) =>
+    [
+      'subject:("Maya Black Credit Card" OR "Maya Credit Card")',
+      '(billing OR statement OR "Statement of Account")',
+      `("${ctx.monthShort} ${ctx.year}" OR "${ctx.monthLong} ${ctx.year}")`,
+    ].join(" "),
   metrobank: (ctx) =>
     [
       'subject:"Metrobank Credit Card MSOA Statement of Account"',

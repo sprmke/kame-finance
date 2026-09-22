@@ -16,24 +16,29 @@ import {
 import { accounts, users } from "./users";
 
 /**
- * Philippine credit-card issuers. List and grouping match Kame Homes
- * `PH_PAYMENT_PROVIDERS` banks + digital banks (e-wallets omitted — they are
- * not card issuers). IDs stay kebab-case so existing `bpi` / `metrobank` /
- * `rcbc` / `unionbank` rows keep working.
+ * Philippine credit-card issuers. Grouping follows Kame Homes
+ * `PH_PAYMENT_PROVIDERS` (e-wallets that issue cards, digital banks, banks).
+ * Only e-wallet brands with a credit-card / billing-statement product are listed
+ * under `ewallet` (e.g. Maya Black; not GrabPay/ShopeePay). MariBank credit
+ * cards use the digital_bank row. IDs stay kebab-case so existing `bpi` /
+ * `metrobank` / `rcbc` / `unionbank` rows keep working.
  */
-export type BankIssuerGroup = "digital_bank" | "bank";
+export type BankIssuerGroup = "ewallet" | "digital_bank" | "bank";
 
 export const BANK_ISSUER_GROUP_ORDER: readonly BankIssuerGroup[] = [
+  "ewallet",
   "digital_bank",
   "bank",
 ];
 
 export const BANK_ISSUER_GROUP_LABELS: Record<BankIssuerGroup, string> = {
+  ewallet: "E-wallets",
   digital_bank: "Digital banks",
   bank: "Traditional banks",
 };
 
 export const PH_BANK_ISSUERS = [
+  { id: "maya", label: "Maya", group: "ewallet" },
   { id: "maribank", label: "MariBank", group: "digital_bank" },
   { id: "gotyme-bank", label: "GoTyme Bank", group: "digital_bank" },
   {
@@ -116,6 +121,12 @@ const BANK_ISSUER_ALIASES: Record<string, BankIssuer> = {
   "cimb bank philippines": "cimb-bank-philippines",
   mari: "maribank",
   maribank: "maribank",
+  paymaya: "maya",
+  "pay maya": "maya",
+  "maya bank": "maya",
+  "maya black": "maya",
+  "maya black credit card": "maya",
+  "maya credit card": "maya",
 };
 
 export function isBankIssuer(value: string): value is BankIssuer {
@@ -198,6 +209,7 @@ export function normalizeBankIssuer(issuer: string): BankIssuer {
 
 /** Default Gmail SOA subject line per bank (form default + SOA search). */
 const SOA_SUBJECT_OVERRIDES: Partial<Record<BankIssuer, string>> = {
+  maya: "Your Maya Black Credit Card billing statement",
   metrobank: "Metrobank Credit Card MSOA Statement of Account",
   rcbc: "FLEX VISA eStatement",
   bpi: "BPI Credit Card Electronic Statement of Account",
@@ -247,6 +259,7 @@ export function soaSubjectForStorage(
 
 /** Default accent colors for new cards (hex). */
 export const DEFAULT_CARD_COLORS: Record<BankIssuer, string> = {
+  maya: "#00B14F",
   maribank: "#EE4D2D",
   "gotyme-bank": "#00C853",
   "uniondigital-bank": "#F7931E",

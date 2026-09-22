@@ -39,6 +39,14 @@ describe("detectIssuerFromSoaText", () => {
     ).toBe("security-bank");
   });
 
+  it("detects maya", () => {
+    expect(
+      detectIssuerFromSoaText(
+        "Your Maya Black Credit Card billing statement is now available",
+      ),
+    ).toBe("maya");
+  });
+
   it("detects uniondigital without confusing unionbank", () => {
     expect(
       detectIssuerFromSoaText("UnionDigital Bank Credit Card Statement"),
