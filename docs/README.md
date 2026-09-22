@@ -11,6 +11,7 @@ Central hub for **Kame Finance** documentation. Topic-based paths mirror Kame Ho
 | [Database](./database/README.md)                              | Schema design                                                    |
 | [Product](./product/README.md)                                | Design system, user flows, dashboard UX                          |
 | [Implementation](./implementation/README.md)                  | Roadmap and phases                                               |
+| [Rebuild](./rebuild/README.md)                                | **Greenfield app** — feature inventory + design system for v2    |
 | [Temp](./temp/README.md)                                      | Migration notes, exploratory docs                                |
 
 ## By role
