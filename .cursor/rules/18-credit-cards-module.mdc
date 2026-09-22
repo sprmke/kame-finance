@@ -19,12 +19,18 @@ Philippine bank credit card SOA automation. This module must preserve behavior f
 
 ## Supported Banks
 
+Card create/edit lists the same Philippine **digital banks** and **traditional banks** as Kame Homes payment providers (e-wallets omitted). Existing issuer IDs (`metrobank`, `rcbc`, `bpi`, `unionbank`) are unchanged.
+
+Dedicated SOA parsers:
+
 | Issuer ID | Label | Notes |
 | --------- | ----- | ----- |
 | `metrobank` | Metrobank | MSOA / SOA Gmail queries |
 | `rcbc` | RCBC | FLEX VISA; geometry-ordered PDF lines |
 | `bpi` | BPI | Often needs OCR (auto-detected; `BPI_OCR` forces it) |
 | `unionbank` | Unionbank | REWARDS VISA patterns |
+
+Other issuers (BDO, Security Bank, PNB, GoTyme, etc.) can be registered, get due-day reminders, and use generic Gmail subject search + generic parse / AI extract / manual upload. Catalog: `PH_BANK_ISSUERS` in `lib/db/schema/credit-cards.ts`.
 
 ## SOA Pipeline (service layer)
 

@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "apps/web/src/lib/credit-cards/card-accent.ts"
+        ],
+        "createdAt": "2026-09-22T09:16:21.689Z",
+        "reason": "Pre-existing card brand accent stripe; bank-list change only widens the TypeScript type"
+      }
+    ]
+  }
+}

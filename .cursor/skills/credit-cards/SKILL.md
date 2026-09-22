@@ -1,6 +1,6 @@
 ---
 name: credit-cards
-description: Credit card SOA module for Kame Finance — Gmail SOA fetch, PDF parsing (Metrobank, RCBC, BPI, Unionbank), due tracking, mark-paid, receipt AI validation. Use when porting pay-credit-cards CLI or building CC UI/API.
+description: Credit card SOA module for Kame Finance — Gmail SOA fetch, PDF parsing (dedicated Metrobank, RCBC, BPI, Unionbank; other PH banks via generic + AI), due tracking, mark-paid, receipt AI validation. Use when porting pay-credit-cards CLI or building CC UI/API.
 ---
 
 # Credit Cards Module Skill

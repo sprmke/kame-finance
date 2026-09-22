@@ -18,6 +18,8 @@ See `docs/temp/pay-credit-cards-migration.md` and `.cursor/rules/18-credit-cards
 - **Persist:** same `soa_statements` / `soa_transactions` / `due_entries` path as Gmail runs (`sourceMessageId` prefix `manual:`). One statement row per card per billing period; leftover duplicates (two Gmail messages for the same card, or a placeholder beside a later parsed row) are collapsed on persist and when a period is listed or opened.
 
 - Card create requires `dueDay` (integer 1–31); card edit requires it in the UI.
+- **Issuers:** create/edit bank picker lists the same Philippine digital + traditional banks as Kame Homes (`PH_BANK_ISSUERS`). Validation is `z.enum(BANK_ISSUERS)` on create/update. Dedicated SOA parsers remain Metrobank, RCBC, BPI, Unionbank; other issuers use generic Gmail search, generic parse, and AI extract.
+- Parsed SOA statements fill a missing `dueDay` from the card’s due-date history (most frequent calendar day; latest wins ties). New SOA persist refreshes that day from the full history.
 - Parsed SOA statements fill a missing `dueDay` from the card’s due-date history (most frequent calendar day; latest wins ties). New SOA persist refreshes that day from the full history.
 - The monthly expected date clamps to the month’s last day.
 - During the configured reminder window, an active card without an SOA-backed due entry gets an `expected` due entry.
