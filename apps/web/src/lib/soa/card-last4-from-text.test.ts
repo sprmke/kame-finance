@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   extractCardLast4Candidates,
   pickDetectedCardLast4,
+  principalCardLast4,
   resolveCardLast4FromSoaText,
 } from "./card-last4-from-text";
 
@@ -16,6 +17,46 @@ describe("extractCardLast4Candidates", () => {
   test("finds masked PAN", () => {
     const text = "Card number XXXX XXXX XXXX 5678";
     expect(extractCardLast4Candidates(text)).toContain("5678");
+  });
+
+  test("finds BPI card numbers but not the customer number", () => {
+    const text =
+      "Customer Number 020100-4-10-8489031\n418898-4-90-3210657 - MICHAEL D MANLULU";
+    expect(extractCardLast4Candidates(text)).toEqual(["0657"]);
+  });
+
+  test("finds BPI card numbers in letter-spaced pdf.js text", () => {
+    const text =
+      "4 1 8 8 9 8 - 4 - 9 0 - 3 2 1 0 6 5 7 - M I C H A E L D M A N L U L U";
+    expect(extractCardLast4Candidates(text)).toEqual(["0657"]);
+  });
+});
+
+describe("principalCardLast4", () => {
+  const bpiText = [
+    "Prepared for",
+    "CUSTOMER NUMBER 020100-4-10-8489031",
+    "MICHAEL D MANLULU",
+    "418898-4-90-1657271 - ARIANNA L PEREZ",
+    "418898-4-90-3210657 - MICHAEL D MANLULU",
+  ].join("\n");
+
+  test("picks the card whose holder is also named in the header", () => {
+    expect(principalCardLast4(bpiText, ["7271", "0657"])).toBe("0657");
+  });
+
+  test("pickDetectedCardLast4 resolves principal among supplementary cards", () => {
+    expect(pickDetectedCardLast4(bpiText)).toBe("0657");
+  });
+
+  test("resolveCardLast4FromSoaText prefers principal when both are known", () => {
+    expect(
+      resolveCardLast4FromSoaText(
+        bpiText,
+        [{ last4: "7271" }, { last4: "0657" }],
+        "0000",
+      ),
+    ).toBe("0657");
   });
 });
 

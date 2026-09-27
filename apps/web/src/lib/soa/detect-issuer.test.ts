@@ -21,6 +21,14 @@ describe("detectIssuerFromSoaText", () => {
     ).toBe("bpi");
   });
 
+  it("detects bpi from letter-spaced pdf.js text", () => {
+    expect(
+      detectIssuerFromSoaText(
+        "S t a t e m e n t   o f   A c c o u n t\nB P I   A M O R E C A S H B A C K C A R D",
+      ),
+    ).toBe("bpi");
+  });
+
   it("detects unionbank", () => {
     expect(
       detectIssuerFromSoaText("Unionbank REWARDS VISA PLATINUM e-Statement"),

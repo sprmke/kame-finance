@@ -1,4 +1,5 @@
 import { normalizeCardLast4 } from "@/lib/due/normalize";
+import { collapseLetterSpacedText } from "@/lib/soa/letter-spacing";
 
 export type KnownCardForLast4 = {
   last4: string;
@@ -6,14 +7,29 @@ export type KnownCardForLast4 = {
   label?: string;
 };
 
+/**
+ * BPI prints card numbers as `418898-4-90-3210657` (6-1-2-7). The customer number
+ * uses the same shape but starts with `0`, so require a card-network leading digit.
+ */
+const BPI_CARD_NUMBER =
+  /\b[2-6]\d{5}\s*-\s*\d\s*-\s*\d{2}\s*-\s*\d{3}(\d{4})\b/;
+
+const BPI_CARD_HOLDER_ROW =
+  /\b[2-6]\d{5}\s*-\s*\d\s*-\s*\d{2}\s*-\s*\d{3}(\d{4})\s*-\s*([A-Za-z][A-Za-z .,'-]*[A-Za-z])/;
+
 /** Candidate card last-4 values found in SOA plain text. */
 export function extractCardLast4Candidates(text: string): string[] {
-  const flat = text.replace(/\s+/g, " ");
+  const flat = collapseLetterSpacedText(text).replace(/\s+/g, " ");
   const found = new Set<string>();
 
   const panRe = /(?:\d{4}[\s-]?){3}(\d{4})\b/g;
   let m: RegExpExecArray | null;
   while ((m = panRe.exec(flat)) !== null) {
+    found.add(normalizeCardLast4(m[1]!));
+  }
+
+  const bpiRe = new RegExp(BPI_CARD_NUMBER.source, "g");
+  while ((m = bpiRe.exec(flat)) !== null) {
     found.add(normalizeCardLast4(m[1]!));
   }
 
@@ -31,6 +47,36 @@ export function extractCardLast4Candidates(text: string): string[] {
   }
 
   return [...found];
+}
+
+function lettersOnlyUpper(value: string): string {
+  return value.replace(/[^A-Za-z]/g, "").toUpperCase();
+}
+
+/**
+ * Consolidated statements list supplementary cards next to the principal card
+ * (`<card no> - <holder>`). The principal holder's name is also printed in the
+ * statement header, so pick the one card whose holder name appears more than once.
+ */
+export function principalCardLast4(
+  text: string,
+  candidates: string[],
+): string | null {
+  const collapsed = collapseLetterSpacedText(text);
+  const docLetters = lettersOnlyUpper(collapsed);
+  const principals = new Set<string>();
+
+  for (const line of collapsed.split("\n")) {
+    const m = line.match(BPI_CARD_HOLDER_ROW);
+    if (!m) continue;
+    const last4 = normalizeCardLast4(m[1]!);
+    if (!candidates.includes(last4)) continue;
+    const holder = lettersOnlyUpper(m[2]!);
+    if (holder.length < 4) continue;
+    if (docLetters.split(holder).length - 1 >= 2) principals.add(last4);
+  }
+
+  return principals.size === 1 ? [...principals][0]! : null;
 }
 
 function firstKnownLast4InText(
@@ -190,7 +236,7 @@ export function pickDetectedCardLast4(
       const digits = normalizeCardLast4(m[1]!);
       if (candidates.includes(digits)) return digits;
     }
-    return null;
+    return principalCardLast4(text, candidates);
   }
 
   const unlockDigits = String(unlockLast4 ?? "").replace(/\D/g, "");
@@ -231,6 +277,8 @@ export function resolveCardLast4FromSoaText(
   if (matched.length === 1) return matched[0]!;
 
   if (matched.length > 1) {
+    const principal = principalCardLast4(text, matched);
+    if (principal) return principal;
     const fromText = firstKnownLast4InText(text, matched, normalizedKnown);
     if (fromText) return fromText;
   }

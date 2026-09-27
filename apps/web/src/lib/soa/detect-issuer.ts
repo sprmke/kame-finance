@@ -3,6 +3,7 @@ import {
   parseBankIssuerId,
   type BankIssuer,
 } from "@/lib/db/schema/credit-cards";
+import { collapseLetterSpacedText } from "@/lib/soa/letter-spacing";
 
 const ISSUER_PATTERNS: { id: BankIssuer; patterns: RegExp[] }[] = [
   {
@@ -101,7 +102,7 @@ const ISSUER_PATTERNS: { id: BankIssuer; patterns: RegExp[] }[] = [
 ];
 
 export function detectIssuerFromSoaText(text: string): BankIssuer | null {
-  const flat = text.replace(/\s+/g, " ");
+  const flat = collapseLetterSpacedText(text).replace(/\s+/g, " ");
   let best: { id: BankIssuer; score: number } | null = null;
 
   for (const { id, patterns } of ISSUER_PATTERNS) {
