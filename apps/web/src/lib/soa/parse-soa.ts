@@ -392,7 +392,8 @@ function preprocessOcrArtifacts(text: string): string {
   return text
     .replace(/\uFF1A/g, ":")
     .replace(/P\s+H\s+P/gi, "PHP")
-    .replace(/(\d),\s+(\d{3})/g, "$1,$2");
+    .replace(/(\d),\s+(\d{3})/g, "$1,$2")
+    .replace(/\b(\d{1,3})\.(\d{3})\.(\d{2})\b/g, "$1,$2.$3");
 }
 
 /** BPI statement line amounts (with or without PHP). */
@@ -678,7 +679,7 @@ function statementDatePatterns(issuerId: string): RegExp[] {
   }
   if (id === "bpi") {
     specific.push(
-      new RegExp(`Statement\\s+Date\\s*[:]?\s*${BPI_DATE_CAP}`, "i"),
+      new RegExp(`Statement\\s+Date\\s*[:]?\\s*${BPI_DATE_CAP}`, "i"),
       new RegExp(`STATEMENT\\s+DATE\\s+${BPI_DATE_CAP}`, "i"),
     );
   }
@@ -714,9 +715,9 @@ function dueDatePatterns(issuerId: string): RegExp[] {
   }
   if (id === "bpi") {
     specific.push(
-      new RegExp(`Payment\\s+Due\\s+Date\\s*[:]?\s*${BPI_DATE_CAP}`, "i"),
+      new RegExp(`Payment\\s+Due\\s+Date\\s*[:]?\\s*${BPI_DATE_CAP}`, "i"),
       new RegExp(`PAYMENT\\s+DUE\\s+DATE\\s+${BPI_DATE_CAP}`, "i"),
-      new RegExp(`Due\\s+Date\\s*[:]?\s*${BPI_DATE_CAP}`, "i"),
+      new RegExp(`Due\\s+Date\\s*[:]?\\s*${BPI_DATE_CAP}`, "i"),
     );
   }
   const generic: RegExp[] = [

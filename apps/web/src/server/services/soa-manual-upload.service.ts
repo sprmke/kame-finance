@@ -209,7 +209,13 @@ async function loadPeriod(userId: string, periodId: string) {
 async function extractPdfText(
   localPath: string,
   cards: CardCredential[],
-): Promise<{ text: string; password: string; unlockLast4: string }> {
+): Promise<{
+  text: string;
+  password: string;
+  unlockLast4: string;
+  usedOcr: boolean;
+  ocrAttempted: boolean;
+}> {
   const withEmpty: CardCredential[] = [
     { issuer: "unknown", last4: "0000", password: "" },
     ...cards,
@@ -222,6 +228,7 @@ async function extractPdfText(
     !ocrDisabledForIssuer(issuerGuess) &&
     (!textQuality.looksUsable || ocrForcedForIssuer(issuerGuess));
 
+  let usedOcr = false;
   if (shouldTryOcr) {
     const { maxPages, scale, psmRaw, dualSparse } =
       ocrTuningForIssuer(issuerGuess);
@@ -233,7 +240,10 @@ async function extractPdfText(
         dualSparse,
       });
       const picked = pickBetterSoaText(parseText, ocrText);
-      if (picked.usedCandidate) parseText = picked.text;
+      if (picked.usedCandidate) {
+        parseText = picked.text;
+        usedOcr = true;
+      }
     } catch {
       /* keep extracted text */
     }
@@ -243,6 +253,8 @@ async function extractPdfText(
     text: parseText,
     password: unlocked.password,
     unlockLast4: unlocked.last4,
+    usedOcr,
+    ocrAttempted: shouldTryOcr,
   };
 }
 
@@ -460,6 +472,7 @@ export const soaManualUploadService = {
           messageId,
           fileName,
           extracted.text,
+          { usedOcr: extracted.usedOcr, ocrAttempted: extracted.ocrAttempted },
         );
         row.transactions = extractTransactions(identity.issuerId, txnText);
         row = mergeAiIntoSoaRow(row, ai);
