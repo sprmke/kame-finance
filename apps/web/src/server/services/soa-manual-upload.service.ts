@@ -25,10 +25,12 @@ import {
   bankLabelForIssuer,
   detectIssuerFromSoaText,
 } from "@/lib/soa/detect-issuer";
+import { collapseLetterSpacedText } from "@/lib/soa/letter-spacing";
 import { alignManualUploadMonth } from "@/lib/soa/manual-upload-align";
 import {
   applyMatchedCardMeta,
   mergeAiIntoSoaRow,
+  pickIdentityText,
   resolveManualUploadIdentity,
   soaRowNeedsAiFill,
 } from "@/lib/soa/manual-upload-identity";
@@ -211,6 +213,7 @@ async function extractPdfText(
   cards: CardCredential[],
 ): Promise<{
   text: string;
+  rawText: string;
   password: string;
   unlockLast4: string;
   usedOcr: boolean;
@@ -251,6 +254,7 @@ async function extractPdfText(
 
   return {
     text: parseText,
+    rawText: unlocked.text,
     password: unlocked.password,
     unlockLast4: unlocked.last4,
     usedOcr,
@@ -394,6 +398,10 @@ export const soaManualUploadService = {
       } else if (isPdf) {
         const extracted = await extractPdfText(localPath, credentials);
         unlockPassword = extracted.password;
+        const identityText = pickIdentityText(
+          extracted.text,
+          extracted.rawText,
+        );
         let ai: SoaAiExtractResult | null = null;
         if (!assessSoaTextQuality(extracted.text).looksUsable) {
           ai = await soaAiExtractService.extractFromText(
@@ -405,7 +413,7 @@ export const soaManualUploadService = {
         }
 
         let identity = resolveManualUploadIdentity({
-          text: extracted.text,
+          text: identityText,
           cards: credentials,
           unlockLast4: extracted.unlockLast4,
           ai,
@@ -421,7 +429,7 @@ export const soaManualUploadService = {
             if (ai) usedAi = true;
           }
           identity = resolveManualUploadIdentity({
-            text: extracted.text,
+            text: identityText,
             cards: credentials,
             unlockLast4: extracted.unlockLast4,
             ai,
@@ -441,7 +449,7 @@ export const soaManualUploadService = {
               usedAi = true;
               ai = vision;
               identity = resolveManualUploadIdentity({
-                text: extracted.text,
+                text: identityText,
                 cards: credentials,
                 unlockLast4: extracted.unlockLast4,
                 ai,
@@ -475,6 +483,15 @@ export const soaManualUploadService = {
           { usedOcr: extracted.usedOcr, ocrAttempted: extracted.ocrAttempted },
         );
         row.transactions = extractTransactions(identity.issuerId, txnText);
+        if (extracted.usedOcr) {
+          const rawTxns = extractTransactions(
+            identity.issuerId,
+            collapseLetterSpacedText(extracted.rawText),
+          );
+          if (rawTxns.length > row.transactions.length) {
+            row.transactions = rawTxns;
+          }
+        }
         row = mergeAiIntoSoaRow(row, ai);
 
         if (soaRowNeedsAiFill(row) && !ai) {
@@ -487,7 +504,7 @@ export const soaManualUploadService = {
             usedAi = true;
             row = mergeAiIntoSoaRow(row, fill);
             const filledIdentity = resolveManualUploadIdentity({
-              text: extracted.text,
+              text: identityText,
               cards: credentials,
               unlockLast4: extracted.unlockLast4,
               ai: fill,

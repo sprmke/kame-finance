@@ -1,5 +1,6 @@
 import { normalizeCardLast4 } from "@/lib/due/normalize";
 import {
+  extractCardLast4Candidates,
   pickDetectedCardLast4,
   resolveCardLast4FromSoaText,
 } from "@/lib/soa/card-last4-from-text";
@@ -206,6 +207,16 @@ export function resolveManualUploadIdentity(input: {
       input.cards,
     ),
   };
+}
+
+/**
+ * OCR is page-capped on serverless, so card numbers printed on later pages can be
+ * missing from OCR text even though the pdf.js text layer has them.
+ */
+export function pickIdentityText(parseText: string, rawText: string): string {
+  if (parseText === rawText) return parseText;
+  if (extractCardLast4Candidates(parseText).length > 0) return parseText;
+  return extractCardLast4Candidates(rawText).length > 0 ? rawText : parseText;
 }
 
 export function normalizeSoaRowDates(row: SoaRow): SoaRow {

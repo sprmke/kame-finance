@@ -5,6 +5,7 @@ import {
   identityIsAssignedToKnownCard,
   last4MatchesKnownCard,
   mergeAiIntoSoaRow,
+  pickIdentityText,
   resolveIssuerAndLast4,
   resolveManualUploadIdentity,
 } from "./manual-upload-identity";
@@ -185,5 +186,29 @@ describe("resolveManualUploadIdentity", () => {
       last4: "3746",
       matchedKnownCard: false,
     });
+  });
+});
+
+describe("pickIdentityText", () => {
+  const ocrFirstPages =
+    "BPI Credit Cards Statement of Account\nSTATEMENT DATE SEPTEMBER 07,2026";
+  const rawAllPages = [
+    "M I C H A E L D M A N L U L U   P A Y M E N T   D U E   D A T E",
+    "B P I   A M O R E C A S H B A C K C A R D",
+    "4 1 8 8 9 8 - 4 - 9 0 - 1 6 5 7 2 7 1 - A R I A N N A L P E R E Z",
+    "4 1 8 8 9 8 - 4 - 9 0 - 3 2 1 0 6 5 7 - M I C H A E L D M A N L U L U",
+  ].join("\n");
+
+  test("falls back to pdf.js text when page-capped OCR has no card number", () => {
+    const text = pickIdentityText(ocrFirstPages, rawAllPages);
+    expect(text).toBe(rawAllPages);
+    expect(
+      resolveManualUploadIdentity({ text, cards: [], unlockLast4: "0000", ai: null }),
+    ).toEqual({ issuerId: "bpi", last4: "0657", matchedKnownCard: false });
+  });
+
+  test("keeps OCR text when it already has a card number", () => {
+    const ocr = `${ocrFirstPages}\n418898-4-90-3210657 - MICHAEL D MANLULU`;
+    expect(pickIdentityText(ocr, rawAllPages)).toBe(ocr);
   });
 });
