@@ -46,6 +46,10 @@ Period detail **Upload** accepts PDF/image when the bank does not email SOA. Det
   Serverless: `prepare-server-native` vendors `tesseract-core*.wasm` (NFT does not
   trace those binaries from `node_modules`); missing WASM or `SOA_OCR_TIMEOUT_MS`
   skips OCR and continues the run instead of hanging `getRunProgress`.
+- **BPI identity**: pdf.js emits BPI text letter-spaced; `lib/soa/letter-spacing.ts`
+  collapses it before issuer/last-4 detection. Card numbers print as `6-1-2-7` digits
+  (customer number shares the shape but starts with `0`); with supplementary cards,
+  `principalCardLast4` picks the holder named in the header.
 - **Unavailable SOA**: set `soaUnavailable` flag; UI shows em dash in overview
 - **Multi-card completeness**: `run.ts` dedupes downloaded PDFs by `filePath`
   (attachment-level), not `messageId` — a single Gmail message can carry
