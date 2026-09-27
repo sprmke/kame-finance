@@ -224,7 +224,8 @@ async function extractPdfText(
     ...cards,
   ];
   const unlocked = await tryUnlockAndExtractText(localPath, withEmpty);
-  let parseText = unlocked.text;
+  const layerText = collapseLetterSpacedText(unlocked.text);
+  let parseText = layerText;
   const textQuality = assessSoaTextQuality(parseText);
   const issuerGuess = detectIssuerFromSoaText(parseText) ?? "bpi";
   const shouldTryOcr =
@@ -254,7 +255,7 @@ async function extractPdfText(
 
   return {
     text: parseText,
-    rawText: unlocked.text,
+    rawText: layerText,
     password: unlocked.password,
     unlockLast4: unlocked.last4,
     usedOcr,
@@ -486,7 +487,7 @@ export const soaManualUploadService = {
         if (extracted.usedOcr) {
           const rawTxns = extractTransactions(
             identity.issuerId,
-            collapseLetterSpacedText(extracted.rawText),
+            extracted.rawText,
           );
           if (rawTxns.length > row.transactions.length) {
             row.transactions = rawTxns;
