@@ -17,19 +17,14 @@ const BPI_CARD_NUMBER =
 const BPI_CARD_HOLDER_ROW =
   /\b[2-6]\d{5}\s*-\s*\d\s*-\s*\d{2}\s*-\s*\d{3}(\d{4})\s*-\s*([A-Za-z][A-Za-z .,'-]*[A-Za-z])/;
 
-/** Candidate card last-4 values found in SOA plain text. */
-export function extractCardLast4Candidates(text: string): string[] {
+/** PAN / masked / "ending in" last-4s — not bank-internal account suffixes. */
+export function extractEmbossedCardLast4Candidates(text: string): string[] {
   const flat = collapseLetterSpacedText(text).replace(/\s+/g, " ");
   const found = new Set<string>();
 
   const panRe = /(?:\d{4}[\s-]?){3}(\d{4})\b/g;
   let m: RegExpExecArray | null;
   while ((m = panRe.exec(flat)) !== null) {
-    found.add(normalizeCardLast4(m[1]!));
-  }
-
-  const bpiRe = new RegExp(BPI_CARD_NUMBER.source, "g");
-  while ((m = bpiRe.exec(flat)) !== null) {
     found.add(normalizeCardLast4(m[1]!));
   }
 
@@ -46,6 +41,18 @@ export function extractCardLast4Candidates(text: string): string[] {
     found.add(normalizeCardLast4(m[1]!));
   }
 
+  return [...found];
+}
+
+/** Candidate card last-4 values found in SOA plain text (includes BPI account nos). */
+export function extractCardLast4Candidates(text: string): string[] {
+  const found = new Set(extractEmbossedCardLast4Candidates(text));
+  const flat = collapseLetterSpacedText(text).replace(/\s+/g, " ");
+  const bpiRe = new RegExp(BPI_CARD_NUMBER.source, "g");
+  let m: RegExpExecArray | null;
+  while ((m = bpiRe.exec(flat)) !== null) {
+    found.add(normalizeCardLast4(m[1]!));
+  }
   return [...found];
 }
 

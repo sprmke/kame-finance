@@ -4,10 +4,11 @@ import { randomUUID } from "crypto";
 import { readFile } from "fs/promises";
 import { TRPCError } from "@trpc/server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 
 import { db } from "@/lib/db";
-import { soaPeriods, type BankIssuer } from "@/lib/db/schema";
+import { soaPeriods, soaStatements, type BankIssuer } from "@/lib/db/schema";
+import { normalizeCardLast4 } from "@/lib/due/normalize";
 import {
   isImageMime,
   isPdfMime,
@@ -33,6 +34,8 @@ import {
   pickIdentityText,
   resolveManualUploadIdentity,
   soaRowNeedsAiFill,
+  statementHasParsedAmounts,
+  type PeriodIssuerSlot,
 } from "@/lib/soa/manual-upload-identity";
 import {
   ocrDisabledForIssuer,
@@ -64,6 +67,7 @@ import {
 } from "./soa-ai-extract.service";
 import { soaPersistService } from "./soa-persist.service";
 import { storageService } from "./storage.service";
+import { invalidateSoaStatementRows } from "./user-rows.service";
 
 const CARD_UNKNOWN_MESSAGE =
   "Could not detect which card this statement belongs to.";
@@ -208,6 +212,70 @@ async function loadPeriod(userId: string, periodId: string) {
   return period;
 }
 
+async function loadPeriodIssuerSlots(
+  userId: string,
+  months: CalendarMonth[],
+): Promise<PeriodIssuerSlot[]> {
+  if (months.length === 0) return [];
+  const monthConds = months.map((m) =>
+    and(
+      eq(soaStatements.statementMonth, m.month),
+      eq(soaStatements.statementYear, m.year),
+    ),
+  );
+  const rows = await db.query.soaStatements.findMany({
+    where: and(eq(soaStatements.userId, userId), or(...monthConds)),
+    columns: {
+      issuerId: true,
+      cardLast4: true,
+      soaUnavailable: true,
+      minimumDue: true,
+      totalDue: true,
+      statementDate: true,
+      dueDate: true,
+    },
+  });
+  return rows.map((r) => ({
+    issuerId: r.issuerId,
+    last4: r.cardLast4,
+    soaUnavailable: Boolean(r.soaUnavailable),
+    hasParsedAmounts: statementHasParsedAmounts(r),
+  }));
+}
+
+/** Drop a blank/mistaken duplicate row left behind when upload remapped last-4. */
+async function dropRemappedDuplicateStatement(
+  userId: string,
+  issuerId: string,
+  orphanLast4: string,
+  keepLast4: string,
+  month: CalendarMonth,
+) {
+  const orphan = normalizeCardLast4(orphanLast4);
+  const keep = normalizeCardLast4(keepLast4);
+  if (!orphan || orphan === keep) return;
+  const deleted = await db
+    .delete(soaStatements)
+    .where(
+      and(
+        eq(soaStatements.userId, userId),
+        sql`lower(${soaStatements.issuerId}) = ${issuerId.toLowerCase()}`,
+        eq(soaStatements.cardLast4, orphan),
+        eq(soaStatements.statementMonth, month.month),
+        eq(soaStatements.statementYear, month.year),
+        or(
+          eq(soaStatements.soaUnavailable, true),
+          and(
+            eq(soaStatements.minimumDue, "—"),
+            eq(soaStatements.totalDue, "—"),
+          ),
+        ),
+      ),
+    )
+    .returning({ id: soaStatements.id });
+  if (deleted.length > 0) invalidateSoaStatementRows();
+}
+
 async function extractPdfText(
   localPath: string,
   cards: CardCredential[],
@@ -342,6 +410,7 @@ export const soaManualUploadService = {
       last4: c.last4,
       label: c.label,
     }));
+    const periodSlots = await loadPeriodIssuerSlots(userId, periodMonths);
 
     const messageId = `manual:${randomUUID()}`;
     let usedAi = false;
@@ -349,6 +418,7 @@ export const soaManualUploadService = {
     let persistStoragePath = input.storagePath;
     let unlockPassword = "";
     let cardCreated = false;
+    let printedLast4 = "";
 
     try {
       const localPath = await storageService.resolveLocalPath(
@@ -381,6 +451,7 @@ export const soaManualUploadService = {
           cards: credentials,
           unlockLast4: "",
           ai,
+          periodSlots,
         });
         if (!identity.issuerId || !identity.last4) {
           return {
@@ -389,6 +460,7 @@ export const soaManualUploadService = {
             message: CARD_UNKNOWN_MESSAGE,
           };
         }
+        printedLast4 = identity.detectedLast4;
         row = rowFromAi(
           ai,
           fileName,
@@ -418,6 +490,7 @@ export const soaManualUploadService = {
           cards: credentials,
           unlockLast4: extracted.unlockLast4,
           ai,
+          periodSlots,
         });
 
         if (!identity.issuerId || !identity.last4) {
@@ -434,6 +507,7 @@ export const soaManualUploadService = {
             cards: credentials,
             unlockLast4: extracted.unlockLast4,
             ai,
+            periodSlots,
           });
         }
 
@@ -454,6 +528,7 @@ export const soaManualUploadService = {
                 cards: credentials,
                 unlockLast4: extracted.unlockLast4,
                 ai,
+                periodSlots,
               });
             }
           }
@@ -466,6 +541,7 @@ export const soaManualUploadService = {
             message: CARD_UNKNOWN_MESSAGE,
           };
         }
+        printedLast4 = identity.detectedLast4;
 
         const txnText = await maybeRcbcGeometry(
           localPath,
@@ -509,6 +585,7 @@ export const soaManualUploadService = {
               cards: credentials,
               unlockLast4: extracted.unlockLast4,
               ai: fill,
+              periodSlots,
             });
             if (filledIdentity.issuerId && filledIdentity.last4) {
               row.issuerId = filledIdentity.issuerId;
@@ -622,6 +699,16 @@ export const soaManualUploadService = {
         fileName,
         message: "Could not save this statement.",
       };
+    }
+
+    if (printedLast4 && printedLast4 !== row.cardLast4) {
+      await dropRemappedDuplicateStatement(
+        userId,
+        row.issuerId,
+        printedLast4,
+        row.cardLast4,
+        persistMonth,
+      );
     }
 
     await dueEntryUpsertService.upsertFromSoaRows(userId, [row]);

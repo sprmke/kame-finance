@@ -49,7 +49,11 @@ Period detail **Upload** accepts PDF/image when the bank does not email SOA. Det
 - **BPI identity**: pdf.js emits BPI text letter-spaced; `lib/soa/letter-spacing.ts`
   collapses it before issuer/last-4 detection. Card numbers print as `6-1-2-7` digits
   (customer number shares the shape but starts with `0`); with supplementary cards,
-  `principalCardLast4` picks the holder named in the header.
+  `principalCardLast4` picks the holder named in the header. Manual upload remaps that
+  account suffix onto the user’s existing BPI card / period unavailable slot
+  (`preferExistingIssuerCard`) so uploads update the month’s SOA instead of duplicating
+  the bank row.
+
 - **Unavailable SOA**: set `soaUnavailable` flag; UI shows em dash in overview
 - **Multi-card completeness**: `run.ts` dedupes downloaded PDFs by `filePath`
   (attachment-level), not `messageId` — a single Gmail message can carry

@@ -6,6 +6,7 @@ import {
   last4MatchesKnownCard,
   mergeAiIntoSoaRow,
   pickIdentityText,
+  preferExistingIssuerCard,
   resolveIssuerAndLast4,
   resolveManualUploadIdentity,
 } from "./manual-upload-identity";
@@ -149,6 +150,7 @@ describe("resolveManualUploadIdentity", () => {
       issuerId: "rcbc",
       last4: "4455",
       matchedKnownCard: false,
+      detectedLast4: "4455",
     });
   });
 
@@ -163,6 +165,7 @@ describe("resolveManualUploadIdentity", () => {
       issuerId: "rcbc",
       last4: "8899",
       matchedKnownCard: true,
+      detectedLast4: "8899",
     });
   });
 
@@ -185,7 +188,92 @@ describe("resolveManualUploadIdentity", () => {
       issuerId: "metrobank",
       last4: "3746",
       matchedKnownCard: false,
+      detectedLast4: "3746",
     });
+  });
+
+  test("remaps BPI account suffix to the sole existing BPI card", () => {
+    const bpiOnly: CardCredential[] = [
+      { issuer: "bpi", last4: "0018", password: "x" },
+    ];
+    const result = resolveManualUploadIdentity({
+      text: [
+        "BPI AMORE CASHBACK CARD",
+        "418898-4-90-3210657 - MICHAEL D MANLULU",
+      ].join("\n"),
+      cards: bpiOnly,
+      unlockLast4: "0000",
+      ai: null,
+    });
+    expect(result).toEqual({
+      issuerId: "bpi",
+      last4: "0018",
+      matchedKnownCard: true,
+      detectedLast4: "0657",
+    });
+  });
+
+  test("remaps blank mistaken BPI row to the unavailable placeholder", () => {
+    const bpiCards: CardCredential[] = [
+      { issuer: "bpi", last4: "0018", password: "a" },
+      { issuer: "bpi", last4: "0657", password: "b" },
+    ];
+    const result = resolveManualUploadIdentity({
+      text: [
+        "BPI AMORE CASHBACK CARD",
+        "418898-4-90-3210657 - MICHAEL D MANLULU",
+      ].join("\n"),
+      cards: bpiCards,
+      unlockLast4: "0000",
+      ai: null,
+      periodSlots: [
+        {
+          issuerId: "bpi",
+          last4: "0018",
+          soaUnavailable: true,
+          hasParsedAmounts: false,
+        },
+        {
+          issuerId: "bpi",
+          last4: "0657",
+          soaUnavailable: false,
+          hasParsedAmounts: false,
+        },
+      ],
+    });
+    expect(result.last4).toBe("0018");
+    expect(result.matchedKnownCard).toBe(true);
+    expect(result.detectedLast4).toBe("0657");
+  });
+});
+
+describe("preferExistingIssuerCard", () => {
+  test("does not steal a real Metrobank statement for another card's slot", () => {
+    const cards: CardCredential[] = [
+      { issuer: "metrobank", last4: "3746", password: "a" },
+      { issuer: "metrobank", last4: "7732", password: "b" },
+    ];
+    expect(
+      preferExistingIssuerCard({
+        issuerId: "metrobank",
+        detectedLast4: "3746",
+        cards,
+        periodSlots: [
+          {
+            issuerId: "metrobank",
+            last4: "3746",
+            soaUnavailable: false,
+            hasParsedAmounts: true,
+          },
+          {
+            issuerId: "metrobank",
+            last4: "7732",
+            soaUnavailable: true,
+            hasParsedAmounts: false,
+          },
+        ],
+      }),
+    ).toEqual({ last4: "3746", matchedKnownCard: true });
   });
 });
 
@@ -204,7 +292,12 @@ describe("pickIdentityText", () => {
     expect(text).toBe(rawAllPages);
     expect(
       resolveManualUploadIdentity({ text, cards: [], unlockLast4: "0000", ai: null }),
-    ).toEqual({ issuerId: "bpi", last4: "0657", matchedKnownCard: false });
+    ).toEqual({
+      issuerId: "bpi",
+      last4: "0657",
+      matchedKnownCard: false,
+      detectedLast4: "0657",
+    });
   });
 
   test("keeps OCR text when it already has a card number", () => {
