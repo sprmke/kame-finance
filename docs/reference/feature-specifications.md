@@ -25,6 +25,7 @@ See `docs/temp/pay-credit-cards-migration.md` and `.cursor/rules/18-credit-cards
 - The monthly expected date clamps to the month’s last day.
 - During the configured reminder window, an active card without an SOA-backed due entry gets an `expected` due entry.
 - Expected entries show missing-SOA guidance, generate reminders/calendar events, and cannot be marked paid.
+- **SOA run + Google Calendar:** when `createCalendar` is on, `buildCalendarRowsForSoaRun` (`lib/soa/calendar-sync-rows.ts`) syncs parsed rows plus estimated due dates for every active card missing a statement in each month of the run. Event descriptions use `notification-body` copy: waiting for SOA during the billing period, or upload/check-bank after the statement period end date.
 - SOA ingestion upgrades the same card/month entry to `source = soa`.
 
 ### SOA period analytics

@@ -37,6 +37,8 @@ export type DueBodyInfo = {
   minimumDue?: string;
   totalDue?: string;
   soaMissing?: boolean;
+  /** When SOA is missing and the statement period end date is before today. */
+  statementPeriodEnded?: boolean;
   interestCharges?: string;
   viewSoaLink?: string;
   contactLine?: string;
@@ -134,7 +136,9 @@ export function buildDueBodyLines(
   if (info.fullPan) lines.push(`Card number: ${info.fullPan}`);
   if (info.soaMissing) {
     lines.push(
-      "SOA not received. Check your email, bank app, or contact the bank.",
+      info.statementPeriodEnded
+        ? "Statement not available, and this billing period has ended. Check your bank app or inbox, or upload the PDF in Kame Finance if you did not receive it."
+        : "Statement not available yet for this billing period. Your due date below is from your card settings until we import your SOA.",
     );
   } else {
     if (info.minimumDue) lines.push(`Minimum due: ${info.minimumDue}`);

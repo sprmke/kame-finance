@@ -40,6 +40,7 @@ export type CalendarEventInput = {
   totalDue: string;
   source?: string;
   soaUnavailable?: boolean;
+  statementDate?: string;
   transactions?: SoaRow["transactions"];
 };
 
@@ -103,15 +104,27 @@ function collectFingerprintsFromExistingEvent(ev: {
   return out;
 }
 
-function buildEventSpecs(row: CalendarEventInput): CalendarEventSpec[] {
-  if (row.soaUnavailable) return [];
+function buildEventSpecs(
+  row: CalendarEventInput,
+  todayYmd: string,
+): CalendarEventSpec[] {
   const due = parseDueDate(row.dueDate);
   if (!due) return [];
 
   const dueFmt = row.dueDate;
   const dueYMD = toYMD(due);
   const info = dueBodyInfoFromSoaRow(row, telegramWebLinkFromEnv());
-  if (row.source === "expected") info.soaMissing = true;
+  const soaMissing = row.soaUnavailable || row.source === "expected";
+  if (soaMissing) {
+    info.soaMissing = true;
+    const stmtYmd =
+      row.statementDate && row.statementDate !== "—"
+        ? parseDueDateToYmd(row.statementDate)
+        : null;
+    if (stmtYmd && stmtYmd < todayYmd) {
+      info.statementPeriodEnded = true;
+    }
+  }
   const cardLabel = info.cardLabel;
   const specs: CalendarEventSpec[] = [];
 
@@ -126,7 +139,7 @@ function buildEventSpecs(row: CalendarEventInput): CalendarEventSpec[] {
 
     specs.push({
       summary:
-        row.source === "expected"
+        soaMissing
           ? `⚠️ ${cardLabel} — SOA missing · due ${dayLabel}`
           : `💳 ${cardLabel} — Pay ${dayLabel} (due ${dueFmt})`,
       description: body,
@@ -143,7 +156,7 @@ function buildEventSpecs(row: CalendarEventInput): CalendarEventSpec[] {
   }).join("\n");
   specs.push({
     summary:
-      row.source === "expected"
+      soaMissing
         ? `🚨 ${cardLabel} — DUE TODAY · SOA missing`
         : `💳 ${cardLabel} — PAYMENT DUE TODAY (${dueFmt})`,
     description: dueBody,
@@ -186,9 +199,7 @@ export async function createDueDateCalendarEvents(
   const timeZone = options?.timeZone ?? "Asia/Manila";
   const todayYmd = options?.todayYmd ?? todayYmdInTimezone(timeZone);
 
-  const allParseable = rows.filter(
-    (r) => !r.soaUnavailable && parseDueDateToYmd(r.dueDate),
-  );
+  const allParseable = rows.filter((r) => parseDueDateToYmd(r.dueDate));
 
   if (allParseable.length === 0) {
     log.warn("No rows with parseable due dates — nothing to add to Calendar.");
@@ -272,7 +283,7 @@ export async function createDueDateCalendarEvents(
   }
 
   for (const row of eligibleRows) {
-    const specs = buildEventSpecs(row);
+    const specs = buildEventSpecs(row, todayYmd);
     for (const spec of specs) {
       // Delete the existing event if one is found for this fingerprint.
       const existingId = existingByFingerprint.get(spec.fingerprint);

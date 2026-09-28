@@ -1,11 +1,17 @@
-import { desc, eq, and } from "drizzle-orm";
+import { desc, eq, and, isNull } from "drizzle-orm";
 import { access, readFile } from "fs/promises";
 import { basename } from "path";
 
 import { buildOverviewPaidLabelFn } from "@/lib/soa/overview-paid-label";
 import { sniffUploadMime } from "@/lib/files/sniff-upload";
 import { db } from "@/lib/db";
-import { dueEntries, soaPeriods, soaStatements } from "@/lib/db/schema";
+import {
+  creditCards,
+  dueEntries,
+  soaPeriods,
+  soaStatements,
+} from "@/lib/db/schema";
+import { buildCalendarRowsForSoaRun } from "@/lib/soa/calendar-sync-rows";
 import { creditCardService } from "./credit-card.service";
 import { dueEntryUpsertService } from "./due-entry-upsert.service";
 import { gmailService } from "./gmail.service";
@@ -645,9 +651,27 @@ export const soaService = {
       if (input.createCalendar) {
         try {
           await reporter?.activate("calendar", "Syncing Google Calendar");
+          const calendarCards = await db.query.creditCards.findMany({
+            where: and(
+              eq(creditCards.userId, userId),
+              isNull(creditCards.deletedAt),
+              eq(creditCards.isActive, true),
+            ),
+          });
+          const calendarRows = buildCalendarRowsForSoaRun(
+            detailed.months,
+            calendarCards.map((c) => ({
+              issuer: c.issuer,
+              last4: c.last4,
+              label: c.label,
+              fullPan: c.fullPan,
+              contactLine: c.contactLine,
+              dueDay: c.dueDay,
+            })),
+          );
           const calResult = await googleCalendarService.createDueDateEvents(
             userId,
-            detailed.allRows,
+            calendarRows,
           );
           calendar = {
             created: calResult.created,
