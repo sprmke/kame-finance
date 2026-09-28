@@ -143,6 +143,7 @@ function SoaPeriodDetailBody({
     initial: periodToRunInitial(period),
     onRunSuccess: () => {
       void utils.soa.getPeriod.invalidate({ periodId });
+      void utils.soa.getStatement.invalidate();
       void utils.soa.listPeriods.invalidate();
       void utils.reminders.listDue.invalidate();
     },
@@ -150,6 +151,7 @@ function SoaPeriodDetailBody({
 
   const manualUpload = useSoaManualUpload(periodId, () => {
     void utils.soa.getPeriod.invalidate({ periodId });
+    void utils.soa.getStatement.invalidate();
     void utils.soa.listPeriods.invalidate();
     void utils.reminders.listDue.invalidate();
     void utils.overview.stats.invalidate();

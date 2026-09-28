@@ -56,16 +56,76 @@ type SoaStatementDetail = NonNullable<
   inferRouterOutputs<AppRouter>['soa']['getStatement']
 >;
 
+function statementRichness(statement: {
+  totalDue?: string | null;
+  minimumDue?: string | null;
+  statementDate?: string | null;
+  dueDate?: string | null;
+  transactions?: unknown[] | null;
+}): number {
+  const filled = (v: string | null | undefined) =>
+    Boolean(v && v.trim() && v !== '—');
+  return (
+    Number(filled(statement.totalDue)) +
+    Number(filled(statement.minimumDue)) +
+    Number(filled(statement.statementDate)) +
+    Number(filled(statement.dueDate)) +
+    Number((statement.transactions?.length ?? 0) > 0) * 2
+  );
+}
+
 export function SoaStatementDetailPage({
   periodId,
   statementId,
 }: SoaStatementDetailPageProps) {
-  const { data, isLoading } = api.soa.getStatement.useQuery({
-    periodId,
-    statementId,
-  });
+  const utils = api.useUtils();
+  const { data, isLoading, isFetching } = api.soa.getStatement.useQuery(
+    { periodId, statementId },
+    {
+      staleTime: 0,
+      placeholderData: () => {
+        const period = utils.soa.getPeriod.getData({ periodId });
+        if (!period) return undefined;
+        const statement = period.statements.find((s) => s.id === statementId);
+        if (!statement) return undefined;
+        return {
+          period: {
+            id: period.id,
+            mode: period.mode,
+            fromMonth: period.fromMonth,
+            fromYear: period.fromYear,
+            toMonth: period.toMonth,
+            toYear: period.toYear,
+            label: period.label,
+          },
+          statement,
+        } as SoaStatementDetail;
+      },
+    },
+  );
 
-  if (isLoading) {
+  const periodCached = utils.soa.getPeriod.getData({ periodId });
+  const fromPeriod = periodCached?.statements.find((s) => s.id === statementId);
+  const statement =
+    data?.statement && fromPeriod
+      ? statementRichness(fromPeriod) > statementRichness(data.statement)
+        ? fromPeriod
+        : data.statement
+      : (data?.statement ?? fromPeriod);
+  const period = data?.period ??
+    (periodCached
+      ? {
+          id: periodCached.id,
+          mode: periodCached.mode,
+          fromMonth: periodCached.fromMonth,
+          fromYear: periodCached.fromYear,
+          toMonth: periodCached.toMonth,
+          toYear: periodCached.toYear,
+          label: periodCached.label,
+        }
+      : null);
+
+  if (isLoading && !statement) {
     return (
       <div className="space-y-8">
         <SoaStatementDetailContentSkeleton />
@@ -73,10 +133,12 @@ export function SoaStatementDetailPage({
     );
   }
 
-  if (!data) {
+  if (!period || !statement) {
     return (
       <div className="py-12 space-y-4 text-center">
-        <p className="text-sm text-muted-foreground">Statement not found.</p>
+        <p className="text-sm text-muted-foreground">
+          {isFetching ? 'Loading statement…' : 'Statement not found.'}
+        </p>
         <Button variant="outline" asChild>
           <Link href={ROUTES.dashboard.soaPeriod(periodId)}>
             <ArrowLeft className="mr-2 w-4 h-4" />
@@ -91,12 +153,12 @@ export function SoaStatementDetailPage({
     <CategorizeWithAiProvider
       periodId={periodId}
       statementId={statementId}
-      transactions={data.statement.transactions ?? []}
+      transactions={statement.transactions ?? []}
     >
       <SoaStatementDetailBody
         periodId={periodId}
-        period={data.period}
-        statement={data.statement}
+        period={period}
+        statement={statement}
       />
     </CategorizeWithAiProvider>
   );
@@ -108,7 +170,7 @@ function SoaStatementDetailBody({
   statement,
 }: {
   periodId: string;
-  period: SoaStatementDetail['period'];
+  period: { label: string };
   statement: SoaStatementDetail['statement'];
 }) {
   const { data: dues } = api.reminders.listDue.useQuery({ unpaidOnly: false });
