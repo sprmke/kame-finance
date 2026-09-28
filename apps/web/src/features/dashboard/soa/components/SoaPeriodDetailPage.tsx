@@ -40,6 +40,7 @@ import {
   SoaPeriodAnalyticsTab,
   SoaPeriodOverviewTab,
 } from "./SoaPeriodAnalyticsTabs";
+import { SoaPeriodTransactionsTab } from "./SoaPeriodTransactionsTab";
 import { SoaStatementCard } from "./SoaStatementCard";
 import { SoaStatementTable } from "./SoaStatementTable";
 import { usePersistedViewMode } from "@/hooks/use-persisted-view-mode";
@@ -305,7 +306,8 @@ function SoaPeriodDetailBody({
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="overflow-x-auto justify-start w-full">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="transactions">Cards</TabsTrigger>
+          <TabsTrigger value="cards">Cards</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
@@ -324,7 +326,7 @@ function SoaPeriodDetailBody({
           />
         </TabsContent>
 
-        <TabsContent value="transactions" className="mt-0 space-y-6">
+        <TabsContent value="cards" className="mt-0 space-y-6">
           {!!period.statements.length && (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
@@ -416,6 +418,10 @@ function SoaPeriodDetailBody({
               }
             />
           </div>
+        </TabsContent>
+
+        <TabsContent value="transactions" className="mt-0">
+          <SoaPeriodTransactionsTab statements={flatStatements} />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-0">

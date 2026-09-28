@@ -33,6 +33,10 @@ import {
 type SoaTransactionListProps = {
   transactions: SoaTransaction[];
   issuerId?: string | null;
+  /** When set, resolves issuer per row (period-wide lists). */
+  resolveIssuerId?: (tx: SoaTransaction) => string | null | undefined;
+  showCard?: boolean;
+  resolveCardLabel?: (tx: SoaTransaction) => string;
 };
 
 function DateCell({ value }: { value: string | null }) {
@@ -54,20 +58,22 @@ type TransactionRowModel = {
 function useTransactionRows(
   transactions: SoaTransaction[],
   issuerId?: string | null,
+  resolveIssuerId?: (tx: SoaTransaction) => string | null | undefined,
 ): TransactionRowModel[] {
   return useMemo(
     () =>
       transactions.map((tx) => {
         const kind = classifyTransaction(tx.description, tx.amount);
+        const rowIssuer = resolveIssuerId?.(tx) ?? issuerId;
         return {
           tx,
           kind,
           meta: TRANSACTION_KIND_META[kind],
-          dates: parseTransactionDate(tx.date, issuerId),
+          dates: parseTransactionDate(tx.date, rowIssuer),
           description: cleanTransactionDescription(tx.description),
         };
       }),
-    [transactions, issuerId],
+    [transactions, issuerId, resolveIssuerId],
   );
 }
 
@@ -102,9 +108,13 @@ function TransactionCategoryField({ tx }: { tx: SoaTransaction }) {
 function SoaTransactionCards({
   rows,
   dualDates,
+  showCard,
+  resolveCardLabel,
 }: {
   rows: TransactionRowModel[];
   dualDates: boolean;
+  showCard?: boolean;
+  resolveCardLabel?: (tx: SoaTransaction) => string;
 }) {
   return (
     <div className="space-y-3 md:hidden">
@@ -128,6 +138,9 @@ function SoaTransactionCards({
                 ) : (
                   (dates.posted ?? "—")
                 )}
+                {showCard && resolveCardLabel
+                  ? ` · ${resolveCardLabel(tx)}`
+                  : null}
               </p>
             </div>
             <p
@@ -152,9 +165,13 @@ function SoaTransactionCards({
 function SoaTransactionTable({
   rows,
   dualDates,
+  showCard,
+  resolveCardLabel,
 }: {
   rows: TransactionRowModel[];
   dualDates: boolean;
+  showCard?: boolean;
+  resolveCardLabel?: (tx: SoaTransaction) => string;
 }) {
   return (
     <div className="hidden max-h-[min(70vh,720px)] overflow-auto rounded-lg border border-border/80 md:block">
@@ -175,6 +192,9 @@ function SoaTransactionTable({
                 Date
               </TableHead>
             )}
+            {showCard ? (
+              <TableHead className="w-[9.5rem] whitespace-nowrap">Card</TableHead>
+            ) : null}
             <TableHead>Description</TableHead>
             <TableHead className={TRANSACTION_CATEGORY_SELECT_WIDTH_CLASS}>
               Category
@@ -200,6 +220,13 @@ function SoaTransactionTable({
                   <DateCell value={dates.posted} />
                 </TableCell>
               )}
+              {showCard ? (
+                <TableCell className="py-2.5 align-middle">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {resolveCardLabel?.(tx) ?? "—"}
+                  </span>
+                </TableCell>
+              ) : null}
               <TableCell className="py-2.5 align-middle">
                 <p className="text-sm leading-snug">{description}</p>
               </TableCell>
@@ -233,12 +260,15 @@ function SoaTransactionTable({
 export function SoaTransactionList({
   transactions,
   issuerId,
+  resolveIssuerId,
+  showCard,
+  resolveCardLabel,
 }: SoaTransactionListProps) {
   const dualDates = useMemo(
     () => transactionHasDualDates(transactions),
     [transactions],
   );
-  const rows = useTransactionRows(transactions, issuerId);
+  const rows = useTransactionRows(transactions, issuerId, resolveIssuerId);
 
   if (transactions.length === 0) {
     return (
@@ -250,8 +280,18 @@ export function SoaTransactionList({
 
   return (
     <>
-      <SoaTransactionCards rows={rows} dualDates={dualDates} />
-      <SoaTransactionTable rows={rows} dualDates={dualDates} />
+      <SoaTransactionCards
+        rows={rows}
+        dualDates={dualDates}
+        showCard={showCard}
+        resolveCardLabel={resolveCardLabel}
+      />
+      <SoaTransactionTable
+        rows={rows}
+        dualDates={dualDates}
+        showCard={showCard}
+        resolveCardLabel={resolveCardLabel}
+      />
     </>
   );
 }

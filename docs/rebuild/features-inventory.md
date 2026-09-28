@@ -56,7 +56,7 @@
 | --- | --------------------------------- | -------------------------------------- |
 | O1  | SOA period list & CRUD            | Date range, notify/calendar settings   |
 | O2  | Period detail — Overview          | Summary per period                     |
-| O3  | Period detail — Transactions      | Cross-statement list                   |
+| O3  | Period detail — Transactions      | Cross-statement list (search, filter, sort, group) |
 | O4  | Period detail — Analytics         | Category breakdown + donut             |
 | O5  | Analytics drill-down              | Category → transactions; Back / Escape |
 | O6  | Per-card statement view           | One card in one period                 |

@@ -34,7 +34,7 @@ Track statement-of-account PDFs from Gmail, parse dues across multiple PH banks,
 - **SOA pipeline** — Gmail fetch → PDF unlock/parse → summary PDF → Postgres upsert
 - **Bank parsers (PH)** — Metrobank, RCBC, BPI, Unionbank; OCR fallback when PDF text is unusable
 - **Manual SOA upload** — drag-and-drop PDF or image; auto-detects bank and statement period
-- **Period workspace** — Overview, Transactions, and Analytics tabs per billing cycle
+- **Period workspace** — Overview, Cards, Transactions, and Analytics tabs per billing cycle
 - **Transaction categories** — built-in labels, custom categories, keyword rules, AI categorization
 
 ### Due tracking & reminders
@@ -120,7 +120,7 @@ scripts/                      # Local setup, Supabase bootstrap, CLI migration
 | `/dashboard`                | Auth   | Overview and mission panel                          |
 | `/dashboard/credit-cards`   | Auth   | Manage cards                                        |
 | `/dashboard/soa`            | Auth   | SOA period list                                     |
-| `/dashboard/soa/[periodId]` | Auth   | Period detail (Overview / Transactions / Analytics) |
+| `/dashboard/soa/[periodId]` | Auth   | Period detail (Overview / Cards / Transactions / Analytics) |
 | `/dashboard/reminders`      | Auth   | Due entries, mark paid, scheduled jobs              |
 | `/dashboard/receipts`       | Auth   | Receipt upload and validation                       |
 | `/dashboard/settings`       | Auth   | Integrations, AI keys, category rules               |
