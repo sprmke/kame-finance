@@ -47,6 +47,29 @@ describe("period-transactions-view", () => {
     expect(sorted.map((r) => r.id)).toEqual(["b", "a"]);
   });
 
+  it("filters interest and fees under one kind", () => {
+    const rows = [
+      tx({
+        id: "1",
+        description: "INTEREST CHARGE",
+        amount: "50.00",
+      }),
+      tx({
+        id: "2",
+        description: "OVERLIMIT FEE",
+        amount: "600.00",
+      }),
+      tx({ id: "3", description: "JOLLIBEE", amount: "200.00" }),
+    ];
+    const filtered = filterPeriodTransactions(rows, {
+      search: "",
+      cardKey: "all",
+      categorySlug: "all",
+      kind: "interest_fees",
+    });
+    expect(filtered.map((r) => r.id).sort()).toEqual(["1", "2"]);
+  });
+
   it("groups by card", () => {
     const rows = [
       tx({ id: "1", cardLast4: "1111" }),

@@ -4,6 +4,7 @@ import type { PeriodTransaction } from "./period-overview-stats";
 import {
   classifyTransaction,
   cleanTransactionDescription,
+  isInterestOrFeeKind,
   parseTransactionAmount,
   type TransactionKind,
 } from "./transaction-utils";
@@ -59,6 +60,7 @@ function matchesSearch(tx: PeriodTransaction, query: string): boolean {
 function matchesKind(tx: PeriodTransaction, kind: string): boolean {
   if (!kind || kind === "all") return true;
   const actual = classifyTransaction(tx.description, tx.amount);
+  if (kind === "interest_fees") return isInterestOrFeeKind(actual);
   return actual === kind;
 }
 
@@ -200,12 +202,15 @@ export function listCategoryFilterOptions(
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
-export const PERIOD_TX_KIND_OPTIONS: { value: TransactionKind | "all"; label: string }[] =
-  [
-    { value: "all", label: "All types" },
-    { value: "purchase", label: "Purchase" },
-    { value: "payment", label: "Payment" },
-    { value: "credit", label: "Credit" },
-    { value: "interest", label: "Interest" },
-    { value: "fee", label: "Fee" },
-  ];
+export type PeriodTxKindFilterValue = TransactionKind | "all" | "interest_fees";
+
+export const PERIOD_TX_KIND_OPTIONS: {
+  value: PeriodTxKindFilterValue;
+  label: string;
+}[] = [
+  { value: "all", label: "All types" },
+  { value: "purchase", label: "Purchase" },
+  { value: "payment", label: "Payment" },
+  { value: "credit", label: "Credit" },
+  { value: "interest_fees", label: "Interest & fees" },
+];

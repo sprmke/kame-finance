@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, FileText, Receipt } from "lucide-react";
+import { AlertTriangle, Calendar, FileText, Receipt } from "lucide-react";
 
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { ROUTES } from "@/config/routes";
+import { cn } from "@/lib/utils/cn";
 
 import { CardBankLabel } from "@/lib/credit-cards/CardBankLabel";
 import { resolveCardAccent } from "@/lib/credit-cards/card-accent";
@@ -17,11 +18,20 @@ import {
   formatDisplayAmount,
   type SoaStatement,
 } from "../lib/soa-utils";
+import {
+  shouldOfferStatementPayNow,
+  type StatementDueEntryRow,
+} from "@/lib/soa/statement-due-entry";
+import { StatementPayNowButton } from "./StatementPayNowButton";
 
 type SoaStatementCardProps = {
   periodId: string;
   statement: SoaStatement;
   paid?: boolean;
+  dueEntries?: StatementDueEntryRow[];
+  onPayNow?: (dueEntryId: string) => void;
+  payNowDisabled?: boolean;
+  showMissingSoaNudge?: boolean;
   onPreviewSource: () => void;
 };
 
@@ -29,6 +39,10 @@ export function SoaStatementCard({
   periodId,
   statement,
   paid,
+  dueEntries = [],
+  onPayNow,
+  payNowDisabled,
+  showMissingSoaNudge,
   onPreviewSource,
 }: SoaStatementCardProps) {
   const accent = resolveCardAccent(statement.issuerId, statement.cardColor);
@@ -40,6 +54,11 @@ export function SoaStatementCard({
     !statement.soaUnavailable;
   const txCount = statement.transactions?.length ?? 0;
   const detailHref = ROUTES.dashboard.soaStatement(periodId, statement.id);
+  const payNow = shouldOfferStatementPayNow(
+    statement,
+    dueEntries,
+    Boolean(paid),
+  );
 
   const urgencyVariant =
     paid || days === null
@@ -111,7 +130,24 @@ export function SoaStatementCard({
           </div>
         </div>
 
+        {showMissingSoaNudge ? (
+          <div className="flex gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+            <p>
+              No SOA yet for this period. Check Gmail or upload the PDF manually.
+            </p>
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap gap-2">
+          {payNow.show && payNow.dueEntryId && onPayNow ? (
+            <StatementPayNowButton
+              fullWidth={txCount === 0 && !hasPdf}
+              className={cn(txCount === 0 && !hasPdf && "min-h-9")}
+              onClick={() => onPayNow(payNow.dueEntryId!)}
+              disabled={payNowDisabled}
+            />
+          ) : null}
           {txCount > 0 && (
             <Button variant="default" size="sm" className="h-8" asChild>
               <Link href={detailHref}>

@@ -57,6 +57,18 @@ export function classifyTransaction(
   return "purchase";
 }
 
+export function isInterestOrFeeKind(kind: TransactionKind): boolean {
+  return kind === "interest" || kind === "fee";
+}
+
+const INTEREST_FEES_KIND_META = {
+  row: "bg-[hsl(var(--destructive)/0.07)]",
+  amount: "text-[hsl(var(--destructive))] font-semibold",
+  badge:
+    "bg-[hsl(var(--destructive)/0.12)] text-[hsl(var(--destructive))] border-[hsl(var(--destructive)/0.25)]",
+  label: "Interest & fees",
+} as const;
+
 export const TRANSACTION_KIND_META: Record<
   TransactionKind,
   { row: string; amount: string; badge: string; label: string | null }
@@ -75,20 +87,8 @@ export const TRANSACTION_KIND_META: Record<
       "bg-[hsl(var(--warning)/0.2)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.35)]",
     label: "Payment",
   },
-  interest: {
-    row: "bg-[hsl(var(--destructive)/0.07)]",
-    amount: "text-[hsl(var(--destructive))] font-semibold",
-    badge:
-      "bg-[hsl(var(--destructive)/0.12)] text-[hsl(var(--destructive))] border-[hsl(var(--destructive)/0.25)]",
-    label: "Interest",
-  },
-  fee: {
-    row: "bg-[hsl(var(--warning)/0.09)]",
-    amount: "text-[hsl(var(--warning))]",
-    badge:
-      "bg-[hsl(var(--warning)/0.14)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.3)]",
-    label: "Fee",
-  },
+  interest: { ...INTEREST_FEES_KIND_META },
+  fee: { ...INTEREST_FEES_KIND_META },
   purchase: {
     row: "",
     amount: "text-foreground",

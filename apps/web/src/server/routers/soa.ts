@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { protectedProcedure, router } from "@/server/trpc";
+import { soaManualEntryService } from "@/server/services/soa-manual-entry.service";
 import { soaManualUploadService } from "@/server/services/soa-manual-upload.service";
 import { soaPeriodService } from "@/server/services/soa-period.service";
 import { soaRunProgressService } from "@/server/services/soa-run-progress.service";
@@ -88,6 +89,34 @@ export const soaRouter = router({
   clearHistory: protectedProcedure.mutation(({ ctx }) =>
     soaService.clearHistory(ctx.user.id),
   ),
+
+  createManualEntry: protectedProcedure
+    .input(
+      z.object({
+        periodId: z.string().uuid(),
+        creditCardId: z.string().uuid(),
+        statementMonth: z.number().int().min(1).max(12),
+        statementYear: z.number().int().min(2000).max(2100),
+        statementDate: z.string().min(1).max(32),
+        dueDate: z.string().min(1).max(32),
+        minimumDue: z.number().min(0).max(100_000_000),
+        totalDue: z.number().min(0).max(100_000_000),
+        transactions: z
+          .array(
+            z.object({
+              date: z.string().min(1).max(32),
+              description: z.string().trim().min(1).max(500),
+              amount: z.number().positive().max(100_000_000),
+              credit: z.boolean(),
+              categorySlug: z.string().min(1).max(32).optional(),
+            }),
+          )
+          .max(300),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      soaManualEntryService.create(ctx.user.id, input),
+    ),
 
   processManualUpload: protectedProcedure
     .input(

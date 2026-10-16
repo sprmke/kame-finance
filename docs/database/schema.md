@@ -4,8 +4,8 @@
 
 ## Core tables (planned)
 
-- `users` — profile extension for Supabase Auth users
-- `credit_cards` — card credentials, required-on-save recurring `due_day` (1–31 fallback when SOA is missing; also filled from parsed SOA due-date history), encrypted PDF password, optional `soa_subject`, and `color`. Issuer is one of `PH_BANK_ISSUERS` (Maya e-wallet + Kame Homes digital + traditional PH banks). Manual SOA upload can auto-create a row when issuer + last-4 are detected on a new statement.
+- `users` — profile extension for Supabase Auth users (`timezone`, `soa_advance_prompt_day` 1–31, default 20 — when to suggest running SOA for the next statement month)
+- `credit_cards` — card credentials, required-on-save recurring `statement_day` and `due_day` (1–31; due day fallback when SOA is missing; both can be filled from parsed SOA history), encrypted PDF password, optional `soa_subject`, and `color`. Issuer is one of `PH_BANK_ISSUERS` (Maya e-wallet + Kame Homes digital + traditional PH banks). Manual SOA upload can auto-create a row when issuer + last-4 are detected on a new statement.
 - `soa_statements`, `soa_transactions` — parsed SOA data (Gmail or manual upload; file in `pdf_storage_path`)
 - `user_transaction_categories` — per-user custom category slugs/labels (e.g. AI-created)
 - `due_entries` — payment due tracking; `source` is `soa` or preventive `expected`

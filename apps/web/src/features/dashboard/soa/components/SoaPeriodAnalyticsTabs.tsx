@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowLeft, Lightbulb, Sparkles } from "lucide-react";
+import { AlertCircle, Lightbulb, Sparkles } from "lucide-react";
 
 import { StatCard } from "@/components/shared/StatCard";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import {
 } from "../lib/period-overview-stats";
 import type { SoaStatement } from "../lib/soa-utils";
 import { useCategorizeWithAiActions } from "./CategorizeWithAiProvider";
+import { CategoryDrillDownHeader } from "./CategoryDrillDownHeader";
 import {
   CategorySpendBreakdown,
   categorySpendRowId,
@@ -233,64 +234,39 @@ export function SoaPeriodAnalyticsTab({
     <div className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-5">
         <Card className="border-border/80 xl:col-span-3">
-          <CardHeader
-            className={cn(
-              "flex flex-row justify-between gap-3 space-y-0 pb-4",
-              selectedRow ? "items-center" : "items-start",
-            )}
-          >
-            {selectedRow ? (
-              <div className="flex min-w-0 items-center gap-1">
-                <Button
-                  ref={backButtonRef}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-11 shrink-0 gap-1.5 px-2.5"
-                  onClick={() => setSelectedSlug(null)}
-                  aria-label="Back to category breakdown"
-                >
-                  <ArrowLeft className="h-4 w-4" aria-hidden />
-                  Back
-                </Button>
-                <div className="min-w-0">
-                  <CardTitle
-                    id="category-drill-title"
-                    className="flex items-center gap-2 font-display text-base"
-                  >
-                    <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: selectedColor }}
-                      aria-hidden
-                    />
-                    <span className="truncate">{selectedRow.label}</span>
-                  </CardTitle>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {selectedRow.count}{" "}
-                    {selectedRow.count === 1 ? "transaction" : "transactions"}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <CardTitle className="font-display text-base">
-                Category breakdown
-              </CardTitle>
-            )}
-            <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-              {formatPhpAmount(selectedRow?.total ?? spendTotal)}
-            </span>
+          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-4">
+            <CardTitle className="font-display text-base">
+              Category breakdown
+            </CardTitle>
+            {!selectedRow ? (
+              <span className="shrink-0 text-sm font-medium tabular-nums text-foreground">
+                {formatPhpAmount(spendTotal)}
+              </span>
+            ) : null}
           </CardHeader>
           <CardContent>
-            {selectedRow ? (
+            {selectedRow && selectedColor ? (
               <div
                 key={selectedRow.slug}
                 role="region"
                 aria-labelledby="category-drill-title"
-                className="max-h-[min(28rem,60vh)] overflow-auto motion-safe:animate-slide-in"
+                className="space-y-4 motion-safe:animate-slide-in"
               >
-                <CategorySpendTransactions
-                  transactions={categoryTransactions}
+                <CategoryDrillDownHeader
+                  label={selectedRow.label}
+                  count={selectedRow.count}
+                  total={selectedRow.total}
+                  spendTotal={spendTotal}
+                  accentColor={selectedColor}
+                  onBack={() => setSelectedSlug(null)}
+                  backButtonRef={backButtonRef}
                 />
+                <div className="max-h-[min(24rem,55vh)] overflow-auto rounded-lg border border-border/80 bg-card/40">
+                  <CategorySpendTransactions
+                    transactions={categoryTransactions}
+                    className="px-3 py-1"
+                  />
+                </div>
               </div>
             ) : (
               <CategorySpendBreakdown

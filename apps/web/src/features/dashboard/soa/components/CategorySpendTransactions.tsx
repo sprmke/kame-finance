@@ -48,16 +48,32 @@ export function CategorySpendTransactions({
         return (
           <li
             key={tx.id}
-            className="flex items-start justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+            className={cn(
+              "flex items-start justify-between gap-3 py-3 first:pt-2 last:pb-2",
+              meta.row && "rounded-md px-2 -mx-2",
+              meta.row,
+            )}
           >
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium leading-snug">
                 {description}
               </p>
-              <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
-                {dateLabel}
-                {showCard ? ` · ${cardIdentity(tx)}` : null}
-              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <p className="text-xs tabular-nums text-muted-foreground">
+                  {dateLabel}
+                  {showCard ? ` · ${cardIdentity(tx)}` : null}
+                </p>
+                {meta.label ? (
+                  <span
+                    className={cn(
+                      "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                      meta.badge,
+                    )}
+                  >
+                    {meta.label}
+                  </span>
+                ) : null}
+              </div>
             </div>
             <p
               className={cn(

@@ -11,13 +11,14 @@
 
 ## Monthly SOA cycle
 
-1. Bank emails SOA → manual **Run SOA** (or scheduled `run_soa_pipeline` automation)
-2. View parsed statement, transactions, summary PDF
-3. When **Add to Google Calendar** is enabled on the run, due-date events (D-4…D-0) are created for every active card with a due day — including cards with no SOA yet (estimated due from card settings). Calendar copy explains missing SOA; if the billing period has ended, it prompts a manual check or upload.
-4. Reminder window start (D-4…D-0) for expected entries when no SOA exists
-5. Daily reminder pings until paid
-6. Mark paid via UI, Telegram, or receipt photo
-7. Reminders stop; calendar shows paid
+1. From the configured calendar day each month (default **20**, Settings → SOA), signed-in users with at least one card see a one-time prompt to **Run SOA** for the **next** statement month if that period does not exist yet. **Not now** dismisses until the next target month.
+2. Bank emails SOA → manual **Run SOA** (or scheduled `run_soa_pipeline` automation)
+3. View parsed statement, transactions, summary PDF
+4. When **Add to Google Calendar** is enabled on the run, due-date events (D-4…D-0) are created for every active card with a due day — including cards with no SOA yet (estimated due from card settings). Calendar copy explains missing SOA; if the billing period has ended, it prompts a manual check or upload.
+5. Reminder window start (D-4…D-0) for expected entries when no SOA exists
+6. Daily reminder pings until paid
+7. Mark paid via UI, Telegram, or receipt photo
+8. Reminders stop; calendar shows paid
 
 ### Missing SOA fallback
 
@@ -34,6 +35,14 @@
 3. If the detected card is not in **Credit cards** yet, it is added automatically (due day from the SOA when available; set the PDF password later in Cards if Gmail unlock is needed).
 4. Multi-month periods attach to the matching month. A mismatch vs the current period asks to attach here or save the detected month.
 5. The statement is stored like a Gmail SOA: totals, transactions, analytics, and due entries.
+
+### Manual SOA entry
+
+1. Open a period on **SOA** and choose **Add**.
+2. Pick the credit card. Multi-month periods also ask which statement month.
+3. Enter statement date, due date, minimum due, and total due. Save with no transactions when only the summary is available.
+4. Optional transaction lines use the stored columns: date, description, amount, and category. Mark a line **Credit** (or describe it as a payment) so it reduces the balance. Total due then follows the lines and stays read-only. Minimum due stays editable, and cannot exceed total due.
+5. The row is stored like a parsed SOA for that card and month (replacing an unavailable placeholder). Due entries, reminders, and analytics use the saved amounts.
 
 ### SOA period transactions
 

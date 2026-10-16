@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
   ArrowLeft,
@@ -12,11 +13,13 @@ import {
   Loader2,
   PhilippinePeso,
   Play,
+  Plus,
   Sparkles,
   Upload,
 } from "lucide-react";
 
 import { DashboardPageHeader } from "@/components/shared/DashboardPageHeader";
+import { ReceiptBatchUploadProgressDialog } from "@/components/shared/ReceiptBatchUploadProgressDialog";
 import { SoaPeriodDetailContentSkeleton } from "@/components/shared/skeletons";
 import { StatCard } from "@/components/shared/StatCard";
 import { ViewToggle } from "@/components/shared/ViewToggle";
@@ -26,6 +29,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ROUTES } from "@/config/routes";
 import { api } from "@/lib/api/client";
 import type { AppRouter } from "@/server/routers/_app";
+import { useReceiptUploadFlow } from "@/hooks/use-receipt-upload-flow";
+import {
+  type StatementDueEntryRow,
+} from "@/lib/soa/statement-due-entry";
+import { isOnOrPastStatementDateForPeriod } from "@/lib/credit-cards/billing-cycle";
+import { normalizeCardLast4 } from "@/lib/due/normalize";
+import { todayYmdLocal } from "@/lib/reminders/reminder-status";
 import { formatPhpAmount } from "@/lib/utils/format-money";
 import { cn } from "@/lib/utils/cn";
 
@@ -33,6 +43,7 @@ import {
   CategorizeWithAiProvider,
   useCategorizeWithAiActions,
 } from "./CategorizeWithAiProvider";
+import { ManualSoaEntryDialog } from "./ManualSoaEntryDialog";
 import { ManualSoaMonthConfirmDialog } from "./ManualSoaMonthConfirmDialog";
 import { RunSoaDialog } from "./RunSoaDialog";
 import { SoaPdfPreview } from "./SoaPdfPreview";
@@ -130,12 +141,38 @@ function SoaPeriodDetailBody({
   periodTransactions: CategorizeTransactionInput[];
 }) {
   const utils = api.useUtils();
+  const router = useRouter();
+  const redirectToReceiptsAfterUploadRef = useRef(false);
   const { data: dues } = api.reminders.listDue.useQuery({ unpaidOnly: false });
+  const { data: cards } = api.creditCards.list.useQuery();
+  const { data: integrations } = api.integrations.list.useQuery();
   const categorize = useCategorizeWithAiActions();
+
+  const connected = useMemo(
+    () => new Set(integrations?.map((i) => i.provider) ?? []),
+    [integrations],
+  );
+
+  const receiptUpload = useReceiptUploadFlow(connected, {
+    onBatchSuccess: () => {
+      redirectToReceiptsAfterUploadRef.current = true;
+      void utils.soa.getPeriod.invalidate({ periodId });
+      void utils.soa.listPeriods.invalidate();
+    },
+  });
+
+  function handleReceiptUploadDialogComplete() {
+    receiptUpload.handleProgressComplete();
+    if (redirectToReceiptsAfterUploadRef.current) {
+      redirectToReceiptsAfterUploadRef.current = false;
+      router.push(ROUTES.dashboard.receipts);
+    }
+  }
 
   const [pdfPreview, setPdfPreview] = useState<PdfPreviewState>({
     kind: "closed",
   });
+  const [manualEntryOpen, setManualEntryOpen] = useState(false);
   const { viewMode, setViewMode } = usePersistedViewMode(
     "kame-finance:soa-view-mode",
   );
@@ -159,6 +196,17 @@ function SoaPeriodDetailBody({
     void utils.creditCards.list.invalidate();
   });
 
+  const dueEntries = useMemo((): StatementDueEntryRow[] => {
+    return (dues ?? []).map((due) => ({
+      id: due.id,
+      issuerId: due.issuerId,
+      cardLast4: due.cardLast4,
+      dueDateYmd: due.dueDateYmd,
+      paidAt: due.paidAt,
+      statementPeriodKey: due.statementPeriodKey,
+    }));
+  }, [dues]);
+
   const paidDues = useMemo(
     () =>
       (dues ?? []).map((due) => ({
@@ -170,6 +218,26 @@ function SoaPeriodDetailBody({
       })),
     [dues],
   );
+
+  const asOfYmd = todayYmdLocal();
+
+  function showMissingSoaNudge(statement: SoaStatement): boolean {
+    if (!statement.soaUnavailable) return false;
+    const card = (cards ?? []).find(
+      (c) =>
+        c.issuer.toLowerCase() === statement.issuerId.toLowerCase() &&
+        normalizeCardLast4(c.last4) === normalizeCardLast4(statement.cardLast4),
+    );
+    if (!card?.dueDay) return false;
+    return isOnOrPastStatementDateForPeriod(
+      asOfYmd,
+      statement.statementYear,
+      statement.statementMonth,
+      {
+        statementDay: card.statementDay,
+      },
+    );
+  }
 
   const pdfUrl =
     pdfPreview.kind === "source"
@@ -193,6 +261,14 @@ function SoaPeriodDetailBody({
         title={period.label}
         actions={
           <div className="flex flex-wrap gap-2 items-center">
+            <Button
+              variant="outline"
+              onClick={() => setManualEntryOpen(true)}
+              disabled={manualUpload.isPending || runPipeline.isPending}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add
+            </Button>
             <Button
               asChild
               variant="outline"
@@ -253,6 +329,19 @@ function SoaPeriodDetailBody({
       />
 
       <RunSoaDialog {...runDialogProps} />
+      <ManualSoaEntryDialog
+        periodId={periodId}
+        period={period}
+        cards={(cards ?? []).map((card) => ({
+          id: card.id,
+          issuer: card.issuer,
+          last4: card.last4,
+          label: card.label,
+          isActive: card.isActive,
+        }))}
+        open={manualEntryOpen}
+        onOpenChange={setManualEntryOpen}
+      />
       <ManualSoaMonthConfirmDialog
         pending={manualUpload.confirmPending}
         onSkip={() => manualUpload.resolveConfirm({ action: "skip" })}
@@ -271,6 +360,24 @@ function SoaPeriodDetailBody({
         }}
         title={pdfPreview.kind !== "closed" ? pdfPreview.title : "PDF"}
         pdfUrl={pdfUrl}
+      />
+
+      <input
+        ref={receiptUpload.fileRef}
+        type="file"
+        accept="image/*,application/pdf"
+        multiple
+        className="hidden"
+        onChange={receiptUpload.handleFileInputChange}
+      />
+      <ReceiptBatchUploadProgressDialog
+        open={receiptUpload.progressOpen}
+        onOpenChange={receiptUpload.handleProgressOpenChange}
+        jobs={receiptUpload.cardJobs}
+        options={receiptUpload.uploadOptions}
+        isPending={receiptUpload.isPending}
+        batchProgress={receiptUpload.batchProgress}
+        onComplete={handleReceiptUploadDialogComplete}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -353,6 +460,11 @@ function SoaPeriodDetailBody({
                     periodId={periodId}
                     statements={flatStatements}
                     paidDues={paidDues}
+                    dueEntries={dueEntries}
+                    onPayNow={(dueEntryId) =>
+                      receiptUpload.triggerFilePicker(dueEntryId)
+                    }
+                    payNowDisabled={receiptUpload.isPending}
                     onPreviewSource={(s) =>
                       setPdfPreview({
                         kind: "source",
@@ -396,6 +508,12 @@ function SoaPeriodDetailBody({
                             periodId={periodId}
                             statement={s}
                             paid={isStatementMarkedPaid(s, paidDues)}
+                            dueEntries={dueEntries}
+                            onPayNow={(dueEntryId) =>
+                              receiptUpload.triggerFilePicker(dueEntryId)
+                            }
+                            payNowDisabled={receiptUpload.isPending}
+                            showMissingSoaNudge={showMissingSoaNudge(s)}
                             onPreviewSource={() =>
                               setPdfPreview({
                                 kind: "source",

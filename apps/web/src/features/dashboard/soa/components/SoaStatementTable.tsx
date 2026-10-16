@@ -32,11 +32,19 @@ import {
 } from "../lib/soa-utils";
 import { isStatementMarkedPaid } from "@/lib/soa/paid-status";
 import type { DueEntryPaidMatchInput } from "@/lib/soa/paid-status";
+import {
+  shouldOfferStatementPayNow,
+  type StatementDueEntryRow,
+} from "@/lib/soa/statement-due-entry";
+import { StatementPayNowButton } from "./StatementPayNowButton";
 
 type SoaStatementTableProps = {
   periodId: string;
   statements: SoaStatement[];
   paidDues: DueEntryPaidMatchInput[];
+  dueEntries?: StatementDueEntryRow[];
+  onPayNow?: (dueEntryId: string) => void;
+  payNowDisabled?: boolean;
   onPreviewSource: (statement: SoaStatement) => void;
   showPeriodColumn?: boolean;
 };
@@ -45,6 +53,9 @@ export function SoaStatementTable({
   periodId,
   statements,
   paidDues,
+  dueEntries = [],
+  onPayNow,
+  payNowDisabled,
   onPreviewSource,
   showPeriodColumn = false,
 }: SoaStatementTableProps) {
@@ -79,6 +90,11 @@ export function SoaStatementTable({
             const detailHref = ROUTES.dashboard.soaStatement(
               periodId,
               statement.id,
+            );
+            const payNow = shouldOfferStatementPayNow(
+              statement,
+              dueEntries,
+              paid,
             );
 
             const urgencyVariant =
@@ -127,12 +143,22 @@ export function SoaStatementTable({
                   {formatDisplayAmount(statement.minimumDue)}
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col gap-1">
+                  <div
+                    className="flex flex-col items-start gap-1.5"
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                  >
                     <span>{statement.dueDate ?? "—"}</span>
                     {paid && <StatusBadge label="Paid" variant="success" />}
                     {countdown && !paid && (
                       <StatusBadge label={countdown} variant={urgencyVariant} />
                     )}
+                    {payNow.show && payNow.dueEntryId && onPayNow ? (
+                      <StatementPayNowButton
+                        onClick={() => onPayNow(payNow.dueEntryId!)}
+                        disabled={payNowDisabled}
+                      />
+                    ) : null}
                   </div>
                 </TableCell>
                 <TableRowActions>

@@ -36,7 +36,10 @@ function summarizeGroupResults(
   return { settled: "success", errorMessage: null };
 }
 
-export function useReceiptUploadFlow(connected: Set<string>) {
+export function useReceiptUploadFlow(
+  connected: Set<string>,
+  options?: { onBatchSuccess?: () => void },
+) {
   const utils = api.useUtils();
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingDueEntryIdRef = useRef<string | null>(null);
@@ -198,6 +201,8 @@ export function useReceiptUploadFlow(connected: Set<string>) {
             ? reason.payment.reason
             : "Some receipts failed",
         );
+      } else if (successGroups.length > 0) {
+        options?.onBatchSuccess?.();
       }
 
       void utils.receipts.list.invalidate();
