@@ -17,6 +17,7 @@ export type DueReminderEntry = {
   contactLine?: string | null;
   fullPan?: string | null;
   source?: string;
+  statementPeriodEnded?: boolean;
 };
 
 type Urgency = "info" | "warning" | "final" | "today";
@@ -42,6 +43,7 @@ function bodyInfoFromEntry(
     minimumDue: entry.minimumDue,
     totalDue: entry.totalDue,
     soaMissing: entry.source === "expected",
+    statementPeriodEnded: entry.statementPeriodEnded,
     interestCharges: entry.interestCharges ?? undefined,
     viewSoaLink: telegramWebLink?.trim() || undefined,
     contactLine: entry.contactLine ?? undefined,

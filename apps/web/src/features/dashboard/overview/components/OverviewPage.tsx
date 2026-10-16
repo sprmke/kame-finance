@@ -51,8 +51,8 @@ export function OverviewPage() {
                 <p className="font-display font-semibold">SOA missing</p>
                 <p className="text-sm text-muted-foreground">
                   {missingSoaDues.length} card
-                  {missingSoaDues.length === 1 ? "" : "s"} near the expected due
-                  date. Check email or your bank app.
+                  {missingSoaDues.length === 1 ? "" : "s"} past the statement
+                  date without an SOA. Check email or upload manually.
                 </p>
               </div>
             </div>

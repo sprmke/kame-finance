@@ -1,4 +1,7 @@
 import { formatExpectedDueDate, expectedDueDateYmd } from "@/lib/credit-cards/expected-due";
+import {
+  formatExpectedStatementDate,
+} from "@/lib/credit-cards/billing-cycle";
 import { parseDueDateToYmd } from "@/lib/due/parse-due-date";
 import { normalizeCardLast4 } from "@/lib/due/normalize";
 import { formatBankIssuer } from "@/lib/db/schema";
@@ -11,6 +14,7 @@ export type SoaCalendarCard = {
   label?: string | null;
   fullPan?: string | null;
   contactLine?: string | null;
+  statementDay?: number | null;
   dueDay: number | null;
 };
 
@@ -99,6 +103,11 @@ function missingSoaCalendarRow(
     month.month,
     card.dueDay,
   );
+  const statementDate = formatExpectedStatementDate(
+    { statementDay: card.statementDay ?? null },
+    month.year,
+    month.month,
+  );
 
   return {
     issuerId,
@@ -110,7 +119,7 @@ function missingSoaCalendarRow(
     dueDate: formatExpectedDueDate(dueYmd),
     minimumDue: "—",
     totalDue: "—",
-    statementDate: formatStatementPeriodEnd(month.year, month.month),
+    statementDate,
     source: "expected",
     soaUnavailable: true,
   };

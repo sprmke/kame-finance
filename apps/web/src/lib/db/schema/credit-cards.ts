@@ -315,6 +315,8 @@ export const creditCards = pgTable(
     gmailMonthOffset: integer("gmail_month_offset").default(0),
     /** Gmail subject line hint for SOA search (null = bank default query). */
     soaSubject: text("soa_subject"),
+    /** Normal monthly statement day (1–31). Gates missing-SOA prompts and expected due rows. */
+    statementDay: integer("statement_day"),
     /** Normal monthly due day. Used as a fallback when no SOA is received. */
     dueDay: integer("due_day"),
     /** Hex accent color (#RRGGBB) for SOA and card UI. */
@@ -340,6 +342,10 @@ export const creditCards = pgTable(
   },
   (table) => [
     check("credit_cards_due_day_check", sql`${table.dueDay} between 1 and 31`),
+    check(
+      "credit_cards_statement_day_check",
+      sql`${table.statementDay} between 1 and 31`,
+    ),
     index("credit_cards_user_idx").on(table.userId),
     index("credit_cards_issuer_last4_idx").on(table.issuer, table.last4),
     index("credit_cards_google_account_idx").on(table.googleAccountId),

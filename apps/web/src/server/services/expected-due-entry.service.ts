@@ -3,11 +3,18 @@ import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 
 import {
+  cardHasParsedSoaForStatementMonth,
+  isOnOrPastExpectedStatementDate,
+  targetStatementMonthForCard,
+  type CardBillingSchedule,
+} from "@/lib/credit-cards/billing-cycle";
+import {
   expectedDueDateCandidates,
   formatExpectedDueDate,
 } from "@/lib/credit-cards/expected-due";
+import { estimatedDueYmdForStatementMonth } from "@/lib/soa/calendar-sync-rows";
 import { db } from "@/lib/db";
-import { creditCards, dueEntries, formatBankIssuer } from "@/lib/db/schema";
+import { creditCards, dueEntries, formatBankIssuer, soaStatements } from "@/lib/db/schema";
 import { daysUntilYmd, todayYmdLocal } from "@/lib/reminders/reminder-status";
 
 import { invalidateDueEntryRows } from "./user-rows.service";
@@ -23,6 +30,18 @@ type EnsureExpectedDueEntriesOptions = {
   cardId?: string;
 };
 
+function cardSchedule(card: {
+  statementDay: number | null;
+  dueDay: number | null;
+  gmailMonthOffset: number | null;
+}): CardBillingSchedule {
+  return {
+    statementDay: card.statementDay,
+    dueDay: card.dueDay,
+    gmailMonthOffset: card.gmailMonthOffset ?? 0,
+  };
+}
+
 export const expectedDueEntryService = {
   async ensureForUser(
     userId: string,
@@ -37,22 +56,69 @@ export const expectedDueEntryService = {
         options.cardId ? eq(creditCards.id, options.cardId) : undefined,
       ),
     });
-    const existing = await db.query.dueEntries.findMany({
-      where: eq(dueEntries.userId, userId),
-    });
+    const [existing, statements] = await Promise.all([
+      db.query.dueEntries.findMany({
+        where: eq(dueEntries.userId, userId),
+      }),
+      db.query.soaStatements.findMany({
+        where: eq(soaStatements.userId, userId),
+        columns: {
+          creditCardId: true,
+          issuerId: true,
+          cardLast4: true,
+          statementYear: true,
+          statementMonth: true,
+          soaUnavailable: true,
+          dueDateYmd: true,
+        },
+      }),
+    ]);
     let added = 0;
     let updated = 0;
 
     for (const card of cards) {
       if (!card.dueDay) continue;
 
-      for (const dueDateYmd of expectedDueDateCandidates(
+      const schedule = cardSchedule(card);
+      const { year, month } = targetStatementMonthForCard(
         asOfYmd,
-        card.dueDay,
-      )) {
+        schedule.gmailMonthOffset,
+      );
+      const hasParsedSoa = cardHasParsedSoaForStatementMonth(
+        statements,
+        card,
+        year,
+        month,
+      );
+      const pastStatementDate = isOnOrPastExpectedStatementDate(
+        asOfYmd,
+        schedule,
+      );
+
+      const dueCandidates = new Set(
+        pastStatementDate && !hasParsedSoa
+          ? [
+              estimatedDueYmdForStatementMonth(
+                year,
+                month,
+                card.dueDay,
+              ),
+            ]
+          : expectedDueDateCandidates(asOfYmd, card.dueDay),
+      );
+
+      for (const dueDateYmd of dueCandidates) {
         const daysAway = daysUntilYmd(dueDateYmd, asOfYmd);
         const windowDays = card.reminderWindowDays ?? DEFAULT_WINDOW_DAYS;
-        if (daysAway > windowDays || daysAway < -OVERDUE_FOLLOW_UP_DAYS) {
+        const inDueWindow =
+          daysAway <= windowDays && daysAway >= -OVERDUE_FOLLOW_UP_DAYS;
+        const missingSoaForCycle =
+          pastStatementDate &&
+          !hasParsedSoa &&
+          dueDateYmd ===
+            estimatedDueYmdForStatementMonth(year, month, card.dueDay);
+
+        if (!inDueWindow && !missingSoaForCycle) {
           continue;
         }
 

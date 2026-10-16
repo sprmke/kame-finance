@@ -1,13 +1,18 @@
 import { relations } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   uuid,
   varchar,
   text,
   timestamp,
+  integer,
   index,
   uniqueIndex,
+  check,
 } from "drizzle-orm/pg-core";
+
+export const DEFAULT_SOA_ADVANCE_PROMPT_DAY = 20;
 
 export const users = pgTable(
   "users",
@@ -19,6 +24,10 @@ export const users = pgTable(
     image: text("image"),
     password: varchar("password", { length: 255 }),
     timezone: varchar("timezone", { length: 64 }).default("Asia/Manila"),
+    /** Calendar day of month (1–31) when we suggest running SOA for the next statement month. */
+    soaAdvancePromptDay: integer("soa_advance_prompt_day")
+      .notNull()
+      .default(DEFAULT_SOA_ADVANCE_PROMPT_DAY),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
@@ -26,7 +35,13 @@ export const users = pgTable(
       .$onUpdate(() => new Date()),
     deletedAt: timestamp("deleted_at"),
   },
-  (table) => [index("users_email_idx").on(table.email)],
+  (table) => [
+    index("users_email_idx").on(table.email),
+    check(
+      "users_soa_advance_prompt_day_check",
+      sql`${table.soaAdvancePromptDay} between 1 and 31`,
+    ),
+  ],
 );
 
 export const accounts = pgTable(

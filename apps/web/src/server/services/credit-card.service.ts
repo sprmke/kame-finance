@@ -2,6 +2,7 @@ import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { inferDueDayFromYmds } from "@/lib/credit-cards/expected-due";
+import { inferStatementDayFromStatementDates } from "@/lib/credit-cards/billing-cycle";
 import { db } from "@/lib/db";
 import {
   BANK_ISSUERS,
@@ -51,6 +52,45 @@ type SyncDueDaysOptions = {
   /** When true, only cards that still have no due day are updated. */
   fillNullOnly?: boolean;
 };
+
+async function syncStatementDaysFromStatements(
+  userId: string,
+  options: SyncDueDaysOptions = {},
+): Promise<number> {
+  const fillNullOnly = options.fillNullOnly ?? false;
+  const [cards, statements] = await Promise.all([
+    db.query.creditCards.findMany({
+      where: and(eq(creditCards.userId, userId), isNull(creditCards.deletedAt)),
+    }),
+    db.query.soaStatements.findMany({
+      where: eq(soaStatements.userId, userId),
+    }),
+  ]);
+
+  let updated = 0;
+  for (const card of cards) {
+    if (fillNullOnly && card.statementDay != null) continue;
+
+    const displayDates = statements
+      .filter((statement) => statementMatchesCard(statement, card))
+      .filter((statement) => statement.statementDate?.trim())
+      .map((statement) => statement.statementDate!.trim());
+
+    const inferred = inferStatementDayFromStatementDates(displayDates);
+    if (inferred == null || inferred === card.statementDay) continue;
+
+    await db
+      .update(creditCards)
+      .set({ statementDay: inferred, updatedAt: new Date() })
+      .where(
+        and(eq(creditCards.id, card.id), eq(creditCards.userId, userId)),
+      );
+    updated++;
+  }
+
+  if (updated > 0) invalidateCreditCardRows();
+  return updated;
+}
 
 async function syncDueDaysFromStatements(
   userId: string,
@@ -106,6 +146,7 @@ const createCardSchema = z.object({
   googleAccountId: z.string().uuid().optional().nullable(),
   soaSubject: z.string().max(512).optional().nullable(),
   dueDay: z.number().int().min(1).max(31),
+  statementDay: z.number().int().min(1).max(31).optional().nullable(),
   color: z
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "Color must be a hex value like #E8720C")
@@ -118,6 +159,7 @@ const createCardSchema = z.object({
 
 export const creditCardService = {
   syncDueDaysFromStatements,
+  syncStatementDaysFromStatements,
 
   async resolveGoogleAccountId(
     userId: string,
@@ -146,6 +188,12 @@ export const creditCardService = {
         fillNullOnly: true,
       });
       if (filled > 0) cards = await loadCards();
+    }
+    if (cards.some((card) => card.statementDay == null)) {
+      const filledStmt = await syncStatementDaysFromStatements(userId, {
+        fillNullOnly: true,
+      });
+      if (filledStmt > 0) cards = await loadCards();
     }
 
     const [defaultGoogleAccountId, googleAccountRows] = await Promise.all([
@@ -231,6 +279,7 @@ export const creditCardService = {
         googleAccountId,
         soaSubject: soaSubjectForStorage(data.soaSubject, data.issuer),
         dueDay: data.dueDay,
+        statementDay: data.statementDay ?? null,
         color: normalizeCardColor(data.color, data.issuer),
         reminderWindowDays: data.reminderWindowDays ?? null,
         reminderIntervalMinutes: data.reminderIntervalMinutes ?? 1440,
@@ -392,6 +441,8 @@ export const creditCardService = {
               )
             : undefined,
         dueDay: input.dueDay,
+        statementDay:
+          input.statementDay !== undefined ? input.statementDay : undefined,
         color:
           input.color !== undefined
             ? normalizeCardColor(

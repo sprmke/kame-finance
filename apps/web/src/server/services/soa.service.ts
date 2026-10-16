@@ -667,6 +667,7 @@ export const soaService = {
               fullPan: c.fullPan,
               contactLine: c.contactLine,
               dueDay: c.dueDay,
+              statementDay: c.statementDay,
             })),
           );
           const calResult = await googleCalendarService.createDueDateEvents(

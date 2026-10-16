@@ -10,6 +10,7 @@ export type AddCardDraft = {
   label: string;
   fullPan: string;
   dueDay: string;
+  statementDay: string;
   contactLine: string;
   pdfPassword: string;
   gmailMonthOffset: string;

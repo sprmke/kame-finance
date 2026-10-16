@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { MobileDashboardNav } from "@/features/dashboard/components/MobileDashboardNav";
 import { DashboardSidebar } from "@/features/dashboard/components/DashboardSidebar";
+import { SoaAdvanceRunPrompt } from "@/features/dashboard/soa/components/SoaAdvanceRunPrompt";
 import { ROUTES } from "@/config/routes";
 import { auth } from "@/lib/auth/auth-config";
 
@@ -24,6 +25,7 @@ export default async function DashboardLayout({
           </div>
         </main>
       </div>
+      <SoaAdvanceRunPrompt />
     </div>
   );
 }

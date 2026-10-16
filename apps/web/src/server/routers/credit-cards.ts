@@ -42,6 +42,7 @@ export const creditCardsRouter = router({
         googleAccountId: z.string().uuid().optional().nullable(),
         soaSubject: z.string().max(512).optional().nullable(),
         dueDay: z.number().int().min(1).max(31),
+        statementDay: z.number().int().min(1).max(31),
         color: z
           .string()
           .regex(/^#[0-9A-Fa-f]{6}$/)
@@ -66,6 +67,7 @@ export const creditCardsRouter = router({
         googleAccountId: z.string().uuid().optional().nullable(),
         soaSubject: z.string().max(512).optional().nullable(),
         dueDay: z.number().int().min(1).max(31),
+        statementDay: z.number().int().min(1).max(31),
         color: z
           .string()
           .regex(/^#[0-9A-Fa-f]{6}$/)

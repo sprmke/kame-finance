@@ -30,6 +30,10 @@ DB table `credit_cards` (replaces `CARDS_JSON`). Loaded via `creditCardService.l
 
 `tRPC` → `soa.service.runSoaPipeline` → `prepareSoaWorkdir` → `lib/soa/run.ts`.
 
+## Manual SOA entry
+
+Period detail **Add** writes a statement without a file. The user picks a credit card (and statement month on a multi-month period), then statement date, due date, minimum due, and total due. Transaction lines are optional and use the saved columns (date, description, amount, category). When lines are present, total due is the net of those lines and minimum due stays editable. `soa.createManualEntry` → `soa-manual-entry.service.ts` upserts `soa_statements` / `soa_transactions` and the due entry for that card and month.
+
 ## Manual SOA upload
 
 Period detail **Upload** accepts PDF/image when the bank does not email SOA. Detects issuer + last-4 from the file (text/OCR/AI); if that card is not on the user’s list, **auto-creates** it via `creditCardService.ensureForManualUpload`, picks the statement month inside a multi-month period, and prompts when the file is outside the current period. AI (`ai_api_keys`) fills fields parsers cannot read. Persist + due upsert reuse the Gmail pipeline. Uploads are MIME-sniffed; `storagePath` must belong to the user.

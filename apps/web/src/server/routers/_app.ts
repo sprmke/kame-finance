@@ -6,6 +6,7 @@ import { creditCardsRouter } from "./credit-cards";
 import { integrationsRouter } from "./integrations";
 import { overviewRouter } from "./overview";
 import { receiptsRouter } from "./receipts";
+import { settingsRouter } from "./settings";
 import { remindersRouter } from "./reminders";
 import { soaRouter } from "./soa";
 import { transactionCategoriesRouter } from "./transaction-categories";
@@ -20,6 +21,7 @@ export const appRouter = router({
   aiKeys: aiKeysRouter,
   automations: automationsRouter,
   receipts: receiptsRouter,
+  settings: settingsRouter,
 });
 
 export type AppRouter = typeof appRouter;

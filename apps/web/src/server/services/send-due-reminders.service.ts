@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 
-import { reminderFingerprint } from "@/lib/reminders/fingerprint";
+import { isOnOrPastExpectedStatementDate } from "@/lib/credit-cards/billing-cycle";
 import {
   buildSlackReminderMessage,
   buildTelegramReminderMessage,
@@ -72,6 +72,9 @@ export const sendDueRemindersService = {
           {
             windowDays: card.reminderWindowDays ?? DEFAULT_WINDOW_DAYS,
             intervalMinutes: card.reminderIntervalMinutes ?? 1440,
+            statementDay: card.statementDay,
+            dueDay: card.dueDay,
+            gmailMonthOffset: card.gmailMonthOffset ?? 0,
           },
         ]),
       );
@@ -105,8 +108,22 @@ export const sendDueRemindersService = {
 
         const settings =
           cardSettings.get(cardKey(due.issuerId, due.cardLast4)) ??
-          ({ windowDays: DEFAULT_WINDOW_DAYS, intervalMinutes: 1440 } as const);
+          ({
+            windowDays: DEFAULT_WINDOW_DAYS,
+            intervalMinutes: 1440,
+            statementDay: null,
+            dueDay: null,
+            gmailMonthOffset: 0,
+          } as const);
         const daysAway = daysUntilYmd(due.dueDateYmd, asOf);
+        const statementPeriodEnded =
+          due.source === "expected" &&
+          settings.dueDay != null &&
+          isOnOrPastExpectedStatementDate(asOf, {
+            statementDay: settings.statementDay,
+            dueDay: settings.dueDay,
+            gmailMonthOffset: settings.gmailMonthOffset,
+          });
         if (
           daysAway > settings.windowDays ||
           (daysAway < 0 &&
@@ -130,6 +147,7 @@ export const sendDueRemindersService = {
             contactLine: due.contactLine,
             fullPan: due.fullPan,
             source: due.source,
+            statementPeriodEnded,
           },
           daysAway,
           fingerprint: reminderFingerprint({

@@ -39,6 +39,7 @@ export type CreditCardRow = {
   reminderWindowDays: number | null;
   reminderIntervalMinutes: number;
   dueDay: number | null;
+  statementDay: number | null;
   isActive: boolean;
   googleAccountLabel?: string | null;
 };
@@ -64,7 +65,7 @@ export function CreditCardsTable({
             <TableHead>Last 4</TableHead>
             <TableHead className="hidden lg:table-cell">Gmail</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Due date</TableHead>
+            <TableHead>Billing</TableHead>
             <TableHead>Reminders</TableHead>
             <TableHead className="w-[52px]" />
           </TableRow>
@@ -102,8 +103,9 @@ export function CreditCardsTable({
                     variant={card.isActive ? "success" : "muted"}
                   />
                 </TableCell>
-                <TableCell className="tabular-nums">
-                  {card.dueDay ? `Day ${card.dueDay}` : "Not set"}
+                <TableCell className="tabular-nums text-sm">
+                  {card.statementDay ? `Stmt ${card.statementDay}` : "—"}
+                  {card.dueDay ? ` · Due ${card.dueDay}` : ""}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {formatReminderSummary(

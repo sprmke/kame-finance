@@ -138,6 +138,7 @@ export function CreditCardsPage() {
   const [label, setLabel] = useState("");
   const [fullPan, setFullPan] = useState("");
   const [dueDay, setDueDay] = useState("");
+  const [statementDay, setStatementDay] = useState("");
   const [contactLine, setContactLine] = useState("");
   const [pdfPassword, setPdfPassword] = useState("");
   const [gmailMonthOffset, setGmailMonthOffset] = useState("0");
@@ -176,6 +177,9 @@ export function CreditCardsPage() {
     setLabel(editingCard.label ?? "");
     setFullPan(editingCard.fullPan ?? "");
     setDueDay(editingCard.dueDay != null ? String(editingCard.dueDay) : "");
+    setStatementDay(
+      editingCard.statementDay != null ? String(editingCard.statementDay) : "",
+    );
     setContactLine(editingCard.contactLine ?? "");
     setPdfPassword(editingCard.pdfPassword);
     setGmailMonthOffset(String(editingCard.gmailMonthOffset ?? 0));
@@ -212,6 +216,7 @@ export function CreditCardsPage() {
     setLabel("");
     setFullPan("");
     setDueDay("");
+    setStatementDay("");
     setContactLine("");
     setPdfPassword("");
     setGmailMonthOffset("0");
@@ -229,6 +234,7 @@ export function CreditCardsPage() {
       label,
       fullPan,
       dueDay,
+      statementDay,
       contactLine,
       pdfPassword,
       gmailMonthOffset,
@@ -246,6 +252,7 @@ export function CreditCardsPage() {
     setLabel(draft.label);
     setFullPan(draft.fullPan);
     setDueDay(draft.dueDay ?? "");
+    setStatementDay(draft.statementDay ?? "");
     setContactLine(draft.contactLine);
     setPdfPassword(draft.pdfPassword);
     setGmailMonthOffset(draft.gmailMonthOffset);
@@ -282,6 +289,7 @@ export function CreditCardsPage() {
       label: label || undefined,
       fullPan: fullPan || undefined,
       dueDay: Number(dueDay),
+      statementDay: Number(statementDay),
       contactLine: contactLine || undefined,
       gmailMonthOffset: Number(gmailMonthOffset) || 0,
       reminderWindowDays: windowDays,
@@ -307,6 +315,14 @@ export function CreditCardsPage() {
       toast.error("Enter a due date from 1 to 31");
       return;
     }
+    if (
+      !Number.isInteger(payload.statementDay) ||
+      payload.statementDay < 1 ||
+      payload.statementDay > 31
+    ) {
+      toast.error("Enter a statement date from 1 to 31");
+      return;
+    }
     create.mutate({ ...payload, pdfPassword });
   }
 
@@ -322,6 +338,14 @@ export function CreditCardsPage() {
       payload.dueDay > 31
     ) {
       toast.error("Enter a due date from 1 to 31");
+      return;
+    }
+    if (
+      !Number.isInteger(payload.statementDay) ||
+      payload.statementDay < 1 ||
+      payload.statementDay > 31
+    ) {
+      toast.error("Enter a statement date from 1 to 31");
       return;
     }
     update.mutate({
@@ -421,6 +445,8 @@ export function CreditCardsPage() {
                 fullPanRequired
                 dueDay={dueDay}
                 setDueDay={setDueDay}
+                statementDay={statementDay}
+                setStatementDay={setStatementDay}
                 contactLine={contactLine}
                 setContactLine={setContactLine}
                 pdfPassword={pdfPassword}
@@ -559,7 +585,17 @@ export function CreditCardsPage() {
                               Due date
                             </p>
                             <p className="font-medium">
-                              {card.dueDay ? `Day ${card.dueDay}` : "Not set"}
+                              {card.statementDay || card.dueDay ? (
+                                <>
+                                  {card.statementDay
+                                    ? `Stmt ${card.statementDay}`
+                                    : null}
+                                  {card.statementDay && card.dueDay ? " · " : null}
+                                  {card.dueDay ? `Due ${card.dueDay}` : "Due not set"}
+                                </>
+                              ) : (
+                                "Not set"
+                              )}
                             </p>
                           </div>
                           <div>
@@ -634,6 +670,8 @@ export function CreditCardsPage() {
                 setFullPan={setFullPan}
                 dueDay={dueDay}
                 setDueDay={setDueDay}
+                statementDay={statementDay}
+                setStatementDay={setStatementDay}
                 contactLine={contactLine}
                 setContactLine={setContactLine}
                 pdfPassword={pdfPassword}
@@ -731,6 +769,8 @@ function CardForm({
   fullPanRequired = false,
   dueDay,
   setDueDay,
+  statementDay,
+  setStatementDay,
   contactLine,
   setContactLine,
   pdfPassword,
@@ -765,6 +805,8 @@ function CardForm({
   fullPanRequired?: boolean;
   dueDay: string;
   setDueDay: (v: string) => void;
+  statementDay: string;
+  setStatementDay: (v: string) => void;
   contactLine: string;
   setContactLine: (v: string) => void;
   pdfPassword: string;
@@ -832,19 +874,37 @@ function CardForm({
           required={fullPanRequired}
         />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor={`due-day-${creditCardId ?? "add"}`}>Due date</Label>
-        <Input
-          id={`due-day-${creditCardId ?? "add"}`}
-          type="number"
-          inputMode="numeric"
-          min={1}
-          max={31}
-          value={dueDay}
-          onChange={(e) => setDueDay(e.target.value)}
-          placeholder="Day of month"
-          required
-        />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor={`statement-day-${creditCardId ?? "add"}`}>
+            Statement date
+          </Label>
+          <Input
+            id={`statement-day-${creditCardId ?? "add"}`}
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={31}
+            value={statementDay}
+            onChange={(e) => setStatementDay(e.target.value)}
+            placeholder="Day of month"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`due-day-${creditCardId ?? "add"}`}>Due date</Label>
+          <Input
+            id={`due-day-${creditCardId ?? "add"}`}
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={31}
+            value={dueDay}
+            onChange={(e) => setDueDay(e.target.value)}
+            placeholder="Day of month"
+            required
+          />
+        </div>
       </div>
 
       <div className="space-y-2">

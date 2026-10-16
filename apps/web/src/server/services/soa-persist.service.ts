@@ -83,6 +83,7 @@ export const soaPersistService = {
 
     await collapseDuplicateStatements(userId);
     await creditCardService.syncDueDaysFromStatements(userId);
+    await creditCardService.syncStatementDaysFromStatements(userId);
 
     return { saved, updated, unavailable };
   },
