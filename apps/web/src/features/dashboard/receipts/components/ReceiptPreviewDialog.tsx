@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import {
+  ChevronLeft,
+  ChevronRight,
   Download,
   ExternalLink,
   Loader2,
@@ -43,6 +45,7 @@ type ReceiptPreviewDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   receipt: ReceiptListItem | null;
+  images?: ReceiptListItem[];
   onDelete?: (receipt: ReceiptListItem) => void;
   onMarkPaid?: (receiptId: string) => void;
   isMarkPaidPending?: boolean;
@@ -82,6 +85,7 @@ export function ReceiptPreviewDialog({
   open,
   onOpenChange,
   receipt,
+  images,
   onDelete,
   onMarkPaid,
   isMarkPaidPending,
@@ -91,10 +95,42 @@ export function ReceiptPreviewDialog({
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [imageIndex, setImageIndex] = useState(0);
 
-  const receiptId = receipt?.id ?? null;
+  const slides = images && images.length > 0 ? images : receipt ? [receipt] : [];
+  const slideKey = slides.map((slide) => slide.id).join(",");
+  const activeImage = slides[imageIndex] ?? slides[0] ?? null;
+
+  useEffect(() => {
+    if (!open) return;
+    setImageIndex(0);
+  }, [open, slideKey]);
+
+  useEffect(() => {
+    if (!open || slides.length < 2) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setImageIndex((current) =>
+          current === 0 ? slides.length - 1 : current - 1,
+        );
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setImageIndex((current) =>
+          current === slides.length - 1 ? 0 : current + 1,
+        );
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, slides.length]);
+
+  const receiptId = activeImage?.id ?? null;
   const fileUrl = receiptId ? receiptFileUrl(receiptId) : null;
-  const isPdf = isPdfReceipt(receipt?.originalFileName);
+  const isPdf = isPdfReceipt(activeImage?.originalFileName);
   const title = receipt ? formatReceiptCardTitle(receipt) : "Receipt";
   const coverage = receipt ? buildReceiptPaymentCoverage(receipt) : null;
 
@@ -205,6 +241,44 @@ export function ReceiptPreviewDialog({
                       className="h-auto w-full max-w-full rounded-md"
                     />
                   )}
+                  {slides.length > 1 ? (
+                    <div className="mt-3 flex items-center justify-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9"
+                        aria-label="Previous receipt"
+                        onClick={() =>
+                          setImageIndex((current) =>
+                            current === 0 ? slides.length - 1 : current - 1,
+                          )
+                        }
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span
+                        className="min-w-12 text-center text-xs tabular-nums text-muted-foreground"
+                        aria-live="polite"
+                      >
+                        {imageIndex + 1} / {slides.length}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9"
+                        aria-label="Next receipt"
+                        onClick={() =>
+                          setImageIndex((current) =>
+                            current === slides.length - 1 ? 0 : current + 1,
+                          )
+                        }
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -226,7 +300,10 @@ export function ReceiptPreviewDialog({
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Uploaded {formatReceiptDate(new Date(receipt.createdAt))}
+                      Uploaded{" "}
+                      {formatReceiptDate(
+                        new Date((activeImage ?? receipt).createdAt),
+                      )}
                     </p>
                   </section>
 
@@ -333,10 +410,7 @@ export function ReceiptPreviewDialog({
                         variant="outline"
                         className="text-destructive hover:text-destructive"
                         disabled={isRevalidatePending}
-                        onClick={() => {
-                          onOpenChange(false);
-                          onDelete(receipt);
-                        }}
+                        onClick={() => onDelete(activeImage ?? receipt)}
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
                         Remove

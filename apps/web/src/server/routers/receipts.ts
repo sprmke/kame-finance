@@ -91,9 +91,18 @@ export const receiptsRouter = router({
     ),
 
   revalidateWithAi: protectedProcedure
-    .input(z.object({ receiptId: z.string().uuid() }))
+    .input(
+      z.object({
+        receiptId: z.string().uuid(),
+        receiptIds: z.array(z.string().uuid()).max(8).optional(),
+      }),
+    )
     .mutation(({ ctx, input }) =>
-      receiptService.revalidateWithAi(ctx.user.id, input.receiptId),
+      receiptService.revalidateWithAi(
+        ctx.user.id,
+        input.receiptId,
+        input.receiptIds,
+      ),
     ),
 
   delete: protectedProcedure

@@ -24,9 +24,12 @@ import {
   buildReceiptConfirmationMessage,
 } from "./mark-paid.service";
 import { aiApiKeyService } from "./ai-api-key.service";
+import { receiptPaymentStackKey } from "@/lib/receipts/receipt-stack";
 import {
   shouldPersistReceiptValidation,
   validateCreditCardReceiptImage,
+  validateCreditCardReceiptImages,
+  type ReceiptVisionImage,
 } from "./receipt-validation.service";
 import { ReceiptUploadProgressReporter } from "./receipt-upload-progress.service";
 import { storageService } from "./storage.service";
@@ -85,6 +88,35 @@ function shouldApplyRevalidationResult(
     return false;
   }
   return true;
+}
+
+function overlayGroupedReceiptAi(
+  item: AnalyzedBatchItem,
+  groupAi: CreditCardReceiptAiResult,
+): AnalyzedBatchItem {
+  return {
+    ...item,
+    ai: {
+      ...item.ai,
+      verdict: groupAi.verdict,
+      confidence: groupAi.confidence,
+      summary: groupAi.summary,
+      hasAmount: groupAi.hasAmount || item.ai.hasAmount,
+      hasDate: groupAi.hasDate || item.ai.hasDate,
+      hasReference: groupAi.hasReference || item.ai.hasReference,
+      isCreditCardPayment:
+        groupAi.isCreditCardPayment || item.ai.isCreditCardPayment,
+      provider: groupAi.provider ?? item.ai.provider,
+      extraction: {
+        ...item.ai.extraction,
+        paymentDate:
+          item.ai.extraction.paymentDate ?? groupAi.extraction.paymentDate,
+        referenceNumber:
+          item.ai.extraction.referenceNumber ??
+          groupAi.extraction.referenceNumber,
+      },
+    },
+  };
 }
 
 function aiToParsedReceipt(ai: CreditCardReceiptAiResult) {
@@ -766,7 +798,11 @@ export const receiptService = {
     return { ok: true as const, dueEntryId: payResult.entry.id };
   },
 
-  async revalidateWithAi(userId: string, receiptId: string) {
+  async revalidateWithAi(
+    userId: string,
+    receiptId: string,
+    receiptIds?: string[],
+  ) {
     const row = await db.query.receipts.findFirst({
       where: and(eq(receipts.id, receiptId), eq(receipts.userId, userId)),
     });
@@ -778,17 +814,10 @@ export const receiptService = {
       const ai = skippedReceiptAi(AI_SKIP_NO_KEYS_MESSAGE, "no_keys");
       return {
         receipt: row,
+        receipts: [row],
         ai,
         paymentStatus: row.paymentStatus ?? "pending",
       };
-    }
-
-    const buffer = await storageService.readPrivate(row.storagePath);
-    if (!buffer?.length) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Could not read receipt file",
-      });
     }
 
     const cards = await creditCardService.list(userId);
@@ -861,8 +890,51 @@ export const receiptService = {
       }
     }
 
-    const mimeType = mimeFromPath(row.originalFileName ?? row.storagePath);
-    const ai = await validateCreditCardReceiptImage(userId, buffer, mimeType, {
+    const requestedIds = [
+      ...new Set([receiptId, ...(receiptIds ?? [])]),
+    ].slice(0, 8);
+    let siblingIds = requestedIds;
+    if (!receiptIds?.length) {
+      const listed = await this.list(userId, 200);
+      const currentListed = listed.find((item) => item.id === receiptId);
+      const stackKey = currentListed
+        ? receiptPaymentStackKey(currentListed)
+        : null;
+      siblingIds = stackKey
+        ? listed
+            .filter((item) => receiptPaymentStackKey(item) === stackKey)
+            .map((item) => item.id)
+            .slice(0, 8)
+        : [receiptId];
+    }
+    const siblingRows = await db.query.receipts.findMany({
+      where: and(eq(receipts.userId, userId), inArray(receipts.id, siblingIds)),
+    });
+    const rowOrder = new Map(siblingIds.map((id, index) => [id, index]));
+    siblingRows.sort(
+      (a, b) => (rowOrder.get(a.id) ?? 0) - (rowOrder.get(b.id) ?? 0),
+    );
+    const targets = siblingRows.length > 0 ? siblingRows : [row];
+
+    const images: ReceiptVisionImage[] = [];
+    for (const target of targets) {
+      const buffer = await storageService.readPrivate(target.storagePath);
+      if (!buffer?.length) continue;
+      images.push({
+        bytes: buffer,
+        mimeType: mimeFromPath(target.originalFileName ?? target.storagePath),
+        path: target.originalFileName ?? target.storagePath,
+      });
+    }
+
+    if (images.length === 0) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Could not read receipt file",
+      });
+    }
+
+    const ai = await validateCreditCardReceiptImages(userId, images, {
       knownCards,
       dueContext,
     });
@@ -870,78 +942,97 @@ export const receiptService = {
     if (isReceiptAiSkippedNoKeys(ai)) {
       return {
         receipt: row,
+        receipts: targets,
         ai,
         paymentStatus: row.paymentStatus ?? "pending",
       };
     }
 
     const extraction = ai.extraction;
-    const preserveMarkedPaid = row.paymentStatus === "marked_paid";
-    const applyValidation = shouldApplyRevalidationResult(ai, row);
-    const paymentStatus = preserveMarkedPaid
-      ? "marked_paid"
-      : applyValidation
-        ? ai.verdict === "invalid"
-          ? "rejected"
-          : "pending"
-        : (row.paymentStatus ?? "pending");
+    const grouped = targets.length > 1;
+    const updatedRows = [];
 
-    const nextAiAnalysis = applyValidation
-      ? {
-          confidence: ai.confidence,
-          hasAmount: ai.hasAmount,
-          hasDate: ai.hasDate,
-          hasReference: ai.hasReference,
-          isCreditCardPayment: ai.isCreditCardPayment,
-          paymentDate: extraction.paymentDate,
-          referenceNumber: extraction.referenceNumber,
-          aiModelError: ai.aiModelError,
-        }
-      : {
-          ...(row.aiAnalysis ?? {}),
-          aiModelError: ai.aiModelError ?? row.aiAnalysis?.aiModelError,
-        };
+    for (const target of targets) {
+      const preservePaid =
+        target.paymentStatus === "marked_paid" ||
+        target.paymentStatus === "partial";
+      const applyValidation = shouldApplyRevalidationResult(ai, target);
+      const paymentStatus = preservePaid
+        ? (target.paymentStatus ?? "pending")
+        : applyValidation
+          ? ai.verdict === "invalid"
+            ? "rejected"
+            : "pending"
+          : (target.paymentStatus ?? "pending");
 
-    const [updated] = await db
-      .update(receipts)
-      .set({
-        parsedCardLast4: applyValidation
-          ? extraction.cardLast4
-          : row.parsedCardLast4,
-        parsedAmount: applyValidation
-          ? extraction.amount != null
-            ? String(extraction.amount)
-            : null
-          : row.parsedAmount,
-        parsedAmountRaw: applyValidation
-          ? extraction.amountRaw
-          : row.parsedAmountRaw,
-        bankDetected: applyValidation
-          ? extraction.bankOrWallet
-          : row.bankDetected,
-        aiVerdict: applyValidation ? ai.verdict : row.aiVerdict,
-        aiSummary: applyValidation ? ai.summary : row.aiSummary,
-        aiProvider: applyValidation ? ai.provider : row.aiProvider,
-        aiAnalysis: nextAiAnalysis,
-        paymentStatus,
-        status:
-          ai.aiModelError && !applyValidation
-            ? row.status
-            : ai.aiModelError
-              ? "error"
-              : "processed",
-      })
-      .where(and(eq(receipts.id, receiptId), eq(receipts.userId, userId)))
-      .returning();
+      const nextAiAnalysis = applyValidation
+        ? {
+            confidence: ai.confidence,
+            hasAmount: ai.hasAmount,
+            hasDate: ai.hasDate,
+            hasReference: ai.hasReference,
+            isCreditCardPayment: ai.isCreditCardPayment,
+            paymentDate: extraction.paymentDate,
+            referenceNumber: extraction.referenceNumber,
+            aiModelError: ai.aiModelError,
+          }
+        : {
+            ...(target.aiAnalysis ?? {}),
+            aiModelError: ai.aiModelError ?? target.aiAnalysis?.aiModelError,
+          };
 
+      const [updated] = await db
+        .update(receipts)
+        .set({
+          parsedCardLast4: applyValidation
+            ? grouped
+              ? (target.parsedCardLast4 ?? extraction.cardLast4)
+              : extraction.cardLast4
+            : target.parsedCardLast4,
+          parsedAmount:
+            applyValidation && !grouped
+              ? extraction.amount != null
+                ? String(extraction.amount)
+                : null
+              : target.parsedAmount,
+          parsedAmountRaw:
+            applyValidation && !grouped
+              ? extraction.amountRaw
+              : target.parsedAmountRaw,
+          bankDetected: applyValidation
+            ? grouped
+              ? (target.bankDetected ?? extraction.bankOrWallet)
+              : extraction.bankOrWallet
+            : target.bankDetected,
+          aiVerdict: applyValidation ? ai.verdict : target.aiVerdict,
+          aiSummary: applyValidation ? ai.summary : target.aiSummary,
+          aiProvider: applyValidation ? ai.provider : target.aiProvider,
+          aiAnalysis: nextAiAnalysis,
+          paymentStatus,
+          status:
+            ai.aiModelError && !applyValidation
+              ? target.status
+              : ai.aiModelError
+                ? "error"
+                : "processed",
+        })
+        .where(and(eq(receipts.id, target.id), eq(receipts.userId, userId)))
+        .returning();
+
+      if (updated) updatedRows.push(updated);
+    }
+
+    const updated =
+      updatedRows.find((item) => item.id === receiptId) ?? updatedRows[0];
     if (!updated) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Receipt not found" });
     }
 
     return {
       receipt: updated,
+      receipts: updatedRows,
       ai,
-      paymentStatus,
+      paymentStatus: updated.paymentStatus ?? "pending",
     };
   },
 
@@ -1008,6 +1099,7 @@ export const receiptService = {
     }
 
     const analyzed: AnalyzedBatchItem[] = [];
+    const imageByPath = new Map<string, ReceiptVisionImage>();
 
     for (const item of input.items) {
       const buffer = await storageService.readPrivate(item.storagePath);
@@ -1019,6 +1111,11 @@ export const receiptService = {
       }
 
       const mimeType = mimeFromPath(item.originalFileName ?? item.storagePath);
+      imageByPath.set(item.storagePath, {
+        bytes: buffer,
+        mimeType,
+        path: item.originalFileName ?? item.storagePath,
+      });
 
       if (!(await aiApiKeyService.hasConfiguredKeys(userId))) {
         analyzed.push({
@@ -1045,6 +1142,33 @@ export const receiptService = {
       forcedDueEntryId: input.dueEntryId,
       forcedLabel,
     });
+
+    if (await aiApiKeyService.hasConfiguredKeys(userId)) {
+      for (const group of groups) {
+        if (group.items.length < 2) continue;
+        const images = group.items.flatMap((item) => {
+          const stored = imageByPath.get(item.storagePath);
+          return stored ? [stored] : [];
+        });
+        if (images.length < 2) continue;
+
+        const groupAi = await validateCreditCardReceiptImages(
+          userId,
+          images,
+          { knownCards, dueContext },
+        );
+        if (
+          !shouldPersistReceiptValidation(groupAi) ||
+          isReceiptAiSkipped(groupAi)
+        ) {
+          continue;
+        }
+
+        group.items = group.items.map((item) =>
+          overlayGroupedReceiptAi(item, groupAi),
+        );
+      }
+    }
 
     return { groups };
   },

@@ -2,6 +2,7 @@
 
 import { Eye, MoreVertical, Sparkles, Trash2 } from "lucide-react";
 
+import { MissingSoaBadge } from "@/components/shared/MissingSoaBadge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,20 +34,29 @@ import { ReceiptThumbnail } from "./ReceiptThumbnail";
 
 type ReceiptCardProps = {
   receipt: ReceiptListItem;
+  imageCount?: number;
+  thumbnailReceiptId?: string;
+  thumbnailFileName?: string | null;
   onView: (receipt: ReceiptListItem) => void;
   onDelete: (receipt: ReceiptListItem) => void;
   onRevalidate: (receipt: ReceiptListItem) => void;
   isRevalidatePending?: boolean;
+  soaMissing?: boolean;
 };
 
 export function ReceiptCard({
   receipt,
+  imageCount = 1,
+  thumbnailReceiptId,
+  thumbnailFileName,
   onView,
   onDelete,
   onRevalidate,
   isRevalidatePending,
+  soaMissing = false,
 }: ReceiptCardProps) {
   const title = formatReceiptCardTitle(receipt);
+  const previewId = thumbnailReceiptId ?? receipt.id;
   const coverage = buildReceiptPaymentCoverage(receipt);
   const dueDate = formatReceiptDueDate(receipt.dueDateYmd);
   const cardLabel = receipt.cardDisplayLabel ?? receiptCardLabel(receipt);
@@ -96,13 +106,22 @@ export function ReceiptCard({
       </DropdownMenu>
 
       <div className="flex min-h-[7.5rem] items-stretch sm:min-h-[8rem]">
-        <ReceiptThumbnail
-          receiptId={receipt.id}
-          fileName={receipt.originalFileName}
-          alt={title}
-          layout="sidebar"
-          onClick={() => onView(receipt)}
-        />
+        <div className="relative flex self-stretch">
+          <ReceiptThumbnail
+            receiptId={previewId}
+            fileName={thumbnailFileName ?? receipt.originalFileName}
+            alt={
+              imageCount > 1 ? `${title}, ${imageCount} images` : title
+            }
+            layout="sidebar"
+            onClick={() => onView(receipt)}
+          />
+          {imageCount > 1 ? (
+            <span className="pointer-events-none absolute bottom-1.5 left-1.5 rounded-full bg-foreground/85 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-background">
+              {imageCount}
+            </span>
+          ) : null}
+        </div>
 
         <div className="flex min-w-0 flex-1 flex-col gap-2 p-3 pr-10">
           <div className="min-w-0 space-y-0.5">
@@ -136,6 +155,7 @@ export function ReceiptCard({
               }
             />
             <ReceiptAiVerdictBadge verdict={receipt.aiVerdict} compact />
+            {soaMissing ? <MissingSoaBadge /> : null}
             {coverage && coverage.coverageLabel !== "unknown" ? (
               <StatusBadge
                 label={coverage.coverageText}

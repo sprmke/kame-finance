@@ -3,7 +3,9 @@ import {
   resolveStatementPeriodFromDue,
 } from "@/lib/receipts/match-due";
 import type { DuePaymentCoverage } from "@/lib/receipts/partial-payment";
+import { receiptPaymentStackKey } from "@/lib/receipts/receipt-stack";
 import { formatSoaPeriodLabelFromKey } from "@/lib/soa/period";
+import { formatPhpAmount } from "@/lib/utils/format-money";
 
 export type ReceiptGroupMode = "month" | "card";
 
@@ -132,7 +134,7 @@ export function formatReceiptDueDate(ymd: string | null): string | null {
   return formatReceiptDate(date);
 }
 
-function resolveReceiptMonthGroup(
+export function receiptMonthGroup(
   receipt: ReceiptListItem,
   dues: ReceiptMonthDueContext[],
 ): { key: string; label: string } {
@@ -208,7 +210,7 @@ function receiptDisplaySlotKey(
   dues: ReceiptMonthDueContext[],
 ): string {
   const cardKey = receiptCardGroupKey(receipt);
-  const periodKey = resolveReceiptMonthGroup(receipt, dues).key;
+  const periodKey = receiptMonthGroup(receipt, dues).key;
   const duplicateKey = receiptDuplicateIdentity(receipt);
   return `${cardKey}|${periodKey}|${duplicateKey}`;
 }
@@ -249,6 +251,155 @@ export function dedupeReceiptsForDisplay(
   );
 }
 
+export type ReceiptCardStack = {
+  key: string;
+  items: ReceiptListItem[];
+};
+
+const VERDICT_RANK: Record<string, number> = {
+  valid: 4,
+  likely_valid: 3,
+  unclear: 2,
+  skipped: 1,
+  invalid: 0,
+};
+
+function mergeAnalysisFlag(
+  values: Array<boolean | undefined>,
+): boolean | undefined {
+  if (values.some((value) => value === true)) return true;
+  if (values.length > 0 && values.every((value) => value === false)) {
+    return false;
+  }
+  return undefined;
+}
+
+function pickGroupVerdict(items: ReceiptListItem[]): string | null {
+  const verdicts = items
+    .map((item) => item.aiVerdict)
+    .filter((verdict): verdict is string => Boolean(verdict));
+  if (verdicts.length === 0) return null;
+  if (verdicts.every((verdict) => verdict === "invalid")) return "invalid";
+
+  return verdicts.reduce((best, verdict) =>
+    (VERDICT_RANK[verdict] ?? 2) > (VERDICT_RANK[best] ?? 2) ? verdict : best,
+  );
+}
+
+function combinedReceiptSummary(
+  items: ReceiptListItem[],
+  primary: ReceiptListItem,
+): string | null {
+  const unique = [
+    ...new Set(
+      items
+        .map((item) => item.aiSummary?.trim())
+        .filter((summary): summary is string => Boolean(summary)),
+    ),
+  ];
+  if (unique.length === 1) return unique[0] ?? null;
+  if (unique.length === 0) return null;
+
+  const total = items.reduce(
+    (sum, item) => sum + (item.parsedAmount ?? 0),
+    0,
+  );
+  const amount = formatPhpAmount(total);
+  const card = receiptCardLabel(primary);
+  if (amount !== "—") {
+    return `${items.length} receipts for ${card} totaling PHP ${amount}.`;
+  }
+  return `${items.length} receipts for ${card}.`;
+}
+
+/** Collapse receipt images that pay the same card and statement period. */
+export function stackReceiptsByCard(items: ReceiptListItem[]): ReceiptCardStack[] {
+  const map = new Map<string, ReceiptListItem[]>();
+
+  for (const item of items) {
+    const key = receiptPaymentStackKey(item);
+    const group = map.get(key) ?? [];
+    group.push(item);
+    map.set(key, group);
+  }
+
+  return [...map.entries()]
+    .map(([key, groupItems]) => ({
+      key,
+      items: groupItems.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ),
+    }))
+    .sort(
+      (a, b) =>
+        new Date(b.items[0]?.createdAt ?? 0).getTime() -
+        new Date(a.items[0]?.createdAt ?? 0).getTime(),
+    );
+}
+
+/**
+ * One checklist and summary for every image in a stack.
+ * A check passes when any image satisfies it. Amount coverage stays on the due entry.
+ */
+export function mergeReceiptStack(items: ReceiptListItem[]): ReceiptListItem {
+  const [first] = items;
+  if (!first) {
+    throw new Error("Cannot merge an empty receipt stack");
+  }
+  if (items.length === 1) return first;
+
+  const primary = items.reduce((current, candidate) =>
+    pickPreferredReceipt(current, candidate),
+  );
+  const analyses = items.map((item) => item.aiAnalysis);
+  const paymentDates = analyses
+    .map((analysis) => analysis?.paymentDate)
+    .filter((date): date is string => Boolean(date));
+  const alignedDate = paymentDates.find(
+    (date) =>
+      primary.dueDateYmd != null &&
+      date.slice(0, 7) === primary.dueDateYmd.slice(0, 7),
+  );
+  const references = [
+    ...new Set(
+      analyses
+        .map((analysis) => analysis?.referenceNumber?.trim())
+        .filter((reference): reference is string => Boolean(reference)),
+    ),
+  ];
+  const confidences = analyses
+    .map((analysis) => analysis?.confidence)
+    .filter((value): value is number => typeof value === "number");
+  const modelErrors = analyses
+    .map((analysis) => analysis?.aiModelError)
+    .filter((error): error is string => Boolean(error));
+  const everyImageErrored =
+    analyses.length > 0 &&
+    analyses.every((analysis) => Boolean(analysis?.aiModelError));
+
+  return {
+    ...primary,
+    aiVerdict: pickGroupVerdict(items),
+    aiSummary: combinedReceiptSummary(items, primary),
+    aiAnalysis: {
+      confidence:
+        confidences.length > 0 ? Math.max(...confidences) : null,
+      hasAmount: mergeAnalysisFlag(analyses.map((analysis) => analysis?.hasAmount)),
+      hasDate: mergeAnalysisFlag(analyses.map((analysis) => analysis?.hasDate)),
+      hasReference: mergeAnalysisFlag(
+        analyses.map((analysis) => analysis?.hasReference),
+      ),
+      isCreditCardPayment: mergeAnalysisFlag(
+        analyses.map((analysis) => analysis?.isCreditCardPayment),
+      ),
+      paymentDate: alignedDate ?? paymentDates[0],
+      referenceNumber: references.join(", ") || undefined,
+      aiModelError: everyImageErrored ? modelErrors[0] : undefined,
+    },
+  };
+}
+
 export function groupReceipts(
   items: ReceiptListItem[],
   mode: ReceiptGroupMode,
@@ -258,7 +409,7 @@ export function groupReceipts(
 
   for (const item of items) {
     if (mode === "month") {
-      const { key, label } = resolveReceiptMonthGroup(item, dues);
+      const { key, label } = receiptMonthGroup(item, dues);
       const group = map.get(key) ?? { key, label, items: [] };
       group.items.push(item);
       map.set(key, group);

@@ -2,6 +2,8 @@ import { describe, expect, it } from "bun:test";
 
 import {
   dedupeReceiptsForDisplay,
+  mergeReceiptStack,
+  stackReceiptsByCard,
   type ReceiptListItem,
   type ReceiptMonthDueContext,
 } from "./receipt-utils";
@@ -125,5 +127,95 @@ describe("dedupeReceiptsForDisplay", () => {
     );
 
     expect(result).toHaveLength(2);
+  });
+});
+
+describe("stackReceiptsByCard", () => {
+  it("collapses different images for the same due into one stack", () => {
+    const stacks = stackReceiptsByCard([
+      receipt({
+        id: "part-1",
+        dueEntryId: "due-6607",
+        originalFileName: "part-1.jpg",
+        aiSummary: "First transfer",
+        aiAnalysis: { hasDate: false, hasAmount: true },
+      }),
+      receipt({
+        id: "part-2",
+        dueEntryId: "due-6607",
+        originalFileName: "part-2.jpg",
+        parsedAmount: 15000,
+        aiSummary: "Second transfer",
+        aiAnalysis: {
+          hasDate: true,
+          hasAmount: true,
+          hasReference: true,
+          paymentDate: "2026-06-18",
+          referenceNumber: "675075",
+        },
+      }),
+    ]);
+
+    expect(stacks).toHaveLength(1);
+    expect(stacks[0]?.items).toHaveLength(2);
+  });
+
+  it("keeps a different statement period as its own stack", () => {
+    const stacks = stackReceiptsByCard([
+      receipt({ id: "june", statementPeriodKey: "2026-06" }),
+      receipt({
+        id: "july",
+        statementPeriodKey: "2026-07",
+        statementPeriodLabel: "July 2026",
+        dueDateYmd: "2026-07-22",
+      }),
+    ]);
+
+    expect(stacks).toHaveLength(2);
+  });
+});
+
+describe("mergeReceiptStack", () => {
+  it("passes a check when any image in the stack satisfies it", () => {
+    const merged = mergeReceiptStack([
+      receipt({
+        id: "part-1",
+        dueEntryId: "due-6607",
+        aiVerdict: "likely_valid",
+        aiSummary: "Amount visible, date missing",
+        aiAnalysis: {
+          hasAmount: true,
+          hasDate: false,
+          hasReference: false,
+          isCreditCardPayment: true,
+        },
+      }),
+      receipt({
+        id: "part-2",
+        dueEntryId: "due-6607",
+        parsedAmount: 15000,
+        aiVerdict: "valid",
+        aiSummary: "Dated payment with reference",
+        aiAnalysis: {
+          hasAmount: true,
+          hasDate: true,
+          hasReference: true,
+          isCreditCardPayment: true,
+          paymentDate: "2026-06-18",
+          referenceNumber: "675075",
+        },
+      }),
+    ]);
+
+    expect(merged.aiVerdict).toBe("valid");
+    expect(merged.aiAnalysis?.hasDate).toBe(true);
+    expect(merged.aiAnalysis?.hasReference).toBe(true);
+    expect(merged.aiAnalysis?.paymentDate).toBe("2026-06-18");
+    expect(merged.aiAnalysis?.referenceNumber).toBe("675075");
+    expect(merged.aiSummary).toContain("2 receipts");
+    expect(merged.aiSummary).toContain("57,393.00");
+    expect(merged.parsedAmount === 42393 || merged.parsedAmount === 15000).toBe(
+      true,
+    );
   });
 });
