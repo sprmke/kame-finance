@@ -18,25 +18,23 @@ export function DashboardPageHeader({
   return (
     <div
       className={cn(
-        'flex relative flex-col gap-4 sm:flex-row sm:items-end sm:justify-between',
+        "flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between",
         className,
       )}
     >
-      <div className="pl-4 space-y-2 border-l-4 border-primary">
-        <h1 className="text-2xl font-bold tracking-tight break-words font-display text-foreground sm:text-3xl">
+      <div className="min-w-0 border-l border-primary pl-3">
+        <h1 className="break-words font-display text-lg font-semibold tracking-tight text-foreground sm:text-xl">
           {title}
         </h1>
-        {description && (
-          <p className="max-w-2xl text-sm text-muted-foreground">
+        {description ? (
+          <p className="mt-0.5 max-w-2xl text-sm text-muted-foreground">
             {description}
           </p>
-        )}
+        ) : null}
       </div>
-      {actions && (
-        <div className="flex flex-wrap gap-2 pl-4 shrink-0 sm:pl-0">
-          {actions}
-        </div>
-      )}
+      {actions ? (
+        <div className="min-w-0 sm:max-w-[70%] sm:shrink-0">{actions}</div>
+      ) : null}
     </div>
   );
 }

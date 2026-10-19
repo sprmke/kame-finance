@@ -1,9 +1,5 @@
 "use client";
 
-import type { RefObject } from "react";
-import { ArrowLeft } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { formatPhpAmount } from "@/lib/utils/format-money";
 
@@ -13,8 +9,6 @@ type CategoryDrillDownHeaderProps = {
   total: number;
   spendTotal: number;
   accentColor: string;
-  onBack: () => void;
-  backButtonRef?: RefObject<HTMLButtonElement | null>;
   className?: string;
 };
 
@@ -24,8 +18,6 @@ export function CategoryDrillDownHeader({
   total,
   spendTotal,
   accentColor,
-  onBack,
-  backButtonRef,
   className,
 }: CategoryDrillDownHeaderProps) {
   const sharePct =
@@ -44,45 +36,31 @@ export function CategoryDrillDownHeader({
         style={{ backgroundColor: accentColor }}
         aria-hidden
       />
-      <div className="flex flex-col gap-3 p-3 pl-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4 sm:pl-5">
-        <div className="flex min-w-0 items-start gap-1 sm:items-center">
-          <Button
-            ref={backButtonRef}
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-11 shrink-0 gap-1.5 px-2.5 -ml-1"
-            onClick={onBack}
-            aria-label="Back to category breakdown"
+      <div className="flex flex-col gap-2 p-3 pl-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-3.5 sm:pl-5">
+        <div className="min-w-0">
+          <h3
+            id="category-drill-title"
+            className="flex min-w-0 items-center gap-2 font-display text-base font-semibold leading-tight tracking-tight text-foreground"
           >
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            Back
-          </Button>
-          <div className="min-w-0 flex-1 pt-0.5 sm:pt-0">
-            <h3
-              id="category-drill-title"
-              className="flex min-w-0 items-center gap-2 font-display text-lg font-semibold leading-tight tracking-tight text-foreground"
-            >
-              <span
-                className="h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-background"
-                style={{ backgroundColor: accentColor }}
-                aria-hidden
-              />
-              <span className="truncate">{label}</span>
-            </h3>
-            <p className="mt-1 text-xs tabular-nums text-muted-foreground">
-              {countLabel}
-              {sharePct > 0 ? (
-                <>
-                  <span aria-hidden> · </span>
-                  <span>{sharePct}% of period spend</span>
-                </>
-              ) : null}
-            </p>
-          </div>
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: accentColor }}
+              aria-hidden
+            />
+            <span className="truncate">{label}</span>
+          </h3>
+          <p className="mt-0.5 pl-4 text-xs tabular-nums text-muted-foreground">
+            {countLabel}
+            {sharePct > 0 ? (
+              <>
+                <span aria-hidden> · </span>
+                <span>{sharePct}% of period spend</span>
+              </>
+            ) : null}
+          </p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-2 pl-10 sm:pl-0">
-          <p className="font-display text-xl font-semibold tabular-nums text-foreground sm:text-2xl">
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <p className="font-display text-lg font-semibold tabular-nums leading-none text-foreground">
             {formatPhpAmount(total)}
           </p>
           {sharePct > 0 ? (

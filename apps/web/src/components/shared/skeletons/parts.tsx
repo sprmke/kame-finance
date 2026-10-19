@@ -61,7 +61,7 @@ export function StatCardSkeleton() {
 
 export function StatCardsRowSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
       {Array.from({ length: count }).map((_, i) => (
         <StatCardSkeleton key={i} />
       ))}

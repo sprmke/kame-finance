@@ -52,7 +52,8 @@ export function DueEntryCard({
   disabled,
 }: DueEntryCardProps) {
   const paid = Boolean(entry.paidAt);
-  const soaMissing = entry.source === "expected";
+  const awaitingStatement = entry.source === "expected";
+  const soaMissing = entry.soaMissing ?? awaitingStatement;
   const title = formatDueCardTitle(entry);
   const cardLabel = dueCardLabel(entry);
   const showCardLabel = cardLabel !== title && !title.includes(cardLabel);
@@ -77,8 +78,18 @@ export function DueEntryCard({
           </p>
         </div>
         <StatusBadge
-          label={soaMissing ? MISSING_SOA_LABEL : paid ? "Paid" : "Unpaid"}
-          variant={paid ? "success" : "warning"}
+          label={
+            soaMissing
+              ? MISSING_SOA_LABEL
+              : awaitingStatement
+                ? "Pending"
+                : paid
+                  ? "Paid"
+                  : "Unpaid"
+          }
+          variant={
+            paid ? "success" : awaitingStatement && !soaMissing ? "muted" : "warning"
+          }
         />
       </CardHeader>
       <CardContent className="space-y-3">
@@ -95,7 +106,7 @@ export function DueEntryCard({
             className="w-full justify-center truncate py-1"
           />
         ) : null}
-        {showCardMeta && !soaMissing && (
+        {showCardMeta && !awaitingStatement && (
           <>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Minimum</span>
@@ -107,7 +118,7 @@ export function DueEntryCard({
             </div>
           </>
         )}
-        {soaMissing ? null : paid ? (
+        {awaitingStatement ? null : paid ? (
           <Button
             variant="outline"
             size="sm"

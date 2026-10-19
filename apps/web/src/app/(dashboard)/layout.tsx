@@ -20,7 +20,7 @@ export default async function DashboardLayout({
       <div className="relative z-10 flex min-w-0 flex-1 flex-col">
         <MobileDashboardNav user={session.user} />
         <main className="scrollbar-thin min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
-          <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:p-6 lg:p-8">
+          <div className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
             {children}
           </div>
         </main>

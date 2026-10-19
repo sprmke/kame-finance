@@ -18,9 +18,9 @@
     --popover-foreground: 24 28% 11%;
 
     /* Brand — vibrant orange with gold depth */
-    --primary: 28 92% 52%;
+    --primary: 24 90% 38%;
     --primary-foreground: 0 0% 100%;
-    --primary-deep: 22 88% 42%;
+    --primary-deep: 22 88% 32%;
 
     /* Neutrals — warm stone */
     --secondary: 35 28% 92%;
@@ -35,7 +35,7 @@
     /* Semantic */
     --destructive: 0 72% 52%;
     --destructive-foreground: 0 0% 100%;
-    --success: 152 52% 36%;
+    --success: 152 55% 30%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 28 80% 18%;
@@ -61,7 +61,7 @@
     /* Sidebar */
     --sidebar-background: 40 50% 99%;
     --sidebar-foreground: 24 28% 11%;
-    --sidebar-primary: 28 92% 52%;
+    --sidebar-primary: 24 90% 38%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 38 90% 92%;
     --sidebar-accent-foreground: 28 70% 30%;

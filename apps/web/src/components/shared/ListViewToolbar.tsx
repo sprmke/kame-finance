@@ -38,7 +38,7 @@ export function ListViewToolbar({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+        "flex items-center justify-between gap-2",
         className,
       )}
     >
@@ -52,7 +52,7 @@ export function ListViewToolbar({
         {hasMultiplePages && (
           <>
             <span className="hidden text-muted-foreground sm:inline">·</span>
-            <p className="text-sm text-muted-foreground tabular-nums">
+            <p className="hidden text-sm tabular-nums text-muted-foreground sm:block">
               {rangeStart}–{rangeEnd} of {total}
             </p>
             <div className="flex items-center gap-1">

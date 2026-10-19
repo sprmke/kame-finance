@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { Route } from "next";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
   ArrowLeft,
@@ -19,9 +20,10 @@ import {
 } from "lucide-react";
 
 import { DashboardPageHeader } from "@/components/shared/DashboardPageHeader";
+import { PageActionBar } from "@/components/shared/PageActionBar";
 import { ReceiptBatchUploadProgressDialog } from "@/components/shared/ReceiptBatchUploadProgressDialog";
 import { SoaPeriodDetailContentSkeleton } from "@/components/shared/skeletons";
-import { StatCard } from "@/components/shared/StatCard";
+import { StatCard, statGridClassName } from "@/components/shared/StatCard";
 import { ViewToggle } from "@/components/shared/ViewToggle";
 import { ViewModeLayout } from "@/components/shared/ViewModeLayout";
 import { Button } from "@/components/ui/button";
@@ -66,6 +68,11 @@ import {
   type SoaStatement,
 } from "../lib/soa-utils";
 import { periodToRunInitial } from "../lib/run-soa-progress";
+import {
+  parseSoaPeriodQuery,
+  soaPeriodSearch,
+  type SoaPeriodTab,
+} from "../lib/soa-period-query";
 import { useSoaManualUpload } from "../hooks/use-soa-manual-upload";
 import { useSoaRunDialog } from "../hooks/use-soa-run-dialog";
 
@@ -88,7 +95,7 @@ export function SoaPeriodDetailPage({ periodId }: { periodId: string }) {
 
   if (isLoading) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-4">
         <SoaPeriodDetailContentSkeleton />
       </div>
     );
@@ -96,7 +103,7 @@ export function SoaPeriodDetailPage({ periodId }: { periodId: string }) {
 
   if (!period) {
     return (
-      <div className="py-16 space-y-4 text-center">
+      <div className="py-10 space-y-3 text-center">
         <p className="text-muted-foreground">SOA period not found.</p>
         <Button asChild variant="outline">
           <Link href={ROUTES.dashboard.soa}>
@@ -146,6 +153,33 @@ function SoaPeriodDetailBody({
 }) {
   const utils = api.useUtils();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { tab, category } = parseSoaPeriodQuery(searchParams);
+
+  const writePeriodQuery = useCallback(
+    (next: { tab: SoaPeriodTab; category?: string | null }) => {
+      const query = soaPeriodSearch({
+        tab: next.tab,
+        category: next.tab === "analytics" ? next.category : null,
+      });
+      const href = (query ? `${pathname}?${query}` : pathname) as Route;
+      router.replace(href, { scroll: false });
+    },
+    [pathname, router],
+  );
+
+  const selectCategory = useCallback(
+    (slug: string) => {
+      writePeriodQuery({ tab: "analytics", category: slug });
+    },
+    [writePeriodQuery],
+  );
+
+  const clearCategory = useCallback(() => {
+    writePeriodQuery({ tab: "analytics", category: null });
+  }, [writePeriodQuery]);
+
   const redirectToReceiptsAfterUploadRef = useRef(false);
   const { data: dues, isSuccess: duesReady } =
     api.reminders.listDue.useQuery({ unpaidOnly: false });
@@ -270,7 +304,7 @@ function SoaPeriodDetailBody({
         : null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div className="flex gap-2 items-center">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
           <Link href={ROUTES.dashboard.soa}>
@@ -283,75 +317,78 @@ function SoaPeriodDetailBody({
       <DashboardPageHeader
         title={period.label}
         actions={
-          <div className="flex flex-wrap gap-2 items-center">
-            <Button
-              variant="outline"
-              onClick={() => setManualEntryOpen(true)}
-              disabled={manualUpload.isPending || runPipeline.isPending}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              className={cn(
-                (manualUpload.isPending || runPipeline.isPending) &&
-                  "pointer-events-none opacity-50",
-              )}
-            >
-              <label className="cursor-pointer">
-                <input
-                  ref={manualUpload.fileRef}
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
-                  multiple
-                  className="sr-only"
+          <PageActionBar
+            secondary={
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setManualEntryOpen(true)}
                   disabled={manualUpload.isPending || runPipeline.isPending}
-                  onChange={manualUpload.handleFileInputChange}
-                />
-                {manualUpload.isPending ? (
-                  <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                ) : (
-                  <Upload className="mr-2 w-4 h-4" />
-                )}
-                {manualUpload.progressLabel
-                  ? `Uploading ${manualUpload.progressLabel}`
-                  : "Upload"}
-              </label>
-            </Button>
-            <Button
-              onClick={() => openRun(undefined, { rerun: true })}
-              disabled={runPipeline.isPending}
-            >
-              <Play className="mr-2 w-4 h-4" />
-              Re-run
-            </Button>
-            {periodTransactions.length > 0 && (
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={manualUpload.isPending || runPipeline.isPending}
+                  onClick={() => manualUpload.fileRef.current?.click()}
+                >
+                  {manualUpload.isPending ? (
+                    <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                  ) : (
+                    <Upload className="mr-2 w-4 h-4" />
+                  )}
+                  {manualUpload.progressLabel
+                    ? `Uploading ${manualUpload.progressLabel}`
+                    : "Upload"}
+                </Button>
+                {periodTransactions.length > 0 ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => categorize.openChoiceDialog()}
+                    disabled={categorize.isPending}
+                  >
+                    <Sparkles className="mr-2 w-4 h-4" />
+                    Categorize with AI
+                  </Button>
+                ) : null}
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    setPdfPreview({
+                      kind: "summary",
+                      periodId,
+                      title: `${period.label} summary`,
+                    })
+                  }
+                >
+                  <FileText className="mr-2 w-4 h-4" />
+                  Summary PDF
+                </Button>
+              </>
+            }
+            primary={
               <Button
-                variant="outline"
-                onClick={() => categorize.openChoiceDialog()}
-                disabled={categorize.isPending}
+                onClick={() => openRun(undefined, { rerun: true })}
+                disabled={runPipeline.isPending}
               >
-                <Sparkles className="mr-2 w-4 h-4" />
-                Categorized with AI
+                <Play className="mr-2 w-4 h-4" />
+                Re-run
               </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={() =>
-                setPdfPreview({
-                  kind: "summary",
-                  periodId,
-                  title: `${period.label} summary`,
-                })
-              }
-            >
-              <FileText className="mr-2 w-4 h-4" />
-              Summary PDF
-            </Button>
-          </div>
+            }
+          />
         }
+      />
+
+      <input
+        ref={manualUpload.fileRef}
+        type="file"
+        accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
+        multiple
+        className="sr-only"
+        tabIndex={-1}
+        disabled={manualUpload.isPending || runPipeline.isPending}
+        onChange={manualUpload.handleFileInputChange}
       />
 
       <RunSoaDialog {...runDialogProps} />
@@ -413,7 +450,7 @@ function SoaPeriodDetailBody({
         onComplete={handleReceiptUploadDialogComplete}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className={statGridClassName}>
         <StatCard
           title="Outstanding"
           value={formatPhpAmount(period.totalDue)}
@@ -443,8 +480,21 @@ function SoaPeriodDetailBody({
         />
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="overflow-x-auto justify-start w-full">
+      <Tabs
+        value={tab}
+        onValueChange={(value) => {
+          if (
+            value === "overview" ||
+            value === "cards" ||
+            value === "transactions" ||
+            value === "analytics"
+          ) {
+            writePeriodQuery({ tab: value, category: null });
+          }
+        }}
+        className="space-y-3"
+      >
+        <TabsList className="h-11 w-full justify-start overflow-x-auto sm:h-9">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="cards">Cards</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
@@ -463,10 +513,11 @@ function SoaPeriodDetailBody({
             cardCount={period.cardCount}
             paidCardCount={period.paidCardCount}
             nextDueYmd={period.nextDueYmd}
+            onSelectCategory={selectCategory}
           />
         </TabsContent>
 
-        <TabsContent value="cards" className="mt-0 space-y-6">
+        <TabsContent value="cards" className="mt-0 space-y-4">
           {!!period.statements.length && (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
@@ -484,7 +535,7 @@ function SoaPeriodDetailBody({
             </div>
           )}
 
-          <div className="space-y-10">
+          <div className="space-y-5">
             <ViewModeLayout
               viewMode={viewMode}
               table={
@@ -589,7 +640,12 @@ function SoaPeriodDetailBody({
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-0">
-          <SoaPeriodAnalyticsTab statements={flatStatements} />
+          <SoaPeriodAnalyticsTab
+            statements={flatStatements}
+            categorySlug={category}
+            onSelectCategory={selectCategory}
+            onClearCategory={clearCategory}
+          />
         </TabsContent>
       </Tabs>
     </div>

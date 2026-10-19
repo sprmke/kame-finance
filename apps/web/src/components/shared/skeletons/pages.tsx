@@ -30,9 +30,9 @@ import {
 export function OverviewContentSkeleton() {
   return (
     <SkeletonShell label="Loading overview">
-      <div className="space-y-8">
+      <div className="space-y-4">
         <OverviewPeriodMissionSkeleton />
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-3 lg:grid-cols-2">
           <OverviewListCardSkeleton />
           <OverviewListCardSkeleton />
         </div>
@@ -129,7 +129,7 @@ export function AutomationsContentSkeleton() {
 export function IntegrationsSettingsSkeleton() {
   return (
     <SkeletonShell label="Loading integrations">
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-3 lg:grid-cols-2">
         <IntegrationCardSkeleton fullWidth />
         <IntegrationCardSkeleton />
         <IntegrationCardSkeleton />
@@ -150,7 +150,7 @@ export function TransactionCategoryRulesContentSkeleton() {
 export function SoaPeriodDetailContentSkeleton() {
   return (
     <SkeletonShell label="Loading SOA period">
-      <div className="space-y-8">
+      <div className="space-y-4">
         <BreadcrumbSkeleton />
         <StatCardsRowSkeleton />
         <TabsSkeleton />
@@ -162,7 +162,7 @@ export function SoaPeriodDetailContentSkeleton() {
 export function SoaStatementDetailContentSkeleton() {
   return (
     <SkeletonShell label="Loading statement">
-      <div className="space-y-8">
+      <div className="space-y-4">
         <BreadcrumbSkeleton />
         <StatementHeroSkeleton />
         <StatCardsRowSkeleton count={4} />

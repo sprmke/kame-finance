@@ -15,9 +15,10 @@ import {
 } from 'lucide-react';
 
 import { DashboardPageHeader } from '@/components/shared/DashboardPageHeader';
+import { PageActionBar } from '@/components/shared/PageActionBar';
 import { MissingSoaNotice } from '@/components/shared/MissingSoaBadge';
 import { SoaStatementDetailContentSkeleton } from '@/components/shared/skeletons';
-import { StatCard } from '@/components/shared/StatCard';
+import { StatCard, statGridClassName } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { ViewPaymentReceiptButton } from '@/components/shared/ViewPaymentReceiptButton';
 import { Button } from '@/components/ui/button';
@@ -137,7 +138,7 @@ export function SoaStatementDetailPage({
 
   if (isLoading && !statement) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-4">
         <SoaStatementDetailContentSkeleton />
       </div>
     );
@@ -270,7 +271,7 @@ function SoaStatementDetailBody({
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div className="flex flex-wrap gap-y-1 gap-x-2 items-center text-sm text-muted-foreground">
         <Link
           href={ROUTES.dashboard.soa}
@@ -294,38 +295,71 @@ function SoaStatementDetailBody({
       <DashboardPageHeader
         title={statementTitle(statement)}
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" asChild>
-              <Link href={ROUTES.dashboard.soaPeriod(periodId)}>
-                <ArrowLeft className="mr-2 w-4 h-4" />
-                Back
-              </Link>
-            </Button>
-            {txStats.count > 0 && (
-              <Button
-                variant="outline"
-                onClick={() => categorize.openChoiceDialog()}
-                disabled={categorize.isPending}
-              >
-                <Sparkles className="mr-2 w-4 h-4" />
-                Categorized with AI
-              </Button>
-            )}
-            {hasPdf && (
-              <Button variant="outline" onClick={() => setPdfOpen(true)}>
-                <FileText className="mr-2 w-4 h-4" />
-                SOA
-              </Button>
-            )}
-            {linkedReceipts.length > 0 && (
-              <ViewPaymentReceiptButton
-                count={linkedReceipts.length}
-                label="Payment"
-                className="h-10 w-auto"
-                onClick={() => setPaymentOpen(true)}
-              />
-            )}
-          </div>
+          hasPdf || txStats.count > 0 || linkedReceipts.length > 0 ? (
+            <PageActionBar
+              secondary={
+                (hasPdf && (txStats.count > 0 || linkedReceipts.length > 0)) ||
+                (!hasPdf && linkedReceipts.length > 0 && txStats.count > 0) ? (
+                <>
+                  {hasPdf && txStats.count > 0 ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => categorize.openChoiceDialog()}
+                      disabled={categorize.isPending}
+                    >
+                      <Sparkles className="mr-2 w-4 h-4" />
+                      Categorize with AI
+                    </Button>
+                  ) : null}
+                  {hasPdf && linkedReceipts.length > 0 ? (
+                    <ViewPaymentReceiptButton
+                      count={linkedReceipts.length}
+                      label="Payment"
+                      className="w-auto"
+                      onClick={() => setPaymentOpen(true)}
+                    />
+                  ) : null}
+                  {!hasPdf &&
+                  linkedReceipts.length > 0 &&
+                  txStats.count > 0 ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => categorize.openChoiceDialog()}
+                      disabled={categorize.isPending}
+                    >
+                      <Sparkles className="mr-2 w-4 h-4" />
+                      Categorize with AI
+                    </Button>
+                  ) : null}
+                </>
+                ) : undefined
+              }
+              primary={
+                hasPdf ? (
+                  <Button variant="outline" onClick={() => setPdfOpen(true)}>
+                    <FileText className="mr-2 w-4 h-4" />
+                    SOA
+                  </Button>
+                ) : linkedReceipts.length > 0 ? (
+                  <ViewPaymentReceiptButton
+                    count={linkedReceipts.length}
+                    label="Payment"
+                    className="w-auto"
+                    onClick={() => setPaymentOpen(true)}
+                  />
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => categorize.openChoiceDialog()}
+                    disabled={categorize.isPending}
+                  >
+                    <Sparkles className="mr-2 w-4 h-4" />
+                    Categorize with AI
+                  </Button>
+                )
+              }
+            />
+          ) : null
         }
       />
 
@@ -333,7 +367,7 @@ function SoaStatementDetailBody({
         className="overflow-hidden border-border/80 shadow-card"
         style={accent.stripeStyle}
       >
-        <CardHeader className="pb-4 space-y-4">
+        <CardHeader className="space-y-3 pb-3">
           <div className="flex flex-wrap gap-2 items-center">
             <CardBankLabel
               issuerId={statement.issuerId}
@@ -349,12 +383,12 @@ function SoaStatementDetailBody({
             )}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4">
             <div>
               <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 Total due
               </p>
-              <p className="text-2xl font-bold tabular-nums font-display">
+              <p className="font-display text-xl font-semibold tabular-nums sm:text-2xl">
                 {formatDisplayAmount(statement.totalDue)}
               </p>
             </div>
@@ -362,7 +396,7 @@ function SoaStatementDetailBody({
               <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                 Minimum
               </p>
-              <p className="text-xl font-semibold tabular-nums font-display">
+              <p className="font-display text-base font-semibold tabular-nums sm:text-lg">
                 {formatDisplayAmount(statement.minimumDue)}
               </p>
             </div>
@@ -386,7 +420,7 @@ function SoaStatementDetailBody({
       {missingSoa ? <MissingSoaNotice /> : null}
 
       {txStats.count > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={statGridClassName}>
           <StatCard title="Transactions" value={txStats.count} icon={Receipt} />
           <StatCard
             title="Charges"
@@ -410,7 +444,7 @@ function SoaStatementDetailBody({
 
       <section className="space-y-4">
         <div className="flex gap-3 justify-between items-center">
-          <h2 className="text-lg font-semibold font-display">Transactions</h2>
+          <h2 className="font-display text-base font-semibold">Transactions</h2>
           {txStats.count > 0 && (
             <p className="text-sm tabular-nums text-muted-foreground">
               {txStats.count} {txStats.count === 1 ? 'line' : 'lines'}

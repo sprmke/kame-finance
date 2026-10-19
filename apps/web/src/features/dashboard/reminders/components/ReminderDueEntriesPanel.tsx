@@ -148,9 +148,7 @@ export function ReminderDueEntriesPanel() {
   const unpaidCount = dueItems.filter(
     (d) => !d.paidAt && d.source !== "expected",
   ).length;
-  const missingSoaCount = dueItems.filter(
-    (d) => d.source === "expected",
-  ).length;
+  const missingSoaCount = dueItems.filter((d) => d.soaMissing).length;
 
   const markPaid = api.reminders.markPaid.useMutation({
     onSuccess: () => {
@@ -335,7 +333,7 @@ export function ReminderDueEntriesPanel() {
                 )}
               </p>
               <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="text-muted-foreground">
+                <span className="hidden text-muted-foreground sm:inline">
                   Today {status.asOf}
                 </span>
                 <StatusBadge
@@ -347,6 +345,7 @@ export function ReminderDueEntriesPanel() {
                   variant="muted"
                 />
                 <StatusBadge
+                  className="hidden sm:inline-flex"
                   label={formatDaysBeforeDue(status.defaultWindowDays)}
                   variant="muted"
                 />
@@ -371,7 +370,7 @@ export function ReminderDueEntriesPanel() {
         />
       ) : (
         <Card className="border-border/80 shadow-card">
-          <CardContent className="space-y-8 p-4 sm:p-5">
+          <CardContent className="space-y-5 p-3 sm:p-4">
             {groups.map((group) => (
               <div key={group.key} className="space-y-4">
                 <ReminderGroupHeader

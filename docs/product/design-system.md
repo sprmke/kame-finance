@@ -16,10 +16,10 @@ Defined in `apps/web/src/app/globals.css`. Always use semantic classes in compon
 
 | Token            | Light                      | Purpose                                |
 | ---------------- | -------------------------- | -------------------------------------- |
-| `--primary`      | Orange `28 92% 52%`        | CTAs, active nav, brand accents        |
-| `--primary-deep` | `22 88% 42%`               | Gradients, depth                       |
+| `--primary`      | Orange `24 90% 38%` (light) | CTAs, active nav, brand accents. Darkened so white label text clears 4.5:1. |
+| `--primary-deep` | `22 88% 32%` (light)        | Gradients, depth                       |
 | `--chart-2`      | Gold `42 96% 55%`          | Secondary chart / gradient stops       |
-| `--success`      | Green `152 52% 36%`        | Paid, completed — **not** brand orange |
+| `--success`      | Green `152 55% 30%` (light) | Paid, completed — **not** brand orange |
 | `--background`   | Warm ivory `38 45% 97%`    | Page canvas                            |
 | `--foreground`   | Warm charcoal `24 28% 11%` | Body text                              |
 | `--accent`       | Light gold wash            | Hover surfaces, highlights             |
@@ -54,6 +54,17 @@ Load via `apps/web/src/lib/fonts.ts` and `next/font/google`.
 | `text-gradient`                | Hero emphasis text                          |
 | `shadow-glow` / `glow-primary` | Primary button emphasis                     |
 | `font-display`                 | Heading override                            |
+
+## Density
+
+Dashboard chrome stays compact so a phone shows the task, not the frame.
+
+- Page canvas: `px-3 py-3`, up to `lg:px-6 lg:py-5`, content max `7xl`
+- Page titles: `text-lg` / `sm:text-xl`
+- Section stacks: `space-y-4`
+- Stat strips: 2 columns on small screens, value at `text-lg` / `sm:text-xl`
+- Phone and tablet actions: one primary control; the rest live in a bottom sheet until `lg`
+- Navigation drawer opens from the right and uses full-height rows
 
 ## Rules
 

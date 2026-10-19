@@ -14,7 +14,7 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 hover:shadow-md",
         outline:
-          "border-2 border-input bg-background hover:bg-accent hover:text-accent-foreground hover:border-primary/30",
+          "border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:border-primary/30",
         secondary:
           "bg-secondary text-secondary-foreground shadow-soft-xs hover:bg-secondary/80 hover:shadow-soft-sm",
         ghost: "hover:bg-accent hover:text-accent-foreground",
@@ -25,9 +25,9 @@ const buttonVariants = cva(
         warning:
           "bg-warning text-warning-foreground shadow-sm hover:bg-warning/90 hover:shadow-md",
         "outline-primary":
-          "border-2 border-primary bg-transparent text-primary hover:bg-primary hover:text-primary-foreground",
+          "border border-primary bg-transparent text-primary hover:bg-primary hover:text-primary-foreground",
         "outline-destructive":
-          "border-2 border-destructive bg-transparent text-destructive hover:bg-destructive hover:text-destructive-foreground",
+          "border border-destructive bg-transparent text-destructive hover:bg-destructive hover:text-destructive-foreground",
         soft: "bg-primary/10 text-primary hover:bg-primary/20",
         "soft-destructive":
           "bg-destructive/10 text-destructive hover:bg-destructive/20",

@@ -33,7 +33,7 @@ function TransactionCategoryRulesSkeleton() {
 
 export default function SettingsLoading() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <DashboardPageHeader title="Settings" />
       <IntegrationsSettingsSkeleton />
       <TransactionCategoryRulesSkeleton />

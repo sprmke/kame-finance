@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react";
 
 import { api, backgroundQuery } from "@/lib/api/client";
 import {
-  closeGoogleReconnectModal,
+  acknowledgeGoogleReconnect,
   openGoogleReconnectModal,
 } from "@/lib/auth/google-reconnect-store";
 
@@ -29,7 +29,7 @@ export function GoogleReconnectMonitor() {
       openGoogleReconnectModal(data.message);
       return;
     }
-    closeGoogleReconnectModal();
+    acknowledgeGoogleReconnect();
   }, [data, enabled]);
 
   return null;

@@ -213,7 +213,7 @@ export function OverviewPeriodMission({
             : "bg-gradient-to-r from-primary via-[hsl(var(--chart-2))] to-primary/60",
         )}
       />
-      <CardContent className="p-5 space-y-6 sm:p-6">
+      <CardContent className="space-y-4 p-3 sm:p-4">
         <div className="flex flex-wrap gap-4 justify-between items-start">
           <div className="space-y-1">
             <div className="flex flex-wrap gap-2 items-center">
@@ -245,7 +245,7 @@ export function OverviewPeriodMission({
           </Button>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-2">
             <div className="flex gap-2 justify-between items-baseline text-sm">
               <span className="text-muted-foreground">Paid vs statement</span>
@@ -257,7 +257,7 @@ export function OverviewPeriodMission({
               value={paymentProgress}
               variant={paymentProgress >= 100 ? "success" : "primary"}
             />
-            <p className="text-xs tabular-nums text-muted-foreground">
+            <p className="hidden text-xs tabular-nums text-muted-foreground sm:block">
               {formatPhpAmount(totalPaid)} paid ·{" "}
               {formatPhpAmount(outstandingDue)} outstanding
             </p>
@@ -274,7 +274,7 @@ export function OverviewPeriodMission({
               value={minimumProgress}
               variant={minimumCleared ? "success" : "warning"}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="hidden text-xs text-muted-foreground sm:block">
               {minimumCleared
                 ? `Sum of mins ${formatPhpAmount(grossMinimumDue)}`
                 : cardsBelowMinimum.length === 1
@@ -294,7 +294,7 @@ export function OverviewPeriodMission({
               value={cardProgress}
               variant={cardsComplete ? "success" : "primary"}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="hidden text-xs text-muted-foreground sm:block">
               {cardsComplete
                 ? "All cards marked paid"
                 : `${cardCount - paidCardCount} card${cardCount - paidCardCount === 1 ? "" : "s"} unpaid`}
@@ -303,7 +303,7 @@ export function OverviewPeriodMission({
         </div>
 
         {attention.length > 0 ? (
-          <div className="pt-5 space-y-2 border-t border-border/60">
+          <div className="space-y-1.5 border-t border-border/60 pt-3">
             <p className="text-xs font-medium tracking-wide uppercase text-muted-foreground">
               Needs attention
             </p>
@@ -312,7 +312,7 @@ export function OverviewPeriodMission({
                 <li key={item.id}>
                   <Link
                     href={item.href}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-border/80 px-3 py-2.5 transition-colors hover:bg-muted/40"
+                    className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border/80 px-3 py-2 transition-colors hover:bg-muted/40"
                   >
                     <div className="flex min-w-0 items-center gap-2.5">
                       <AlertCircle

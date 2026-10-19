@@ -6,7 +6,7 @@ import {
 
 export function CreditCardsLoadingView() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <DashboardPageHeader
         title="Credit cards"
         actions={<SkeletonPageActions count={1} />}

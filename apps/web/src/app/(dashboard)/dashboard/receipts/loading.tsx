@@ -6,7 +6,7 @@ import {
 
 export default function ReceiptsLoading() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <DashboardPageHeader
         title="Receipts"
         actions={<SkeletonPageActions count={1} />}

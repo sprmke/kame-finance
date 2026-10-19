@@ -120,6 +120,7 @@ export function AutomationJobCard({
           <Button
             variant="ghost"
             size="icon"
+            className="h-11 w-11"
             aria-label="Edit automation"
             onClick={() => onEdit(job)}
           >
@@ -131,6 +132,7 @@ export function AutomationJobCard({
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="h-11 w-11"
                   aria-label="Delete automation"
                 >
                   <Trash2 className="h-4 w-4" />

@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DashboardPageHeader } from "@/components/shared/DashboardPageHeader";
+import { PageActionBar } from "@/components/shared/PageActionBar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { GoogleAccountSelect } from "@/components/shared/GoogleAccountSelect";
 import { ListViewToolbar } from "@/components/shared/ListViewToolbar";
@@ -413,10 +414,12 @@ export function CreditCardsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <DashboardPageHeader
         title="Credit cards"
         actions={
+          <PageActionBar
+            primary={
           <Dialog
             open={addOpen}
             onOpenChange={(open) => {
@@ -472,6 +475,8 @@ export function CreditCardsPage() {
               />
             </DialogContent>
           </Dialog>
+            }
+          />
         }
       />
 
@@ -505,7 +510,7 @@ export function CreditCardsPage() {
               />
             }
             grid={
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {pagination.items.map((card) => {
                   const accent = resolveCardAccent(card.issuer, card.color);
                   return (
@@ -539,7 +544,7 @@ export function CreditCardsPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="w-8 h-8 shrink-0"
+                                className="h-10 w-10 shrink-0"
                                 aria-label="Card actions"
                               >
                                 <MoreHorizontal className="w-4 h-4" />
@@ -564,24 +569,24 @@ export function CreditCardsPage() {
                           </DropdownMenu>
                         </div>
                       </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                          <div>
+                      <CardContent className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="min-w-0">
                             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                              Reminder window
+                              Reminders
                             </p>
-                            <p className="font-medium">
+                            <p className="font-medium leading-snug">
                               {formatReminderSummary(
                                 card.reminderWindowDays,
                                 card.reminderIntervalMinutes,
                               )}
                             </p>
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                               Due date
                             </p>
-                            <p className="font-medium">
+                            <p className="font-medium leading-snug">
                               {card.statementDay || card.dueDay ? (
                                 <>
                                   {card.statementDay
@@ -595,18 +600,8 @@ export function CreditCardsPage() {
                               )}
                             </p>
                           </div>
-                          <div>
-                            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                              Interval
-                            </p>
-                            <p className="font-medium">
-                              {REMINDER_INTERVALS.find(
-                                (i) => i.value === card.reminderIntervalMinutes,
-                              )?.label ?? "Once per day"}
-                            </p>
-                          </div>
                           {card.googleAccountLabel ? (
-                            <div className="sm:col-span-2">
+                            <div className="col-span-2 hidden sm:block">
                               <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                                 Gmail
                               </p>
@@ -623,7 +618,7 @@ export function CreditCardsPage() {
                           />
                         )}
                         <Button
-                          className="w-full"
+                          className="hidden w-full sm:inline-flex"
                           variant="outline"
                           onClick={() => openEdit(card.id)}
                         >

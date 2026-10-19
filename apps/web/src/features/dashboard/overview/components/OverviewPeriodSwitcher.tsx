@@ -30,6 +30,7 @@ import {
 type OverviewPeriodSwitcherProps = {
   period: OverviewPeriod;
   onChange: (period: OverviewPeriod) => void;
+  className?: string;
 };
 
 const GRAIN_OPTIONS: { value: OverviewPeriodGrain; label: string }[] = [
@@ -40,6 +41,7 @@ const GRAIN_OPTIONS: { value: OverviewPeriodGrain; label: string }[] = [
 export function OverviewPeriodSwitcher({
   period,
   onChange,
+  className,
 }: OverviewPeriodSwitcherProps) {
   const label = formatOverviewPeriodLabel(period);
   const grainNoun = period.grain === "year" ? "year" : "month";
@@ -51,12 +53,15 @@ export function OverviewPeriodSwitcher({
     <div
       role="group"
       aria-label="Statement period"
-      className="inline-flex h-10 max-w-full items-stretch"
+      className={cn(
+        "inline-flex h-11 max-w-full items-stretch sm:h-9",
+        className,
+      )}
     >
       <PeriodStepButton
         label={`Previous ${grainNoun}`}
         disabled={!canGoPrev}
-        className="rounded-l-lg"
+        className="hidden rounded-l-lg sm:inline-flex"
         onClick={() => onChange(shiftOverviewPeriod(period, "prev"))}
       >
         <ChevronLeft aria-hidden />
@@ -65,7 +70,7 @@ export function OverviewPeriodSwitcher({
       <DropdownMenu>
         <DropdownMenuTrigger
           className={cn(
-            "inline-flex min-h-10 min-w-0 flex-1 items-center justify-center gap-1.5 border border-x-0 border-input bg-background px-3 text-sm font-semibold text-foreground sm:min-w-[10.5rem] sm:flex-none",
+            "inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-semibold text-foreground sm:min-h-9 sm:min-w-[9.5rem] sm:flex-none sm:rounded-none sm:border-x-0 sm:px-3",
             "transition-colors duration-200 hover:bg-accent hover:text-accent-foreground",
             "focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             "data-[state=open]:bg-accent",
@@ -84,6 +89,21 @@ export function OverviewPeriodSwitcher({
           />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuItem
+            className="min-h-11 sm:hidden"
+            disabled={!canGoPrev}
+            onSelect={() => onChange(shiftOverviewPeriod(period, "prev"))}
+          >
+            Previous {grainNoun}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="min-h-11 sm:hidden"
+            disabled={!canGoNext}
+            onSelect={() => onChange(shiftOverviewPeriod(period, "next"))}
+          >
+            Next {grainNoun}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="sm:hidden" />
           <DropdownMenuLabel>View by</DropdownMenuLabel>
           <DropdownMenuRadioGroup
             value={period.grain}
@@ -120,7 +140,7 @@ export function OverviewPeriodSwitcher({
       <PeriodStepButton
         label={`Next ${grainNoun}`}
         disabled={!canGoNext}
-        className="rounded-r-lg"
+        className="hidden rounded-r-lg sm:inline-flex"
         onClick={() => onChange(shiftOverviewPeriod(period, "next"))}
       >
         <ChevronRight aria-hidden />
@@ -149,7 +169,7 @@ function PeriodStepButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "inline-flex w-11 shrink-0 items-center justify-center border border-input bg-background text-muted-foreground",
+        "inline-flex w-11 shrink-0 items-center justify-center border border-input bg-background text-muted-foreground sm:w-9",
         "transition-colors duration-200 hover:bg-accent hover:text-accent-foreground",
         "focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         "disabled:pointer-events-none disabled:opacity-40",

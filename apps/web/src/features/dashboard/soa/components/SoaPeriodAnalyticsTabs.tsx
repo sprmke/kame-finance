@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Lightbulb, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowLeft, Lightbulb, Sparkles } from "lucide-react";
 
-import { StatCard } from "@/components/shared/StatCard";
+import { StatCard, statGridClassName } from "@/components/shared/StatCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
@@ -77,6 +77,7 @@ type SoaPeriodOverviewTabProps = {
   cardCount: number;
   paidCardCount: number;
   nextDueYmd: string | null;
+  onSelectCategory?: (slug: string) => void;
 };
 
 export function SoaPeriodOverviewTab({
@@ -90,6 +91,7 @@ export function SoaPeriodOverviewTab({
   cardCount,
   paidCardCount,
   nextDueYmd,
+  onSelectCategory,
 }: SoaPeriodOverviewTabProps) {
   const transactions = flattenStatementTransactions(statements);
   const {
@@ -103,18 +105,19 @@ export function SoaPeriodOverviewTab({
   } = computePeriodOverviewStats(transactions);
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="space-y-4">
+      <div className={statGridClassName}>
         <StatCard title="Spend tracked" value={formatPhpAmount(spendTotal)} />
         <StatCard title="Transactions" value={transactions.length} />
         <StatCard title="Categories" value={categoryRows.length} />
         <StatCard title="Cannot analyze" value={unanalyzed} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-3 lg:grid-cols-2">
         <SoaPeriodSpendByCategoryCard
           rows={analyzedRows}
           spendTotal={spendTotal}
+          onSelectCategory={onSelectCategory}
         />
         <SoaPeriodSummaryCard
           totalPaid={totalPaid}
@@ -142,8 +145,14 @@ export function SoaPeriodOverviewTab({
 
 export function SoaPeriodAnalyticsTab({
   statements,
+  categorySlug = null,
+  onSelectCategory,
+  onClearCategory,
 }: {
   statements: SoaStatement[];
+  categorySlug?: string | null;
+  onSelectCategory?: (slug: string) => void;
+  onClearCategory?: () => void;
 }) {
   const categorize = useCategorizeWithAiActions();
   const transactions = flattenStatementTransactions(statements);
@@ -152,7 +161,10 @@ export function SoaPeriodAnalyticsTab({
   const analyzedSpend = analyzedRows.reduce((sum, row) => sum + row.total, 0);
   const tips = buildAnalyticsTips(categoryRows, unanalyzed);
 
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const selectedSlug =
+    categorySlug && categoryRows.some((row) => row.slug === categorySlug)
+      ? categorySlug
+      : null;
   const backButtonRef = useRef<HTMLButtonElement>(null);
   const lastSlugRef = useRef<string | null>(null);
   const selectedRow =
@@ -176,15 +188,6 @@ export function SoaPeriodAnalyticsTab({
   const unanalyzedAtStartRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (
-      selectedSlug &&
-      !categoryRows.some((row) => row.slug === selectedSlug)
-    ) {
-      setSelectedSlug(null);
-    }
-  }, [categoryRows, selectedSlug]);
-
-  useEffect(() => {
     if (selectedSlug) {
       lastSlugRef.current = selectedSlug;
       backButtonRef.current?.focus();
@@ -200,12 +203,12 @@ export function SoaPeriodAnalyticsTab({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        setSelectedSlug(null);
+        onClearCategory?.();
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [selectedSlug]);
+  }, [onClearCategory, selectedSlug]);
 
   useEffect(() => {
     if (categorize.isPending) {
@@ -231,13 +234,29 @@ export function SoaPeriodAnalyticsTab({
   }, [categorize.isPending, unanalyzed]);
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 xl:grid-cols-5">
+    <div className="space-y-4">
+      <div className="grid gap-3 xl:grid-cols-5">
         <Card className="border-border/80 xl:col-span-3">
-          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-4">
-            <CardTitle className="font-display text-base">
-              Category breakdown
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-4">
+            <div className="flex min-w-0 items-center gap-1">
+              {selectedRow ? (
+                <Button
+                  ref={backButtonRef}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="-ml-2 h-8 gap-1.5 px-2 text-muted-foreground"
+                  onClick={() => onClearCategory?.()}
+                  aria-label="Back to category breakdown"
+                >
+                  <ArrowLeft className="h-4 w-4" aria-hidden />
+                  Back
+                </Button>
+              ) : null}
+              <CardTitle className="font-display text-base">
+                Category breakdown
+              </CardTitle>
+            </div>
             {!selectedRow ? (
               <span className="shrink-0 text-sm font-medium tabular-nums text-foreground">
                 {formatPhpAmount(spendTotal)}
@@ -258,8 +277,6 @@ export function SoaPeriodAnalyticsTab({
                   total={selectedRow.total}
                   spendTotal={spendTotal}
                   accentColor={selectedColor}
-                  onBack={() => setSelectedSlug(null)}
-                  backButtonRef={backButtonRef}
                 />
                 <div className="max-h-[min(24rem,55vh)] overflow-auto rounded-lg border border-border/80 bg-card/40">
                   <CategorySpendTransactions
@@ -274,7 +291,7 @@ export function SoaPeriodAnalyticsTab({
                 spendTotal={spendTotal}
                 isAnalyzing={categorize.isPending}
                 animateUpdate={animateUpdate}
-                onSelectCategory={setSelectedSlug}
+                onSelectCategory={onSelectCategory}
               />
             )}
             <div className="sr-only" aria-live="polite">
@@ -301,12 +318,12 @@ export function SoaPeriodAnalyticsTab({
               rows={analyzedRows}
               spendTotal={analyzedSpend || spendTotal}
               selectedSlug={selectedSlug}
-              onSelectCategory={setSelectedSlug}
+              onSelectCategory={onSelectCategory}
             />
             <CategorySpendLegend
               rows={analyzedRows}
               selectedSlug={selectedSlug}
-              onSelectCategory={setSelectedSlug}
+              onSelectCategory={onSelectCategory}
             />
           </CardContent>
         </Card>

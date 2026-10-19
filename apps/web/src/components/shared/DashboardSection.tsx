@@ -18,7 +18,7 @@ export function DashboardSection({
   return (
     <section className={cn("space-y-4", className)}>
       <div className="flex items-center justify-between gap-4">
-        <h2 className="border-l-2 border-primary pl-3 font-display text-base font-semibold tracking-tight text-foreground">
+        <h2 className="border-l border-primary pl-2.5 font-display text-sm font-semibold tracking-tight text-foreground sm:text-base">
           {title}
         </h2>
         {action}

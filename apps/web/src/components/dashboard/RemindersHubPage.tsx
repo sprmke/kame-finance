@@ -6,10 +6,10 @@ import { ReminderDueEntriesPanel } from "@/features/dashboard/reminders/componen
 
 export function RemindersHubPage() {
   return (
-    <div className="space-y-10">
+    <div className="space-y-4">
       <DashboardPageHeader title="Reminders" />
-      <AutomationsPanel />
       <ReminderDueEntriesPanel />
+      <AutomationsPanel />
     </div>
   );
 }

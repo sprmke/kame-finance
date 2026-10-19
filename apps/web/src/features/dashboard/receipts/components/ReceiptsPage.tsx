@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DashboardPageHeader } from "@/components/shared/DashboardPageHeader";
+import { PageActionBar } from "@/components/shared/PageActionBar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ReceiptBatchUploadProgressDialog } from "@/components/shared/ReceiptBatchUploadProgressDialog";
 import { ReceiptsContentSkeleton } from "@/components/shared/skeletons";
@@ -258,10 +259,12 @@ export function ReceiptsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <DashboardPageHeader
         title="Receipts"
         actions={
+          <PageActionBar
+            primary={
           <>
             <input
               ref={receiptUpload.fileRef}
@@ -279,6 +282,8 @@ export function ReceiptsPage() {
               Upload receipt
             </Button>
           </>
+            }
+          />
         }
       />
 

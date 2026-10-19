@@ -30,12 +30,14 @@ function formatNextDue(ymd: string | null | undefined): string {
 type SoaPeriodSpendByCategoryCardProps = {
   rows: CategorySpendRow[];
   spendTotal: number;
+  onSelectCategory?: (slug: string) => void;
   className?: string;
 };
 
 export function SoaPeriodSpendByCategoryCard({
   rows,
   spendTotal,
+  onSelectCategory,
   className,
 }: SoaPeriodSpendByCategoryCardProps) {
   return (
@@ -46,8 +48,15 @@ export function SoaPeriodSpendByCategoryCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <CategorySpendDonut rows={rows} spendTotal={spendTotal} />
-        <CategorySpendLegend rows={rows} />
+        <CategorySpendDonut
+          rows={rows}
+          spendTotal={spendTotal}
+          onSelectCategory={onSelectCategory}
+        />
+        <CategorySpendLegend
+          rows={rows}
+          onSelectCategory={onSelectCategory}
+        />
       </CardContent>
     </Card>
   );
@@ -95,63 +104,63 @@ export function SoaPeriodSummaryCard({
       <CardHeader>
         <CardTitle className="font-display text-base">Period summary</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm">
-        <SummaryRow label="Total paid" value={formatPhpAmount(totalPaid)} />
-        <SummaryRow
-          label="Total due"
-          value={formatPhpAmount(grossStatementDue)}
-        />
+      <CardContent className="space-y-2 text-sm">
+        <SummaryRow label="Total due" value={formatPhpAmount(grossStatementDue)} />
         {outstandingDue > 0 ? (
           <SummaryRow
             label="Outstanding"
             value={formatPhpAmount(outstandingDue)}
           />
         ) : null}
-        <SummaryRow
-          label="Minimum due"
-          value={formatPhpAmount(grossMinimumDue)}
-        />
-        <SummaryRow
-          label="Minimum met"
-          value={cardCount > 0 ? `${minimumMetCardCount} / ${cardCount}` : "—"}
-        />
-        {minimumRemaining > 0 ? (
-          <SummaryRow
-            label="Minimum remaining"
-            value={formatPhpAmount(minimumRemaining)}
-          />
-        ) : null}
-        <SummaryRow
-          label="Cards paid"
-          value={cardCount > 0 ? `${paidCardCount} / ${cardCount}` : "—"}
-        />
+        <SummaryRow label="Total paid" value={formatPhpAmount(totalPaid)} />
         <SummaryRow label="Next due" value={formatNextDue(nextDueYmd)} />
 
-        <div className="border-t border-border/60 pt-3" />
-
-        <SummaryRow label="Spend tracked" value={formatPhpAmount(spendTotal)} />
-        <SummaryRow
-          label="Top category"
-          value={
-            topCategory ? (
-              <span className="truncate">
-                {topCategory.label}
-                {topCategory.share !== null ? ` · ${topCategory.share}%` : ""}
-              </span>
-            ) : (
-              "—"
-            )
-          }
-        />
-        {interestFeesTotal > 0 ? (
+        <div className="hidden space-y-2 sm:block">
+          <div className="border-t border-border/60 pt-2" />
           <SummaryRow
-            label="Interest & fees"
-            value={formatPhpAmount(interestFeesTotal)}
+            label="Minimum due"
+            value={formatPhpAmount(grossMinimumDue)}
           />
-        ) : null}
-        {unanalyzedCount > 0 ? (
-          <SummaryRow label="Uncategorized" value={`${unanalyzedCount} tx`} />
-        ) : null}
+          <SummaryRow
+            label="Minimum met"
+            value={
+              cardCount > 0 ? `${minimumMetCardCount} / ${cardCount}` : "—"
+            }
+          />
+          {minimumRemaining > 0 ? (
+            <SummaryRow
+              label="Minimum remaining"
+              value={formatPhpAmount(minimumRemaining)}
+            />
+          ) : null}
+          <SummaryRow
+            label="Cards paid"
+            value={cardCount > 0 ? `${paidCardCount} / ${cardCount}` : "—"}
+          />
+          <SummaryRow label="Spend tracked" value={formatPhpAmount(spendTotal)} />
+          <SummaryRow
+            label="Top category"
+            value={
+              topCategory ? (
+                <span className="truncate">
+                  {topCategory.label}
+                  {topCategory.share !== null ? ` · ${topCategory.share}%` : ""}
+                </span>
+              ) : (
+                "—"
+              )
+            }
+          />
+          {interestFeesTotal > 0 ? (
+            <SummaryRow
+              label="Interest & fees"
+              value={formatPhpAmount(interestFeesTotal)}
+            />
+          ) : null}
+          {unanalyzedCount > 0 ? (
+            <SummaryRow label="Uncategorized" value={`${unanalyzedCount} tx`} />
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );

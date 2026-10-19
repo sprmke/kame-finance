@@ -6,7 +6,7 @@ import {
 
 export default function SoaLoading() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <DashboardPageHeader
         title="Statement of account"
         actions={<SkeletonPageActions count={1} />}

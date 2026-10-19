@@ -19,7 +19,7 @@ export default async function SettingsPage() {
 
   return (
     <TrpcHydrate state={state}>
-      <div className="space-y-8">
+      <div className="space-y-4">
         <DashboardPageHeader title="Settings" />
 
         <IntegrationsSettings />

@@ -16,6 +16,7 @@ import {
   SoaPeriodSpendByCategoryCard,
   SoaPeriodSummaryCard,
 } from "@/features/dashboard/soa/components/SoaPeriodOverviewCards";
+import { soaPeriodHref } from "@/features/dashboard/soa/lib/soa-period-query";
 import { api } from "@/lib/api/client";
 import {
   formatOverviewPeriodLabel,
@@ -66,13 +67,17 @@ export function OverviewPage({ grain, year, month }: OverviewPageProps) {
   const contentPending = isLoading || isPlaceholderData;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <DashboardPageHeader
         title="Overview"
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <OverviewPeriodSwitcher period={period} onChange={commit} />
-            <Button asChild>
+          <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+            <OverviewPeriodSwitcher
+              period={period}
+              onChange={commit}
+              className="min-w-0 flex-1 sm:flex-none"
+            />
+            <Button className="h-11 shrink-0 px-3 sm:h-9" asChild>
               <Link href={ROUTES.dashboard.soa}>Run SOA</Link>
             </Button>
           </div>
@@ -110,7 +115,7 @@ export function OverviewPage({ grain, year, month }: OverviewPageProps) {
       ) : contentPending && !showingPeriod ? (
         <OverviewContentSkeleton />
       ) : showingPeriod ? (
-        <div className="space-y-8" aria-busy={isFetching}>
+        <div className="space-y-4" aria-busy={isFetching}>
           {isFetching ? (
             <span className="sr-only" aria-live="polite">
               Loading {label}
@@ -139,12 +144,27 @@ export function OverviewPage({ grain, year, month }: OverviewPageProps) {
             unanalyzedCount={showingPeriod.unanalyzed}
           />
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-2">
             <SoaPeriodSpendByCategoryCard
               rows={showingPeriod.analyzedCategoryRows}
               spendTotal={showingPeriod.spendTotal}
+              onSelectCategory={
+                showingPeriod.id
+                  ? (slug) => {
+                      const periodId = showingPeriod.id;
+                      if (!periodId) return;
+                      router.push(
+                        soaPeriodHref(periodId, {
+                          tab: "analytics",
+                          category: slug,
+                        }),
+                      );
+                    }
+                  : undefined
+              }
             />
             <SoaPeriodSummaryCard
+              className="hidden border-border/80 shadow-card lg:block"
               totalPaid={showingPeriod.totalPaid}
               outstandingDue={showingPeriod.totalDue}
               grossStatementDue={showingPeriod.grossStatementDue}
@@ -162,7 +182,7 @@ export function OverviewPage({ grain, year, month }: OverviewPageProps) {
           </div>
         </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border bg-card/50 px-6 py-16 text-center shadow-card">
+        <div className="rounded-xl border border-dashed border-border bg-card/50 px-4 py-10 text-center shadow-card">
           <p className="font-display text-lg font-semibold">
             No SOA for {label}
           </p>
@@ -172,9 +192,6 @@ export function OverviewPage({ grain, year, month }: OverviewPageProps) {
               Run SOA to fetch statements and track payments.
             </p>
           ) : null}
-          <Button className="mt-6" asChild>
-            <Link href={ROUTES.dashboard.soa}>Run SOA</Link>
-          </Button>
         </div>
       )}
     </div>

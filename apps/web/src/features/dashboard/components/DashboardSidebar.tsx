@@ -25,8 +25,8 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
     "KO";
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex">
-      <div className="flex items-center justify-between border-b border-sidebar-border px-4 py-4">
+    <aside className="hidden w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar md:flex xl:w-60">
+      <div className="flex items-center justify-between border-b border-sidebar-border px-3 py-3">
         <BrandLogo href={ROUTES.dashboard.root} size="sm" showTagline />
         <ThemeToggle />
       </div>

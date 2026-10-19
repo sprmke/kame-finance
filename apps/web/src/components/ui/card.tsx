@@ -20,9 +20,9 @@ const cardVariants = cva(
       padding: {
         default: '',
         none: '',
-        sm: 'p-4',
-        md: 'p-6',
-        lg: 'p-8',
+        sm: 'p-3',
+        md: 'p-4',
+        lg: 'p-5',
       },
     },
     defaultVariants: {
@@ -53,7 +53,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('flex flex-col space-y-1.5 p-6', className)}
+    className={cn('flex flex-col space-y-1 p-4', className)}
     {...props}
   />
 ));
@@ -66,7 +66,7 @@ const CardTitle = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'text-xl font-semibold leading-none tracking-tight',
+      'text-base font-semibold leading-tight tracking-tight',
       className
     )}
     {...props}
@@ -90,7 +90,7 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('p-6 pt-0', className)} {...props} />
+  <div ref={ref} className={cn('p-4 pt-0', className)} {...props} />
 ));
 CardContent.displayName = 'CardContent';
 
@@ -100,7 +100,7 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('flex items-center p-6 pt-0', className)}
+    className={cn('flex items-center p-4 pt-0', className)}
     {...props}
   />
 ));
@@ -121,11 +121,11 @@ interface StatsCardProps extends React.HTMLAttributes<HTMLDivElement> {
 const StatsCard = React.forwardRef<HTMLDivElement, StatsCardProps>(
   ({ className, title, value, description, icon, trend, ...props }, ref) => (
     <Card ref={ref} className={cn('', className)} {...props}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
+      <CardContent className="p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 space-y-1">
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <p className="text-3xl font-bold tracking-tight">{value}</p>
+            <p className="break-words text-xl font-bold tabular-nums tracking-tight">{value}</p>
             {(description || trend) && (
               <div className="flex items-center gap-2">
                 {trend && (

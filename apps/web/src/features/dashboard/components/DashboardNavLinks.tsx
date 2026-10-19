@@ -42,16 +42,22 @@ interface DashboardNavLinksProps {
 
 type NavItem = (typeof DASHBOARD_NAV)[number];
 
-function DashboardNavLinkContent({ item }: { item: NavItem }) {
+function DashboardNavLinkContent({
+  item,
+  iconClassName,
+}: {
+  item: NavItem;
+  iconClassName: string;
+}) {
   const { pending } = useLinkStatus();
   const Icon = ICONS[item.icon];
 
   return (
     <>
       {pending ? (
-        <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+        <Loader2 className={cn(iconClassName, "shrink-0 animate-spin")} aria-hidden />
       ) : (
-        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+        <Icon className={cn(iconClassName, "shrink-0")} aria-hidden />
       )}
       <span className={cn(pending && "opacity-80")}>{item.title}</span>
     </>
@@ -79,17 +85,23 @@ export function DashboardNavLinks({
             onMouseEnter={() => prefetchNavData(item.href)}
             onFocus={() => prefetchNavData(item.href)}
             className={cn(
-              "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              "flex items-center gap-3 rounded-lg font-medium transition-colors touch-manipulation",
+              isSidebar
+                ? "px-3 py-2 text-sm"
+                : "min-h-12 px-3 text-base",
               isSidebar
                 ? active
                   ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-glow"
                   : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 : active
                   ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  : "text-foreground hover:bg-muted",
             )}
           >
-            <DashboardNavLinkContent item={item} />
+            <DashboardNavLinkContent
+              item={item}
+              iconClassName={isSidebar ? "h-4 w-4" : "h-5 w-5"}
+            />
           </Link>
         );
       })}

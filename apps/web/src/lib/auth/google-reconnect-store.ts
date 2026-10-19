@@ -10,6 +10,7 @@ type Listener = () => void;
 const CLOSED_SNAPSHOT: GoogleReconnectSnapshot = { open: false, message: null };
 
 let snapshot: GoogleReconnectSnapshot = CLOSED_SNAPSHOT;
+let dismissed = false;
 const listeners = new Set<Listener>();
 
 function emit() {
@@ -30,7 +31,12 @@ export function getGoogleReconnectServerSnapshot(): GoogleReconnectSnapshot {
   return CLOSED_SNAPSHOT;
 }
 
-export function openGoogleReconnectModal(message?: string | null): void {
+export function openGoogleReconnectModal(
+  message?: string | null,
+  options?: { force?: boolean },
+): void {
+  if (dismissed && !options?.force) return;
+  if (options?.force) dismissed = false;
   snapshot = {
     open: true,
     message: message?.trim() || null,
@@ -44,6 +50,18 @@ export function closeGoogleReconnectModal(): void {
   emit();
 }
 
+/** Hide the prompt until the next failed action or a healthy auth check. */
+export function dismissGoogleReconnectModal(): void {
+  dismissed = true;
+  closeGoogleReconnectModal();
+}
+
+/** Clear a dismissal once Gmail is healthy again. */
+export function acknowledgeGoogleReconnect(): void {
+  dismissed = false;
+  closeGoogleReconnectModal();
+}
+
 export function notifyGoogleReconnectRequired(error: unknown): void {
   if (!isGoogleReconnectRequiredError(error)) return;
   const message =
@@ -55,5 +73,5 @@ export function notifyGoogleReconnectRequired(error: unknown): void {
           typeof (error as { message: unknown }).message === "string"
         ? (error as { message: string }).message
         : null;
-  openGoogleReconnectModal(message);
+  openGoogleReconnectModal(message, { force: true });
 }

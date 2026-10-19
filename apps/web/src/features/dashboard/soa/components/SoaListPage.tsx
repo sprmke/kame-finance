@@ -18,7 +18,8 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { ListViewToolbar } from "@/components/shared/ListViewToolbar";
 import { ViewModeLayout } from "@/components/shared/ViewModeLayout";
 import { SoaListContentSkeleton } from "@/components/shared/skeletons";
-import { StatCard } from "@/components/shared/StatCard";
+import { PageActionBar } from "@/components/shared/PageActionBar";
+import { StatCard, statGridClassName } from "@/components/shared/StatCard";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { api } from "@/lib/api/client";
@@ -100,24 +101,28 @@ export function SoaListPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <DashboardPageHeader
         title="Statement of account"
         actions={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              disabled={dedupe.isPending}
-              onClick={() => dedupe.mutate()}
-            >
-              <Sparkles className="mr-2 h-4 w-4" />
-              Clean up duplicates
-            </Button>
-            <Button className="shadow-glow" onClick={() => openRun()}>
-              <Play className="mr-2 h-4 w-4" />
-              Run SOA
-            </Button>
-          </div>
+          <PageActionBar
+            secondary={
+              <Button
+                variant="outline"
+                disabled={dedupe.isPending}
+                onClick={() => dedupe.mutate()}
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                Clean up duplicates
+              </Button>
+            }
+            primary={
+              <Button className="shadow-glow" onClick={() => openRun()}>
+                <Play className="mr-2 h-4 w-4" />
+                Run SOA
+              </Button>
+            }
+          />
         }
       />
 
@@ -148,17 +153,11 @@ export function SoaListPage() {
           icon={<FileText className="h-6 w-6 text-muted-foreground" />}
           title="No SOA runs yet"
           message="Run SOA to fetch and parse credit card statements."
-          action={
-            <Button onClick={() => openRun()}>
-              <Play className="mr-2 h-4 w-4" />
-              Run SOA
-            </Button>
-          }
         />
       ) : (
         <>
           {listStats && (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className={statGridClassName}>
               <StatCard
                 title="SOA runs"
                 value={listStats.runs}
@@ -212,7 +211,7 @@ export function SoaListPage() {
               />
             }
             grid={
-              <div className="grid auto-rows-fr gap-4 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid auto-rows-fr gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {pagination.items.map((period) => (
                   <SoaPeriodCard
                     key={period.id}

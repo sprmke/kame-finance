@@ -118,7 +118,7 @@ export function CategorySpendDonut({
 
   if (!slices.length) {
     return (
-      <p className="flex h-full min-h-[14rem] items-center justify-center text-sm text-muted-foreground">
+      <p className="flex h-full min-h-28 items-center justify-center text-sm text-muted-foreground">
         No categorized spend yet.
       </p>
     );
@@ -128,7 +128,10 @@ export function CategorySpendDonut({
     <div
       ref={containerRef}
       className={cn(
-        "relative mx-auto h-64 w-full max-w-xs transition-opacity duration-700 ease-out sm:h-72",
+        "relative mx-auto h-44 w-full max-w-xs transition-opacity duration-700 ease-out sm:h-56 lg:h-64",
+        "[&_.recharts-pie]:outline-none [&_.recharts-pie]:focus:outline-none",
+        "[&_.recharts-surface]:outline-none [&_.recharts-surface]:focus:outline-none",
+        "[&_.recharts-wrapper]:outline-none",
         onSelectCategory && "[&_.recharts-pie-sector]:cursor-pointer",
       )}
     >
@@ -139,6 +142,7 @@ export function CategorySpendDonut({
         <PieChart>
           <Pie
             key={animationKey}
+            rootTabIndex={-1}
             data={slices}
             dataKey="value"
             nameKey="name"
@@ -165,6 +169,13 @@ export function CategorySpendDonut({
               const slice = slices[index];
               if (!slice || slice.slug === "other") return;
               onSelectCategory?.(slice.slug);
+              const active = document.activeElement;
+              if (
+                active instanceof HTMLElement &&
+                containerRef.current?.contains(active)
+              ) {
+                active.blur();
+              }
             }}
           >
             {slices.map((slice) => {
@@ -240,7 +251,7 @@ export function CategorySpendLegend({
                 onClick={() => onSelectCategory?.(slice.slug)}
                 aria-pressed={isSelected}
                 className={cn(
-                  "inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-md px-1.5 text-xs",
+                  "inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-md px-2 text-xs sm:min-h-8",
                   "text-muted-foreground transition-colors duration-150",
                   "hover:bg-muted/60 hover:text-foreground",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
