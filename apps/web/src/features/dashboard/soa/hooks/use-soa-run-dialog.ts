@@ -17,6 +17,7 @@ interface SoaRunPipelineResult {
   message?: string;
   warning?: string;
   parsedCount?: number;
+  skippedCardCount?: number;
 }
 
 export interface UseSoaRunDialogOptions {
@@ -34,6 +35,7 @@ export function useSoaRunDialog(options: UseSoaRunDialogOptions = {}) {
   const [runErrorMessage, setRunErrorMessage] = useState<string | null>(null);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const lastPeriodIdRef = useRef<string | null>(null);
+  const [showSkipExisting, setShowSkipExisting] = useState(false);
 
   const runPipeline = api.soa.runPipeline.useMutation({
     onSuccess: async (result) => {
@@ -48,6 +50,11 @@ export function useSoaRunDialog(options: UseSoaRunDialogOptions = {}) {
       setRunSettled("success");
       if (result.warning) {
         toast.warning(result.warning, { duration: 8000 });
+      } else if (
+        (result.parsedCount ?? 1) === 0 &&
+        (result.skippedCardCount ?? 0) > 0
+      ) {
+        toast.success("Cards with SOA were skipped");
       } else if ((result.parsedCount ?? 1) === 0) {
         toast.warning("No statements found for this period.", {
           duration: 8000,
@@ -71,6 +78,7 @@ export function useSoaRunDialog(options: UseSoaRunDialogOptions = {}) {
       setRunErrorMessage(null);
       setActiveRunId(null);
       lastPeriodIdRef.current = null;
+      setShowSkipExisting(false);
     }
   }
 
@@ -81,11 +89,16 @@ export function useSoaRunDialog(options: UseSoaRunDialogOptions = {}) {
     setRunErrorMessage(null);
     setActiveRunId(null);
     lastPeriodIdRef.current = null;
+    setShowSkipExisting(false);
     options.onAfterRunComplete?.(periodId);
   }
 
-  function openRun(initial?: Partial<RunSoaFormValues>) {
+  function openRun(
+    initial?: Partial<RunSoaFormValues>,
+    openOptions?: { rerun?: boolean },
+  ) {
     setRunInitial(initial);
+    setShowSkipExisting(openOptions?.rerun ?? false);
     setRunOpen(true);
   }
 
@@ -103,6 +116,7 @@ export function useSoaRunDialog(options: UseSoaRunDialogOptions = {}) {
       settled: runSettled,
       errorMessage: runErrorMessage,
       onRunComplete: handleRunComplete,
+      showSkipExisting,
       onSubmit: (values: RunSoaFormValues) => {
         const runId = crypto.randomUUID();
         setActiveRunId(runId);

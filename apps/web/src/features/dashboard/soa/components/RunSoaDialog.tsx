@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, HelpCircle, MessageCircle, Slack } from "lucide-react";
+import {
+  Calendar,
+  HelpCircle,
+  MessageCircle,
+  SkipForward,
+  Slack,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +54,8 @@ type RunSoaDialogProps = {
   settled?: RunSoaSettled;
   errorMessage?: string | null;
   onRunComplete?: () => void;
+  /** Shown only when the dialog was opened from Re-run. */
+  showSkipExisting?: boolean;
 };
 
 const now = new Date();
@@ -67,6 +75,7 @@ function defaultValues(): RunSoaFormValues {
     notifyTelegram: false,
     notifySlack: false,
     createCalendar: false,
+    skipExistingCards: false,
   };
 }
 
@@ -100,6 +109,7 @@ export function RunSoaDialog({
   settled = null,
   errorMessage,
   onRunComplete,
+  showSkipExisting = false,
 }: RunSoaDialogProps) {
   const { data: integrations } = api.integrations.list.useQuery(undefined, {
     enabled: open,
@@ -150,8 +160,9 @@ export function RunSoaDialog({
       notifyTelegram: base.notifyTelegram && providers.has("telegram"),
       notifySlack: base.notifySlack && providers.has("slack"),
       createCalendar: base.createCalendar,
+      skipExistingCards: showSkipExisting,
     });
-  }, [open, initial, integrations]);
+  }, [open, initial, integrations, showSkipExisting]);
 
   useEffect(() => {
     if (!runSucceeded || isPending || !showProgress) return;
@@ -377,6 +388,25 @@ export function RunSoaDialog({
                 )}
               </div>
             )}
+
+            {showSkipExisting ? (
+              <div className="rounded-lg border border-border/80 bg-muted/30 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <label
+                    htmlFor="skip-existing-soa"
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <SkipForward className="h-4 w-4 text-muted-foreground" />
+                    Skip cards with SOA
+                  </label>
+                  <Switch
+                    id="skip-existing-soa"
+                    checked={form.skipExistingCards}
+                    onCheckedChange={(v) => patch("skipExistingCards", v)}
+                  />
+                </div>
+              </div>
+            ) : null}
 
             <div className="space-y-3 rounded-lg border border-border/80 bg-muted/30 p-4">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

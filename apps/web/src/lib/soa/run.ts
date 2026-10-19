@@ -29,6 +29,7 @@ import {
   tryUnlockAndExtractText,
 } from "@/lib/soa/pdf";
 import { findMissingCards } from "@/lib/soa/soa-coverage";
+import { soaCoverageKey } from "@/lib/soa/skip-existing-cards";
 import {
   ocrDisabledForIssuer,
   ocrForcedForIssuer,
@@ -94,6 +95,21 @@ function passwordsForIssuer(
   all: ReturnType<typeof loadCardCredentials>,
 ) {
   return all.filter((c) => c.issuer.toLowerCase() === issuerId.toLowerCase());
+}
+
+/** Last-4 printed on the SOA. `0000` is the unlock fallback, not a text match. */
+function last4NamedInSoa(
+  text: string,
+  knownCards: { last4: string; fullPan?: string; label?: string }[],
+  emailSubject?: string,
+): string | null {
+  const named = resolveCardLast4FromSoaText(
+    text,
+    knownCards,
+    "0000",
+    emailSubject,
+  );
+  return named === "0000" ? null : named;
 }
 
 function enrichSoaRowFromCredentials(
@@ -215,6 +231,8 @@ export type SoaSingleMonthResult = {
   parseErrors: SoaParseError[];
   downloadedPdfCount: number;
   gmailSearches: SoaGmailSearchLog[];
+  /** Cards left out because a real SOA is already saved for this month. */
+  skippedCardCount: number;
 };
 
 /**
@@ -227,6 +245,8 @@ export async function runSoaSingleMonth(options: {
   skipBanner?: boolean;
   progress?: SoaRunMonthProgressContext;
   beforeGmailSearch?: (googleAccountId: string | null) => Promise<void>;
+  /** Issuer+last4 keys that already have a real SOA for this month. */
+  skipCardKeys?: ReadonlySet<string>;
 }): Promise<SoaSingleMonthResult> {
   const {
     month,
@@ -234,9 +254,17 @@ export async function runSoaSingleMonth(options: {
     skipBanner = false,
     progress,
     beforeGmailSearch,
+    skipCardKeys,
   } = options;
   const ctx = buildMonthContext(month, year);
   const cards = loadCardCredentials();
+  const cardsToFetch =
+    skipCardKeys && skipCardKeys.size > 0
+      ? cards.filter(
+          (card) => !skipCardKeys.has(soaCoverageKey(card.issuer, card.last4)),
+        )
+      : cards;
+  const skippedCardCount = cards.length - cardsToFetch.length;
 
   if (!skipBanner) {
     logBanner("pay-credit-cards · SOA run", `${ctx.monthLong} ${ctx.year}`);
@@ -252,6 +280,9 @@ export async function runSoaSingleMonth(options: {
   log.header("Pre-flight");
   log.kv("Statement period", `${ctx.monthLong} ${ctx.year}`);
   log.kv("Cards in CARDS_JSON", String(cards.length));
+  if (skippedCardCount > 0) {
+    log.kv("Cards with existing SOA", String(skippedCardCount));
+  }
 
   const { downloads, output } = ensureDirs();
   const periodKey = `${ctx.year}-${ctx.monthNum2}`;
@@ -261,6 +292,28 @@ export async function runSoaSingleMonth(options: {
   fs.mkdirSync(monthOutputDir, { recursive: true });
   log.kv("Download folder", monthDownloadsDir);
   log.kv("Output folder", monthOutputDir);
+
+  if (cardsToFetch.length === 0) {
+    log.header("Existing SOA");
+    log.success(
+      "Every card already has an SOA for this period. Gmail skipped.",
+    );
+    const summaryName = `soa-summary-${ctx.year}-${ctx.monthNum2}.pdf`;
+    return {
+      ctx,
+      rows: [],
+      monthOutputDir,
+      monthDownloadsDir,
+      periodKey,
+      summaryPath: path.join(monthOutputDir, summaryName),
+      parseWarnings: 0,
+      parseFailures: 0,
+      parseErrors: [],
+      downloadedPdfCount: 0,
+      gmailSearches: [],
+      skippedCardCount,
+    };
+  }
 
   log.header("Gmail · search & download");
   const gmailSlot = createSoaGmailClientSlot<
@@ -282,7 +335,9 @@ export async function runSoaSingleMonth(options: {
 
   const rawDownloaded: DownloadedPdf[] = [];
   const gmailSearches: SoaGmailSearchLog[] = [];
-  const activeIssuerIds = new Set(cards.map((c) => c.issuer.toLowerCase()));
+  const activeIssuerIds = new Set(
+    cardsToFetch.map((c) => c.issuer.toLowerCase()),
+  );
   const banksToSearch = banks.filter((b) => activeIssuerIds.has(b.id));
 
   for (const bank of banksToSearch) {
@@ -291,7 +346,7 @@ export async function runSoaSingleMonth(options: {
       monthLabel,
       bank.label,
     );
-    const searchConfigs = gmailSearchConfigsForIssuer(bank.id, cards);
+    const searchConfigs = gmailSearchConfigsForIssuer(bank.id, cardsToFetch);
     log.info(`${bank.label}`);
     if (searchConfigs.length > 1) {
       log.detail(
@@ -395,6 +450,27 @@ export async function runSoaSingleMonth(options: {
     log.info(`${item.bankLabel} · ${item.fileName}`);
     try {
       const unlocked = await tryUnlockAndExtractText(item.filePath, pws);
+      const knownCards = pws.map((c) => ({
+        last4: c.last4,
+        fullPan: c.fullPan,
+        label: c.label,
+      }));
+      const namedLast4 = last4NamedInSoa(
+        unlocked.text,
+        knownCards,
+        item.subject,
+      );
+      if (
+        namedLast4 &&
+        skipCardKeys?.has(soaCoverageKey(item.bankId, namedLast4))
+      ) {
+        log.detail(
+          `Skip · ${item.bankLabel} ****${namedLast4} already has an SOA for this period`,
+        );
+        continue;
+      }
+      let cardLast4 = namedLast4 ?? unlocked.last4;
+
       const unlockedFileName = `unlocked-${path.basename(item.filePath)}`;
       const unlockedPath = path.join(monthDownloadsDir, unlockedFileName);
       try {
@@ -464,6 +540,27 @@ export async function runSoaSingleMonth(options: {
         }
       }
 
+      const namedAfterOcr = last4NamedInSoa(
+        parseText,
+        knownCards,
+        item.subject,
+      );
+      if (
+        namedAfterOcr &&
+        skipCardKeys?.has(soaCoverageKey(item.bankId, namedAfterOcr))
+      ) {
+        log.detail(
+          `Skip · ${item.bankLabel} ****${namedAfterOcr} already has an SOA for this period`,
+        );
+        continue;
+      }
+      if (namedAfterOcr) cardLast4 = namedAfterOcr;
+      if (cardLast4 !== unlocked.last4) {
+        log.detail(
+          `Card last-4 from SOA text · ****${cardLast4} (unlock credential was ****${unlocked.last4})`,
+        );
+      }
+
       let txnSourceText = parseText;
       if (item.bankId === "rcbc") {
         try {
@@ -489,22 +586,6 @@ export async function runSoaSingleMonth(options: {
         } catch (geoErr) {
           log.detail(`RCBC geometry lines skipped: ${errMsg(geoErr)}`);
         }
-      }
-
-      const cardLast4 = resolveCardLast4FromSoaText(
-        parseText,
-        pws.map((c) => ({
-          last4: c.last4,
-          fullPan: c.fullPan,
-          label: c.label,
-        })),
-        unlocked.last4,
-        item.subject,
-      );
-      if (cardLast4 !== unlocked.last4) {
-        log.detail(
-          `Card last-4 from SOA text · ****${cardLast4} (unlock credential was ****${unlocked.last4})`,
-        );
       }
 
       const row = parseSoaText(
@@ -569,7 +650,7 @@ export async function runSoaSingleMonth(options: {
   // unlock the shared-password PDF, or the SOA text couldn't be matched back to this
   // card's last-4. Surface those individually instead of letting a card silently
   // disappear from the run when its bank "looks" fine overall.
-  const missingCards = findMissingCards(cards, rows, banksWithPdf);
+  const missingCards = findMissingCards(cardsToFetch, rows, banksWithPdf);
   if (missingCards.length > 0) {
     log.header("Cards with no matching SOA in downloaded PDFs");
     for (const card of missingCards) {
@@ -641,5 +722,6 @@ export async function runSoaSingleMonth(options: {
     parseErrors,
     downloadedPdfCount: downloaded.length,
     gmailSearches,
+    skippedCardCount,
   };
 }

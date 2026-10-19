@@ -20,6 +20,8 @@ export type RunSoaFormValues = {
   notifyTelegram: boolean;
   notifySlack: boolean;
   createCalendar: boolean;
+  /** Re-run only. Skip cards that already have an SOA in the selected months. */
+  skipExistingCards: boolean;
 };
 
 export type RunSoaProgressStep = SoaRunStepSnapshot;
@@ -58,6 +60,7 @@ export function toRunSoaPipelineInput(values: RunSoaFormValues, runId: string) {
     notifyTelegram: values.notifyTelegram,
     notifySlack: values.notifySlack,
     createCalendar: values.createCalendar,
+    skipExistingCards: values.skipExistingCards,
     runId,
   };
 }

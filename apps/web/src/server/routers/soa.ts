@@ -17,6 +17,7 @@ const runSoaInputSchema = z.object({
   notifyTelegram: z.boolean(),
   notifySlack: z.boolean(),
   createCalendar: z.boolean(),
+  skipExistingCards: z.boolean().optional(),
   runId: z.string().uuid().optional(),
 });
 

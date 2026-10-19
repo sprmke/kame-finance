@@ -12,6 +12,11 @@ import {
   soaStatements,
 } from "@/lib/db/schema";
 import { buildCalendarRowsForSoaRun } from "@/lib/soa/calendar-sync-rows";
+import {
+  coveredKeysByMonth,
+  soaCoverageKey,
+  statementMonthKey,
+} from "@/lib/soa/skip-existing-cards";
 import { creditCardService } from "./credit-card.service";
 import { dueEntryUpsertService } from "./due-entry-upsert.service";
 import { gmailService } from "./gmail.service";
@@ -53,6 +58,8 @@ export type RunSoaPipelineInput = {
   notifyTelegram: boolean;
   notifySlack: boolean;
   createCalendar: boolean;
+  /** Re-run: leave cards that already have a real SOA for each month. */
+  skipExistingCards?: boolean;
   runId?: string;
 };
 
@@ -91,6 +98,20 @@ async function resolveRunPeriodBounds(input: RunSoaPipelineInput): Promise<{
     toMonth: input.toMonth,
     toYear: input.toYear,
   };
+}
+
+async function loadCoveredSoaKeys(userId: string) {
+  const rows = await db.query.soaStatements.findMany({
+    where: eq(soaStatements.userId, userId),
+    columns: {
+      issuerId: true,
+      cardLast4: true,
+      statementMonth: true,
+      statementYear: true,
+      soaUnavailable: true,
+    },
+  });
+  return coveredKeysByMonth(rows);
 }
 
 function resolveMonthCount(input: RunSoaPipelineInput): number {
@@ -224,6 +245,76 @@ function buildSoaGmailWarning(options: {
   return warning;
 }
 
+async function summaryRowsWithSaved(
+  userId: string,
+  month: number,
+  year: number,
+  freshRows: SoaMonthResult["rows"],
+): Promise<SoaMonthResult["rows"]> {
+  const saved = await db.query.soaStatements.findMany({
+    where: and(
+      eq(soaStatements.userId, userId),
+      eq(soaStatements.statementMonth, month),
+      eq(soaStatements.statementYear, year),
+    ),
+    with: {
+      transactions: true,
+      creditCard: {
+        columns: { label: true },
+      },
+    },
+  });
+  const { loadCardCredentials } = await import("@/lib/soa/config");
+  const cards = loadCardCredentials();
+  const freshKeys = new Set(
+    freshRows
+      .filter((row) => !row.soaUnavailable && row.cardLast4 !== "—")
+      .map((row) => soaCoverageKey(row.issuerId, row.cardLast4)),
+  );
+  const keptIssuerIds = new Set<string>();
+  const kept: SoaMonthResult["rows"] = [];
+
+  for (const statement of saved) {
+    if (statement.soaUnavailable) continue;
+    if (!statement.cardLast4 || statement.cardLast4 === "—") continue;
+    const key = soaCoverageKey(statement.issuerId, statement.cardLast4);
+    if (freshKeys.has(key)) continue;
+    const card = cards.find(
+      (candidate) => soaCoverageKey(candidate.issuer, candidate.last4) === key,
+    );
+    keptIssuerIds.add(statement.issuerId.toLowerCase());
+    kept.push({
+      bankLabel: statement.bankLabel,
+      issuerId: statement.issuerId,
+      cardLast4: statement.cardLast4,
+      cardDisplayLabel:
+        card?.label?.trim() || statement.creditCard?.label || undefined,
+      fullPan: card?.fullPan?.trim() || undefined,
+      contactLine: card?.contactLine?.trim() || undefined,
+      sourceEmailSubject: statement.sourceEmailSubject ?? "",
+      sourceMessageId: statement.sourceMessageId ?? "",
+      pdfFileName: statement.pdfFileName ?? "—",
+      minimumDue: statement.minimumDue ?? "—",
+      totalDue: statement.totalDue ?? "—",
+      statementDate: statement.statementDate ?? "—",
+      dueDate: statement.dueDate ?? "—",
+      parseNotes: statement.parseNotes ?? undefined,
+      transactions: statement.transactions.map((line) => ({
+        date: line.date ?? "",
+        description: line.description,
+        amount: line.amount,
+      })),
+    });
+  }
+
+  const fresh = freshRows.filter((row) => {
+    if (!row.soaUnavailable || row.cardLast4 !== "—") return true;
+    return !keptIssuerIds.has(row.issuerId.toLowerCase());
+  });
+
+  return [...fresh, ...kept];
+}
+
 async function runSoaDetailedInService(
   userId: string,
   input: RunSoaPipelineInput,
@@ -236,6 +327,8 @@ async function runSoaDetailedInService(
   parseFailures: number;
   downloadedPdfCount: number;
   parseErrors: SoaParseFailureDetail[];
+  skippedCardCount: number;
+  coveredCardKeysByMonth: Map<string, Set<string>> | null;
 }> {
   const { runSoaSingleMonth } = await import("@/lib/soa/run");
   const { writeSummaryPdf, writeRangeSummaryPdf } =
@@ -244,6 +337,14 @@ async function runSoaDetailedInService(
     await import("@/lib/soa/month");
   const { upsertFromSoaRows } = dueEntryUpsertService;
   const beforeGmailSearch = createSoaGmailAccountSwitcher(userId);
+  const coveredCardKeysByMonth = input.skipExistingCards
+    ? await loadCoveredSoaKeys(userId)
+    : null;
+
+  function skipKeysFor(month: number, year: number) {
+    if (!coveredCardKeysByMonth) return undefined;
+    return coveredCardKeysByMonth.get(statementMonthKey(year, month));
+  }
 
   async function paidLabelForRows() {
     const dues = await db.query.dueEntries.findMany({
@@ -264,6 +365,7 @@ async function runSoaDetailedInService(
       year,
       skipBanner: true,
       beforeGmailSearch,
+      skipCardKeys: skipKeysFor(input.fromMonth, input.fromYear),
       progress: reporter
         ? {
             monthIndex: 0,
@@ -278,9 +380,17 @@ async function runSoaDetailedInService(
     await upsertFromSoaRows(userId, r.rows);
     const resolvePaidLabel = await paidLabelForRows();
     const title = `${r.ctx.monthLong} ${r.ctx.year}`;
+    const summaryRows = input.skipExistingCards
+      ? await summaryRowsWithSaved(
+          userId,
+          input.fromMonth,
+          input.fromYear,
+          r.rows,
+        )
+      : r.rows;
     await reporter?.activate("summary", title);
     await writeSummaryPdf(
-      r.rows,
+      summaryRows,
       r.summaryPath,
       title,
       title,
@@ -303,6 +413,8 @@ async function runSoaDetailedInService(
       parseFailures: r.parseFailures,
       downloadedPdfCount: r.downloadedPdfCount,
       parseErrors: r.parseErrors,
+      skippedCardCount: r.skippedCardCount,
+      coveredCardKeysByMonth,
     };
   }
 
@@ -331,6 +443,7 @@ async function runSoaDetailedInService(
   }[] = [];
   let parseFailures = 0;
   let downloadedPdfCount = 0;
+  let skippedCardCount = 0;
   const parseErrors: SoaParseFailureDetail[] = [];
 
   const { ensureDirs } = await import("@/lib/soa/config");
@@ -348,6 +461,7 @@ async function runSoaDetailedInService(
       year,
       skipBanner: true,
       beforeGmailSearch,
+      skipCardKeys: skipKeysFor(g.monthIndex0 + 1, g.year),
       progress: reporter
         ? {
             monthIndex: i,
@@ -360,8 +474,11 @@ async function runSoaDetailedInService(
     await upsertFromSoaRows(userId, r.rows);
     const resolvePaidLabel = await paidLabelForRows();
     const title = `${g.monthLong} ${g.year}`;
+    const summaryRows = input.skipExistingCards
+      ? await summaryRowsWithSaved(userId, g.monthIndex0 + 1, g.year, r.rows)
+      : r.rows;
     await writeSummaryPdf(
-      r.rows,
+      summaryRows,
       r.summaryPath,
       title,
       title,
@@ -369,6 +486,7 @@ async function runSoaDetailedInService(
     );
     parseFailures += r.parseFailures;
     downloadedPdfCount += r.downloadedPdfCount;
+    skippedCardCount += r.skippedCardCount;
     parseErrors.push(...r.parseErrors);
     months.push({
       month: g.monthIndex0 + 1,
@@ -380,7 +498,7 @@ async function runSoaDetailedInService(
     rangeParts.push({
       periodLabel: title,
       periodKey: r.periodKey,
-      rows: r.rows,
+      rows: summaryRows,
     });
   }
 
@@ -422,6 +540,8 @@ async function runSoaDetailedInService(
     parseFailures,
     downloadedPdfCount,
     parseErrors,
+    skippedCardCount,
+    coveredCardKeysByMonth,
   };
 }
 
@@ -604,10 +724,27 @@ export const soaService = {
       });
 
       const detailed = await runSoaDetailedInService(userId, input, reporter);
+      const parsedCount = detailed.allRows.filter(
+        (row) => !row.soaUnavailable && row.cardLast4 !== "—",
+      ).length;
+      const skippedEverything =
+        !!input.skipExistingCards &&
+        detailed.skippedCardCount > 0 &&
+        parsedCount === 0 &&
+        detailed.gmailSearches.length === 0;
 
       let notify: { telegram: boolean; slack: boolean; error?: string } | null =
         null;
-      if (input.notifyTelegram || input.notifySlack) {
+      if ((input.notifyTelegram || input.notifySlack) && skippedEverything) {
+        if (input.notifyTelegram) {
+          await reporter?.activate("telegram", "No new statements");
+          await reporter?.completeStep("telegram");
+        }
+        if (input.notifySlack) {
+          await reporter?.activate("slack", "No new statements");
+          await reporter?.completeStep("slack");
+        }
+      } else if (input.notifyTelegram || input.notifySlack) {
         try {
           const configured = await notificationService.isConfigured(userId);
           if (configured) {
@@ -648,7 +785,10 @@ export const soaService = {
         notice?: string;
         error?: string;
       } | null = null;
-      if (input.createCalendar) {
+      if (input.createCalendar && skippedEverything) {
+        await reporter?.activate("calendar", "No new statements");
+        await reporter?.completeStep("calendar");
+      } else if (input.createCalendar) {
         try {
           await reporter?.activate("calendar", "Syncing Google Calendar");
           const calendarCards = await db.query.creditCards.findMany({
@@ -669,6 +809,11 @@ export const soaService = {
               dueDay: c.dueDay,
               statementDay: c.statementDay,
             })),
+            detailed.coveredCardKeysByMonth
+              ? {
+                  coveredCardKeysByMonth: detailed.coveredCardKeysByMonth,
+                }
+              : undefined,
           );
           const calResult = await googleCalendarService.createDueDateEvents(
             userId,
@@ -713,11 +858,8 @@ export const soaService = {
       );
 
       const statementCount = saved + updated;
-      const parsedCount = detailed.allRows.filter(
-        (row) => !row.soaUnavailable && row.cardLast4 !== "—",
-      ).length;
 
-      const warning = buildSoaGmailWarning({
+      let warning = buildSoaGmailWarning({
         parsedCount,
         unavailable,
         parseFailures: detailed.parseFailures,
@@ -729,6 +871,7 @@ export const soaService = {
         hasGmailReadScope: gmailMailbox?.hasGmailReadScope ?? true,
         calendar,
       });
+      if (skippedEverything) warning = undefined;
 
       const diagnostics = {
         preflight,
@@ -765,6 +908,7 @@ export const soaService = {
         rowCount: detailed.allRows.length,
         statementCount,
         parsedCount,
+        skippedCardCount: detailed.skippedCardCount,
         unavailableCount: unavailable,
         warning,
         diagnostics,
