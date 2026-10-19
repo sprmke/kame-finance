@@ -28,7 +28,8 @@ export function aggregateCategorySpend(
   for (const tx of transactions) {
     const slug = (tx.categorySlug ??
       CANNOT_ANALYZE_SLUG) as TransactionCategorySlug;
-    if (slug === "payment_credit" || slug === "interest_fees") continue;
+    // Payments/credits are not spend; interest & fees are included in breakdown.
+    if (slug === "payment_credit") continue;
 
     const amount = parseTransactionAmount(tx.amount);
     if (amount <= 0) continue;

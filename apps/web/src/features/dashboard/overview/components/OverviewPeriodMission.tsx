@@ -28,7 +28,7 @@ type AttentionItem = {
 
 type OverviewPeriodMissionProps = {
   periodLabel: string;
-  periodId: string;
+  soaHref: Route;
   paidCardCount: number;
   cardCount: number;
   totalPaid: number;
@@ -48,6 +48,7 @@ type OverviewPeriodMissionProps = {
     markedPaid: boolean;
     outstandingDue: number;
     paidAmount: number;
+    statementPeriodKey: string;
   }>;
   upcomingDues: Array<{
     id: string;
@@ -110,7 +111,7 @@ function formatDaysAway(daysAway: number): string {
 
 export function OverviewPeriodMission({
   periodLabel,
-  periodId,
+  soaHref,
   paidCardCount,
   cardCount,
   totalPaid,
@@ -143,11 +144,13 @@ export function OverviewPeriodMission({
   const attention: AttentionItem[] = [];
 
   const upcomingDueKeys = new Set(
-    upcomingDues.map((due) => `${due.issuerId}:${due.cardLast4}`),
+    upcomingDues.map(
+      (due) => `${due.issuerId}:${due.cardLast4}:${due.statementPeriodKey}`,
+    ),
   );
 
   for (const card of cardsBelowMinimum) {
-    const key = `${card.issuerId}:${card.cardLast4}`;
+    const key = `${card.issuerId}:${card.cardLast4}:${card.statementPeriodKey}`;
     if (upcomingDueKeys.has(key)) continue;
 
     attention.push({
@@ -192,7 +195,7 @@ export function OverviewPeriodMission({
     attention.push({
       id: "unanalyzed",
       label: `${unanalyzedCount} uncategorized transaction${unanalyzedCount === 1 ? "" : "s"}`,
-      href: ROUTES.dashboard.soaPeriod(periodId) as Route,
+      href: soaHref,
       variant: "muted",
     });
   }
@@ -235,7 +238,7 @@ export function OverviewPeriodMission({
             </p>
           </div>
           <Button variant="outline" size="sm" asChild>
-            <Link href={ROUTES.dashboard.soaPeriod(periodId)}>
+            <Link href={soaHref}>
               View SOA
               <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
             </Link>

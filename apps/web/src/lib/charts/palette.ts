@@ -24,12 +24,17 @@ export function chartColorAtIndex(index: number): string {
   ]!;
 }
 
+const INTEREST_FEES_CHART_COLOR = "hsl(var(--destructive) / 0.85)";
+
 export function categoryChartColor(
   slug: TransactionCategorySlug,
   index: number,
 ): string {
   if (slug === CANNOT_ANALYZE_SLUG) {
     return CANNOT_ANALYZE_CHART_COLOR;
+  }
+  if (slug === "interest_fees") {
+    return INTEREST_FEES_CHART_COLOR;
   }
   return chartColorAtIndex(index);
 }

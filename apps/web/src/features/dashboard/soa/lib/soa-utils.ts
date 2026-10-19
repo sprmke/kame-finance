@@ -4,6 +4,7 @@ import {
   resolveCardAccent,
   type ResolvedCardAccent,
 } from "@/lib/credit-cards/card-accent";
+import { formatCardDisplayLabel } from "@/lib/credit-cards/card-display-label";
 import {
   computeStatementMonthTotals,
   dueEntryKey,
@@ -24,6 +25,7 @@ export type SoaStatement = {
   statementMonth: number;
   statementYear: number;
   bankLabel: string;
+  cardDisplayLabel?: string | null;
   issuerId: string;
   cardLast4: string;
   cardColor?: string | null;
@@ -45,6 +47,21 @@ export type SoaStatement = {
     categorySource?: string | null;
   }[];
 };
+
+export function statementCardLabel(
+  statement: Pick<SoaStatement, "issuerId" | "cardDisplayLabel">,
+): string {
+  return formatCardDisplayLabel(
+    statement.issuerId,
+    statement.cardDisplayLabel,
+  );
+}
+
+export function statementTitle(
+  statement: Pick<SoaStatement, "issuerId" | "cardDisplayLabel" | "cardLast4">,
+): string {
+  return `${statementCardLabel(statement)} ···· ${statement.cardLast4}`;
+}
 
 export type SoaPeriodKey = `${number}-${number}`;
 

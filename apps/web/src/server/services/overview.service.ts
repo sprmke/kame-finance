@@ -1,6 +1,18 @@
 import { and, count, desc, eq, isNull } from "drizzle-orm";
 
 import {
+  currentOverviewPeriod,
+  dueMatchesSpan,
+  formatOverviewPeriodLabel,
+  manilaToday,
+  overviewPeriodSpan,
+  parseOverviewPeriod,
+  pickPeriodIdForMonth,
+  spanIncludesMonth,
+  type OverviewStatsInput,
+} from "@/features/dashboard/overview/lib/overview-period";
+import { rollupStatementMonths } from "@/features/dashboard/overview/lib/overview-range-stats";
+import {
   computePeriodOverviewStats,
   flattenStatementTransactions,
 } from "@/features/dashboard/soa/lib/period-overview-stats";
@@ -17,20 +29,18 @@ import { reminderService } from "./reminder.service";
 import { soaPeriodService } from "./soa-period.service";
 
 export const overviewService = {
-  async getStats(userId: string) {
+  async getStats(userId: string, input?: OverviewStatsInput) {
     const asOf = todayYmdLocal();
-
-    // Resolve the latest period first so its detail can join the same parallel wave
-    // below rather than adding another serial round trip after everything else.
-    const latestPeriodRow = await db.query.soaPeriods.findFirst({
-      where: eq(soaPeriods.userId, userId),
-      orderBy: [
-        desc(soaPeriods.lastRunAt),
-        desc(soaPeriods.fromYear),
-        desc(soaPeriods.fromMonth),
-        desc(soaPeriods.createdAt),
-      ],
-    });
+    const selected = input
+      ? parseOverviewPeriod({
+          grain: input.grain,
+          year: String(input.year),
+          month: String(input.month),
+        })
+      : currentOverviewPeriod();
+    const span = overviewPeriodSpan(selected);
+    const today = manilaToday();
+    const includesToday = spanIncludesMonth(span, today.year, today.month);
 
     const [
       cardsCount,
@@ -39,7 +49,8 @@ export const overviewService = {
       periodCount,
       unpaidDueRows,
       reminderStatus,
-      periodDetail,
+      rangeBundle,
+      periodRows,
       lastSoa,
     ] = await Promise.all([
       db
@@ -71,107 +82,88 @@ export const overviewService = {
         .where(eq(soaPeriods.userId, userId))
         .then(([row]) => row?.value ?? 0),
       reminderService.listDueEntries(userId, true),
-      reminderService.getReminderStatus(userId),
-      latestPeriodRow
-        ? soaPeriodService.getPeriod(userId, latestPeriodRow.id)
-        : Promise.resolve(null),
+      includesToday
+        ? reminderService.getReminderStatus(userId)
+        : Promise.resolve({ readyCount: 0, inWindowCount: 0 }),
+      soaPeriodService.loadRangeBundle(userId, span),
+      db.query.soaPeriods.findMany({
+        where: eq(soaPeriods.userId, userId),
+        columns: {
+          id: true,
+          fromMonth: true,
+          fromYear: true,
+          toMonth: true,
+          toYear: true,
+        },
+      }),
       db.query.soaStatements.findFirst({
         where: eq(soaStatements.userId, userId),
         orderBy: [desc(soaStatements.createdAt)],
       }),
     ]);
 
-    const upcomingDues = unpaidDueRows.slice(0, 5).map((row) => ({
-      id: row.id,
-      issuerId: row.issuerId,
-      bankLabel: row.bankLabel,
-      cardLast4: row.cardLast4,
-      cardDisplayLabel: row.cardDisplayLabel,
-      dueDate: row.dueDate,
-      dueDateYmd: row.dueDateYmd,
-      statementPeriodKey: row.statementPeriodKey,
-      statementPeriodLabel: row.statementPeriodLabel,
-      minimumDue: row.minimumDue,
-      totalDue: row.totalDue,
-      paidAt: row.paidAt,
-      source: row.source,
-      daysAway: daysUntilYmd(row.dueDateYmd, asOf),
-    }));
+    const upcomingDues = unpaidDueRows
+      .filter((row) => dueMatchesSpan(row, span))
+      .map((row) => ({
+        id: row.id,
+        issuerId: row.issuerId,
+        bankLabel: row.bankLabel,
+        cardLast4: row.cardLast4,
+        cardDisplayLabel: row.cardDisplayLabel,
+        dueDate: row.dueDate,
+        dueDateYmd: row.dueDateYmd,
+        statementPeriodKey: row.statementPeriodKey,
+        statementPeriodLabel: row.statementPeriodLabel,
+        minimumDue: row.minimumDue,
+        totalDue: row.totalDue,
+        paidAt: row.paidAt,
+        source: row.source,
+        daysAway: daysUntilYmd(row.dueDateYmd, asOf),
+      }));
 
-    let latestPeriod: {
-      id: string;
-      label: string;
-      cardCount: number;
-      paidCardCount: number;
-      minimumMetCardCount: number;
-      statementCount: number;
-      totalDue: number;
-      totalMinimum: number;
-      grossStatementDue: number;
-      grossMinimumDue: number;
-      totalPaid: number;
-      nextDueYmd: string | null;
-      spendTotal: number;
-      unanalyzed: number;
-      interestFeesTotal: number;
-      topCategory: { label: string; share: number | null } | null;
-      analyzedCategoryRows: ReturnType<
-        typeof computePeriodOverviewStats
-      >["analyzedRows"];
-      periodCards: Array<{
-        label: string;
-        issuerId: string;
-        cardLast4: string;
-        grossMinimumDue: number;
-        minimumRemaining: number;
-        minimumMet: boolean;
-        markedPaid: boolean;
-        outstandingDue: number;
-        paidAmount: number;
-      }>;
-    } | null = null;
+    const rolled = rollupStatementMonths(
+      rangeBundle.statements,
+      rangeBundle.dueRows,
+    );
+    const categoryStats = computePeriodOverviewStats(
+      flattenStatementTransactions(rangeBundle.statements),
+    );
 
-    if (periodDetail) {
-      const periodStats = computePeriodOverviewStats(
-        flattenStatementTransactions(periodDetail.statements),
-      );
-
-      latestPeriod = {
-        id: periodDetail.id,
-        label: periodDetail.label,
-        cardCount: periodDetail.cardCount,
-        paidCardCount: periodDetail.paidCardCount,
-        minimumMetCardCount: periodDetail.minimumMetCardCount,
-        statementCount: periodDetail.statementCount,
-        totalDue: periodDetail.totalDue,
-        totalMinimum: periodDetail.totalMinimum,
-        grossStatementDue: periodDetail.grossStatementDue,
-        grossMinimumDue: periodDetail.grossMinimumDue,
-        totalPaid: periodDetail.totalPaid,
-        nextDueYmd: periodDetail.nextDueYmd,
-        spendTotal: periodStats.spendTotal,
-        unanalyzed: periodStats.unanalyzed,
-        interestFeesTotal: periodStats.interestFeesTotal,
-        topCategory: periodStats.topCategory
-          ? {
-              label: periodStats.topCategory.label,
-              share: periodStats.topCategoryShare,
-            }
-          : null,
-        analyzedCategoryRows: periodStats.analyzedRows,
-        periodCards: periodDetail.periodCards.map((card) => ({
-          label: card.label,
-          issuerId: card.issuerId,
-          cardLast4: card.cardLast4,
-          grossMinimumDue: card.grossMinimumDue,
-          minimumRemaining: card.minimumRemaining,
-          minimumMet: card.minimumMet,
-          markedPaid: card.markedPaid,
-          outstandingDue: card.outstandingDue,
-          paidAmount: card.paidAmount,
-        })),
-      };
-    }
+    const period =
+      rolled.statementCount === 0
+        ? null
+        : {
+            id:
+              selected.grain === "month"
+                ? pickPeriodIdForMonth(
+                    periodRows,
+                    selected.month,
+                    selected.year,
+                  )
+                : null,
+            label: formatOverviewPeriodLabel(selected),
+            cardCount: rolled.cardCount,
+            paidCardCount: rolled.paidCardCount,
+            minimumMetCardCount: rolled.minimumMetCardCount,
+            statementCount: rolled.statementCount,
+            totalDue: rolled.totalDue,
+            totalMinimum: rolled.totalMinimum,
+            grossStatementDue: rolled.grossStatementDue,
+            grossMinimumDue: rolled.grossMinimumDue,
+            totalPaid: rolled.totalPaid,
+            nextDueYmd: rolled.nextDueYmd,
+            spendTotal: categoryStats.spendTotal,
+            unanalyzed: categoryStats.unanalyzed,
+            interestFeesTotal: categoryStats.interestFeesTotal,
+            topCategory: categoryStats.topCategory
+              ? {
+                  label: categoryStats.topCategory.label,
+                  share: categoryStats.topCategoryShare,
+                }
+              : null,
+            analyzedCategoryRows: categoryStats.analyzedRows,
+            periodCards: rolled.periodCards,
+          };
 
     return {
       cards: cardsCount,
@@ -182,7 +174,10 @@ export const overviewService = {
         readyCount: reminderStatus.readyCount,
         inWindowCount: reminderStatus.inWindowCount,
       },
-      latestPeriod,
+      missingSoaCount: includesToday
+        ? unpaidDueRows.filter((row) => row.source === "expected").length
+        : 0,
+      period,
       upcomingDues,
       lastSoaAt: lastSoa?.createdAt ?? null,
     };

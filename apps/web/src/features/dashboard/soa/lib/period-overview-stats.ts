@@ -7,7 +7,7 @@ import {
   type CategorySpendRow,
 } from "./category-analytics";
 import { parseTransactionAmount } from "./transaction-utils";
-import type { SoaStatement } from "./soa-utils";
+import { statementCardLabel, type SoaStatement } from "./soa-utils";
 
 export type PeriodTransaction = CategorizedTx & {
   date: string | null;
@@ -28,7 +28,7 @@ export function flattenStatementTransactions(
       categorySlug: tx.categorySlug,
       categoryLabel: tx.categoryLabel,
       issuerId: statement.issuerId,
-      bankLabel: statement.bankLabel,
+      bankLabel: statementCardLabel(statement),
       cardLast4: statement.cardLast4,
     })),
   );
