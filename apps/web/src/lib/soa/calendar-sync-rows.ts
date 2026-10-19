@@ -6,6 +6,10 @@ import { parseDueDateToYmd } from "@/lib/due/parse-due-date";
 import { normalizeCardLast4 } from "@/lib/due/normalize";
 import { formatBankIssuer } from "@/lib/db/schema";
 import type { CalendarEventInput } from "@/lib/soa/google-calendar";
+import {
+  soaCoverageKey,
+  statementMonthKey,
+} from "@/lib/soa/skip-existing-cards";
 import type { SoaRow } from "@/lib/soa/types";
 
 export type SoaCalendarCard = {
@@ -128,10 +132,15 @@ function missingSoaCalendarRow(
 /**
  * Calendar rows for an SOA run: parsed statements plus estimated due dates for every
  * registered card that did not get a statement for that month.
+ * `coveredCardKeysByMonth` cards already have a saved SOA, so they keep their
+ * existing events instead of receiving an estimated "missing SOA" event.
  */
 export function buildCalendarRowsForSoaRun(
   months: SoaCalendarMonth[],
   cards: SoaCalendarCard[],
+  options?: {
+    coveredCardKeysByMonth?: ReadonlyMap<string, ReadonlySet<string>>;
+  },
 ): CalendarEventInput[] {
   const out: CalendarEventInput[] = [];
   const seen = new Set<string>();
@@ -152,6 +161,12 @@ export function buildCalendarRowsForSoaRun(
     for (const card of cards) {
       if (!card.dueDay) continue;
       if (monthHasParsedSoaForCard(month.rows, card.issuer, card.last4)) {
+        continue;
+      }
+      const covered = options?.coveredCardKeysByMonth?.get(
+        statementMonthKey(month.year, month.month),
+      );
+      if (covered?.has(soaCoverageKey(card.issuer, card.last4))) {
         continue;
       }
       const synthetic = missingSoaCalendarRow(card, month);

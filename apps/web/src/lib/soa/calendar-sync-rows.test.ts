@@ -6,6 +6,7 @@ import {
   monthHasParsedSoaForCard,
   statementPeriodEndYmd,
 } from "./calendar-sync-rows";
+import { coveredKeysByMonth } from "./skip-existing-cards";
 import type { SoaRow } from "./types";
 
 function parsedRow(overrides: Partial<SoaRow> = {}): SoaRow {
@@ -73,9 +74,28 @@ describe("buildCalendarRowsForSoaRun", () => {
     ).toBe(true);
     const rows = buildCalendarRowsForSoaRun(
       [{ month: 3, year: 2026, rows: [parsedRow()] }],
-      [cards[0]],
+      [cards[0]!],
     );
     expect(rows).toHaveLength(1);
     expect(rows[0]?.soaUnavailable).toBeFalsy();
+  });
+
+  test("does not invent a missing-SOA event for a card that already has one", () => {
+    const covered = coveredKeysByMonth([
+      {
+        issuerId: "rcbc",
+        cardLast4: "5678",
+        statementMonth: 3,
+        statementYear: 2026,
+        soaUnavailable: false,
+      },
+    ]);
+    const rows = buildCalendarRowsForSoaRun(
+      [{ month: 3, year: 2026, rows: [parsedRow()] }],
+      cards,
+      { coveredCardKeysByMonth: covered },
+    );
+    expect(rows.find((r) => r.issuerId === "rcbc")).toBeUndefined();
+    expect(rows.filter((r) => r.issuerId === "bpi")).toHaveLength(1);
   });
 });

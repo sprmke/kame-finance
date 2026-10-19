@@ -133,6 +133,53 @@ export function cardHasParsedSoaForStatementMonth(
   );
 }
 
+/** Active card is on or past its statement day and the target month has no parsed SOA. */
+export function isCardMissingCurrentSoa(
+  asOfYmd: string,
+  card: {
+    id: string;
+    issuer: string;
+    last4: string;
+    isActive: boolean;
+    statementDay: number | null;
+    gmailMonthOffset?: number | null;
+  },
+  statements: readonly SoaStatementPeriodRow[],
+): boolean {
+  if (!card.isActive) return false;
+  if (card.statementDay == null || !isValidDueDay(card.statementDay)) {
+    return false;
+  }
+  const offset = card.gmailMonthOffset ?? 0;
+  const schedule: CardBillingSchedule = {
+    statementDay: card.statementDay,
+    dueDay: null,
+    gmailMonthOffset: offset,
+  };
+  if (!isOnOrPastExpectedStatementDate(asOfYmd, schedule)) return false;
+  const { year, month } = targetStatementMonthForCard(asOfYmd, offset);
+  return !cardHasParsedSoaForStatementMonth(statements, card, year, month);
+}
+
+/** Unavailable statement row whose billing month is already on or past the card’s statement day. */
+export function isMissingSoaForStatementPeriod(
+  asOfYmd: string,
+  statement: {
+    soaUnavailable: boolean | null;
+    statementYear: number;
+    statementMonth: number;
+  },
+  statementDay: number | null | undefined,
+): boolean {
+  if (!statement.soaUnavailable) return false;
+  return isOnOrPastStatementDateForPeriod(
+    asOfYmd,
+    statement.statementYear,
+    statement.statementMonth,
+    { statementDay: statementDay ?? null },
+  );
+}
+
 export function statementPeriodKeyForCardAsOf(
   asOfYmd: string,
   gmailMonthOffset: number,

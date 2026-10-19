@@ -1,14 +1,14 @@
 "use client";
 
-import { formatBankIssuer } from "@/lib/db/schema/credit-cards";
 import { cn } from "@/lib/utils/cn";
 
+import { formatCardDisplayLabel } from "./card-display-label";
 import { resolveCardAccent } from "./card-accent";
 
 type CardBankLabelProps = {
   issuerId: string;
   color?: string | null;
-  label?: string;
+  label?: string | null;
   className?: string;
   /** Hide swatch when the row/card already has a color stripe. */
   showSwatch?: boolean;
@@ -22,7 +22,7 @@ export function CardBankLabel({
   showSwatch = true,
 }: CardBankLabelProps) {
   const accent = resolveCardAccent(issuerId, color);
-  const text = label ?? formatBankIssuer(issuerId);
+  const text = formatCardDisplayLabel(issuerId, label);
 
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>

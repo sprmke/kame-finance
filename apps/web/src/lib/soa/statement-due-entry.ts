@@ -25,20 +25,22 @@ function cardPrefix(issuerId: string, cardLast4: string): string {
   return `${issuerId.toLowerCase()}:${cardLast4}`;
 }
 
-/** Unpaid due entry aligned with {@link isStatementMarkedPaid} matching rules. */
-export function resolveUnpaidDueEntryForStatement(
+/**
+ * Due entry for this statement, paid or not.
+ * Exact due-date key first, then the same card in the statement month.
+ */
+export function resolveDueEntryForStatement(
   statement: StatementDueEntryMatchInput,
   dues: StatementDueEntryRow[],
 ): StatementDueEntryRow | undefined {
-  const unpaid = dues.filter((due) => !due.paidAt);
-  if (unpaid.length === 0) return undefined;
+  if (dues.length === 0) return undefined;
 
   const statementKey = dueEntryKey(
     statement.issuerId,
     statement.cardLast4,
     statement.dueDateYmd,
   );
-  const byDueDate = unpaid.find(
+  const byDueDate = dues.find(
     (due) =>
       dueEntryKey(due.issuerId, due.cardLast4, due.dueDateYmd) === statementKey,
   );
@@ -50,11 +52,22 @@ export function resolveUnpaidDueEntryForStatement(
   );
   const prefix = cardPrefix(statement.issuerId, statement.cardLast4);
 
-  return unpaid.find((due) => {
+  return dues.find((due) => {
     if (cardPrefix(due.issuerId, due.cardLast4) !== prefix) return false;
     if (due.statementPeriodKey === statementPeriodKey) return true;
     return due.dueDateYmd.slice(0, 7) === statementPeriodKey;
   });
+}
+
+/** Unpaid due entry aligned with {@link isStatementMarkedPaid} matching rules. */
+export function resolveUnpaidDueEntryForStatement(
+  statement: StatementDueEntryMatchInput,
+  dues: StatementDueEntryRow[],
+): StatementDueEntryRow | undefined {
+  return resolveDueEntryForStatement(
+    statement,
+    dues.filter((due) => !due.paidAt),
+  );
 }
 
 export function shouldOfferStatementPayNow(
