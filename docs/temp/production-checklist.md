@@ -61,8 +61,8 @@ See **`docs/temp/supabase-setup.md`** for the full walkthrough.
 - [ ] Gmail OAuth in integrations UI (replace legacy file config)
 - [ ] Expand test suite (bank parsers, mark-paid, tRPC)
 - [ ] Error monitoring (Sentry or Vercel logs alerts)
-- [ ] Formal Drizzle migrations instead of `db:push` only
-- [ ] Apply `0000_exotic_masque.sql` + `0001_tired_katie_power.sql` (or `bun run db:migrate`) — `0001` dedupes `due_entries` before adding the unique index
+- [x] Formal Drizzle migrations instead of `db:push` only — Vercel production builds apply them via `db:migrate:deploy`
+- [x] Apply `0000_exotic_masque.sql` + `0001_tired_katie_power.sql` — baselined automatically on `db:push`-bootstrapped databases
 - [ ] Recurring **due day** (1–31) is required for missing-SOA fallback. Cards with `due_day` NULL are skipped until SOA history fills them or they are edited (`SELECT id, label FROM credit_cards WHERE due_day IS NULL AND deleted_at IS NULL`)
 
 ## Required production env vars

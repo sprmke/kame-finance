@@ -278,6 +278,7 @@ For full guidance, see [Mobile Readiness Plan](./mobile-readiness.md).
   - Edge functions
   - Built-in analytics
   - Preview deployments
+- **Schema migrations**: production builds run `db:migrate:deploy` before `next build`, so a deploy fails instead of shipping code ahead of its schema. Preview builds never migrate. New migrations after `0001` must stay idempotent (`IF NOT EXISTS`, guarded constraints).
 
 ### Database Hosting
 

@@ -124,6 +124,7 @@ Dashboard pages are Server Components that call `prefetchForPage` and render ins
 | `scripts/dev/free-local-ports.sh`  | Stops stale listeners on `:3005` before `next dev` (so Next does not silently jump to 3006)                                   |
 | `apps/web` `scripts/perf-probe.ts` | Times the hot dashboard tRPC procedures against the real database (`bun --conditions=react-server run scripts/perf-probe.ts`) |
 | `apps/web` `prepare-server-native` | Copies qpdf.wasm, Linux canvas `.node`, and Tesseract WASM/traineddata into `src/server/lib/native` for Vercel tracing        |
+| `apps/web` `db:migrate:deploy`     | Runs in `build` before `next build`: applies `drizzle/migrations` on Vercel production (`VERCEL_ENV=production`) or with `MIGRATE_ON_BUILD=1`; uses `DIRECT_URL` → `DATABASE_URL`; baselines `0000`/`0001` on `db:push`-bootstrapped databases with no journal. Preview/CI builds skip it |
 
 ## Cursor / VS Code run tasks
 
