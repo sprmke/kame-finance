@@ -1,14 +1,12 @@
 "use client";
 
-import { FileText } from "lucide-react";
-
 import {
   ClickableTableRow,
   TableRowActions,
 } from "@/components/shared/ClickableTableRow";
 import { TableCard } from "@/components/shared/TableCard";
+import { MissingSoaBadge } from "@/components/shared/MissingSoaBadge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -18,7 +16,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ROUTES } from "@/config/routes";
-import { cn } from "@/lib/utils/cn";
 
 import { CardBankLabel } from "@/lib/credit-cards/CardBankLabel";
 import { resolveCardAccent } from "@/lib/credit-cards/card-accent";
@@ -37,6 +34,11 @@ import {
   type StatementDueEntryRow,
 } from "@/lib/soa/statement-due-entry";
 import { StatementPayNowButton } from "./StatementPayNowButton";
+import {
+  StatementPaidBadge,
+  StatementPaymentButton,
+  StatementSoaButton,
+} from "./StatementSettlement";
 
 type SoaStatementTableProps = {
   periodId: string;
@@ -46,7 +48,11 @@ type SoaStatementTableProps = {
   onPayNow?: (dueEntryId: string) => void;
   payNowDisabled?: boolean;
   onPreviewSource: (statement: SoaStatement) => void;
+  onPreviewPayment?: (statement: SoaStatement) => void;
+  paymentCountFor?: (statement: SoaStatement) => number;
+  paidReady?: boolean;
   showPeriodColumn?: boolean;
+  isMissingSoa?: (statement: SoaStatement) => boolean;
 };
 
 export function SoaStatementTable({
@@ -57,26 +63,33 @@ export function SoaStatementTable({
   onPayNow,
   payNowDisabled,
   onPreviewSource,
+  onPreviewPayment,
+  paymentCountFor,
+  paidReady = true,
   showPeriodColumn = false,
+  isMissingSoa,
 }: SoaStatementTableProps) {
   return (
     <TableCard>
-      <Table>
+      <Table className="min-w-[980px]">
         <TableHeader>
           <TableRow>
             {showPeriodColumn && <TableHead>Period</TableHead>}
-            <TableHead>Bank</TableHead>
             <TableHead>Card</TableHead>
+            <TableHead>Last 4</TableHead>
             <TableHead>Statement</TableHead>
             <TableHead className="text-right">Total due</TableHead>
             <TableHead className="text-right">Minimum</TableHead>
             <TableHead>Due</TableHead>
-            <TableHead className="w-[52px]" />
+            <TableHead className="w-[104px]">Paid</TableHead>
+            <TableHead className="w-[72px] text-center">SOA</TableHead>
+            <TableHead className="w-[88px] text-center">Payment</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {statements.map((statement) => {
-            const paid = isStatementMarkedPaid(statement, paidDues);
+            const paid =
+              paidReady && isStatementMarkedPaid(statement, paidDues);
             const days = daysUntilDue(statement.dueDateYmd);
             const countdown = dueCountdownLabel(days);
             const accent = resolveCardAccent(
@@ -96,6 +109,8 @@ export function SoaStatementTable({
               dueEntries,
               paid,
             );
+            const paymentCount = paymentCountFor?.(statement) ?? 0;
+            const missingSoa = isMissingSoa?.(statement) ?? false;
 
             const urgencyVariant =
               paid || days === null
@@ -124,7 +139,7 @@ export function SoaStatementTable({
                   <CardBankLabel
                     issuerId={statement.issuerId}
                     color={statement.cardColor}
-                    label={statement.bankLabel}
+                    label={statement.cardDisplayLabel}
                     showSwatch={false}
                   />
                 </TableCell>
@@ -132,9 +147,15 @@ export function SoaStatementTable({
                   ···· {statement.cardLast4}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {statement.statementDate && statement.statementDate !== "—"
-                    ? statement.statementDate
-                    : "—"}
+                  <div className="flex flex-col items-start gap-1.5">
+                    <span>
+                      {statement.statementDate &&
+                      statement.statementDate !== "—"
+                        ? statement.statementDate
+                        : "—"}
+                    </span>
+                    {missingSoa ? <MissingSoaBadge /> : null}
+                  </div>
                 </TableCell>
                 <TableCell className="text-right font-medium tabular-nums">
                   {formatDisplayAmount(statement.totalDue)}
@@ -149,11 +170,10 @@ export function SoaStatementTable({
                     onKeyDown={(event) => event.stopPropagation()}
                   >
                     <span>{statement.dueDate ?? "—"}</span>
-                    {paid && <StatusBadge label="Paid" variant="success" />}
-                    {countdown && !paid && (
+                    {paidReady && countdown && !paid && (
                       <StatusBadge label={countdown} variant={urgencyVariant} />
                     )}
-                    {payNow.show && payNow.dueEntryId && onPayNow ? (
+                    {paidReady && payNow.show && payNow.dueEntryId && onPayNow ? (
                       <StatementPayNowButton
                         onClick={() => onPayNow(payNow.dueEntryId!)}
                         disabled={payNowDisabled}
@@ -161,19 +181,36 @@ export function SoaStatementTable({
                     ) : null}
                   </div>
                 </TableCell>
-                <TableRowActions>
-                  {hasPdf ? (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0"
-                      aria-label="Preview source PDF"
+                <TableCell>
+                  {paidReady ? (
+                    <StatementPaidBadge paid={paid} />
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                {hasPdf ? (
+                  <TableRowActions className="text-center">
+                    <StatementSoaButton
                       onClick={() => onPreviewSource(statement)}
-                    >
-                      <FileText className="h-4 w-4" />
-                    </Button>
-                  ) : null}
-                </TableRowActions>
+                    />
+                  </TableRowActions>
+                ) : (
+                  <TableCell className="text-center">
+                    <StatementSoaButton />
+                  </TableCell>
+                )}
+                {paymentCount > 0 && onPreviewPayment ? (
+                  <TableRowActions className="text-center">
+                    <StatementPaymentButton
+                      count={paymentCount}
+                      onClick={() => onPreviewPayment(statement)}
+                    />
+                  </TableRowActions>
+                ) : (
+                  <TableCell className="text-center">
+                    <StatementPaymentButton count={0} />
+                  </TableCell>
+                )}
               </ClickableTableRow>
             );
           })}

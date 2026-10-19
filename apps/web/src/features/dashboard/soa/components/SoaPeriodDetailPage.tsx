@@ -33,7 +33,7 @@ import { useReceiptUploadFlow } from "@/hooks/use-receipt-upload-flow";
 import {
   type StatementDueEntryRow,
 } from "@/lib/soa/statement-due-entry";
-import { isOnOrPastStatementDateForPeriod } from "@/lib/credit-cards/billing-cycle";
+import { isMissingSoaForStatementPeriod } from "@/lib/credit-cards/billing-cycle";
 import { normalizeCardLast4 } from "@/lib/due/normalize";
 import { todayYmdLocal } from "@/lib/reminders/reminder-status";
 import { formatPhpAmount } from "@/lib/utils/format-money";
@@ -54,11 +54,15 @@ import {
 import { SoaPeriodTransactionsTab } from "./SoaPeriodTransactionsTab";
 import { SoaStatementCard } from "./SoaStatementCard";
 import { SoaStatementTable } from "./SoaStatementTable";
+import { PaymentReceiptPreview } from "@/features/dashboard/receipts/components/PaymentReceiptPreview";
 import { usePersistedViewMode } from "@/hooks/use-persisted-view-mode";
 import { isStatementMarkedPaid } from "@/lib/soa/paid-status";
+import { receiptsForStatement } from "@/lib/soa/statement-receipts";
+import type { ReceiptListItem } from "@/features/dashboard/receipts/lib/receipt-utils";
 import {
   groupStatementsByPeriod,
   periodLabel,
+  statementTitle,
   type SoaStatement,
 } from "../lib/soa-utils";
 import { periodToRunInitial } from "../lib/run-soa-progress";
@@ -143,7 +147,9 @@ function SoaPeriodDetailBody({
   const utils = api.useUtils();
   const router = useRouter();
   const redirectToReceiptsAfterUploadRef = useRef(false);
-  const { data: dues } = api.reminders.listDue.useQuery({ unpaidOnly: false });
+  const { data: dues, isSuccess: duesReady } =
+    api.reminders.listDue.useQuery({ unpaidOnly: false });
+  const { data: receipts } = api.receipts.list.useQuery();
   const { data: cards } = api.creditCards.list.useQuery();
   const { data: integrations } = api.integrations.list.useQuery();
   const categorize = useCategorizeWithAiActions();
@@ -172,6 +178,9 @@ function SoaPeriodDetailBody({
   const [pdfPreview, setPdfPreview] = useState<PdfPreviewState>({
     kind: "closed",
   });
+  const [paymentReceipts, setPaymentReceipts] = useState<
+    ReceiptListItem[] | null
+  >(null);
   const [manualEntryOpen, setManualEntryOpen] = useState(false);
   const { viewMode, setViewMode } = usePersistedViewMode(
     "kame-finance:soa-view-mode",
@@ -184,6 +193,7 @@ function SoaPeriodDetailBody({
       void utils.soa.getStatement.invalidate();
       void utils.soa.listPeriods.invalidate();
       void utils.reminders.listDue.invalidate();
+      void utils.overview.stats.invalidate();
     },
   });
 
@@ -207,6 +217,24 @@ function SoaPeriodDetailBody({
     }));
   }, [dues]);
 
+  const paymentReceiptsByStatementId = useMemo(() => {
+    const items = (receipts ?? []) as ReceiptListItem[];
+    const map = new Map<string, ReceiptListItem[]>();
+    for (const statement of flatStatements) {
+      const linked = receiptsForStatement(statement, dueEntries, items);
+      if (linked.length > 0) {
+        map.set(statement.id, linked as ReceiptListItem[]);
+      }
+    }
+    return map;
+  }, [flatStatements, dueEntries, receipts]);
+
+  function openPaymentPreview(statement: SoaStatement) {
+    const linked = paymentReceiptsByStatementId.get(statement.id);
+    if (!linked?.length) return;
+    setPaymentReceipts(linked);
+  }
+
   const paidDues = useMemo(
     () =>
       (dues ?? []).map((due) => ({
@@ -222,20 +250,15 @@ function SoaPeriodDetailBody({
   const asOfYmd = todayYmdLocal();
 
   function showMissingSoaNudge(statement: SoaStatement): boolean {
-    if (!statement.soaUnavailable) return false;
     const card = (cards ?? []).find(
       (c) =>
         c.issuer.toLowerCase() === statement.issuerId.toLowerCase() &&
         normalizeCardLast4(c.last4) === normalizeCardLast4(statement.cardLast4),
     );
-    if (!card?.dueDay) return false;
-    return isOnOrPastStatementDateForPeriod(
+    return isMissingSoaForStatementPeriod(
       asOfYmd,
-      statement.statementYear,
-      statement.statementMonth,
-      {
-        statementDay: card.statementDay,
-      },
+      statement,
+      card?.statementDay,
     );
   }
 
@@ -297,7 +320,10 @@ function SoaPeriodDetailBody({
                   : "Upload"}
               </label>
             </Button>
-            <Button onClick={() => openRun()} disabled={runPipeline.isPending}>
+            <Button
+              onClick={() => openRun(undefined, { rerun: true })}
+              disabled={runPipeline.isPending}
+            >
               <Play className="mr-2 w-4 h-4" />
               Re-run
             </Button>
@@ -351,6 +377,13 @@ function SoaPeriodDetailBody({
         onSaveDetected={() =>
           manualUpload.resolveConfirm({ action: "outOfRange" })
         }
+      />
+
+      <PaymentReceiptPreview
+        receipts={paymentReceipts}
+        onOpenChange={(open) => {
+          if (!open) setPaymentReceipts(null);
+        }}
       />
 
       <SoaPdfPreview
@@ -469,10 +502,17 @@ function SoaPeriodDetailBody({
                       setPdfPreview({
                         kind: "source",
                         statementId: s.id,
-                        title: `${s.bankLabel} ···· ${s.cardLast4}`,
+                        title: statementTitle(s),
                       })
                     }
+                    onPreviewPayment={openPaymentPreview}
+                    paymentCountFor={(statement) =>
+                      paymentReceiptsByStatementId.get(statement.id)?.length ??
+                      0
+                    }
+                    paidReady={duesReady}
                     showPeriodColumn={statementGroups.length > 1}
+                    isMissingSoa={showMissingSoaNudge}
                   />
                 ) : (
                   <p className="py-12 text-sm text-center text-muted-foreground">
@@ -518,9 +558,15 @@ function SoaPeriodDetailBody({
                               setPdfPreview({
                                 kind: "source",
                                 statementId: s.id,
-                                title: `${s.bankLabel} ···· ${s.cardLast4}`,
+                                title: statementTitle(s),
                               })
                             }
+                            onPreviewPayment={() => openPaymentPreview(s)}
+                            paymentCount={
+                              paymentReceiptsByStatementId.get(s.id)?.length ??
+                              0
+                            }
+                            paidReady={duesReady}
                           />
                         ))}
                       </div>

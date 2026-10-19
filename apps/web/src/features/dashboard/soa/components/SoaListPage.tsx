@@ -59,10 +59,11 @@ export function SoaListPage() {
   const { openRun, runDialogProps } = useSoaRunDialog({
     onRunSuccess: (result) => {
       void utils.soa.listPeriods.invalidate();
+      void utils.soa.getPeriod.invalidate();
       void utils.overview.stats.invalidate();
+      void utils.reminders.listDue.invalidate();
       if (result.periodId) {
         void utils.soa.getPeriod.prefetch({ periodId: result.periodId });
-        void utils.reminders.listDue.prefetch({ unpaidOnly: false });
       }
     },
     onAfterRunComplete: (periodId) => {
@@ -95,7 +96,7 @@ export function SoaListPage() {
   });
 
   function openRerun(period: SoaPeriodRow) {
-    openRun(periodToRunInitial(period));
+    openRun(periodToRunInitial(period), { rerun: true });
   }
 
   return (

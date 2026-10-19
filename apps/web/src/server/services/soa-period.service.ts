@@ -16,33 +16,48 @@ import { transactionCategoryService } from "./transaction-category.service";
 import { creditCardService } from "./credit-card.service";
 import { soaPersistService } from "./soa-persist.service";
 
-type CardColorLookup = Map<string, string | null>;
+type CardIdentity = {
+  color: string | null;
+  label: string | null;
+};
 
-async function loadCardColorLookup(userId: string): Promise<CardColorLookup> {
+type CardIdentityLookup = Map<string, CardIdentity>;
+
+async function loadCardIdentityLookup(
+  userId: string,
+): Promise<CardIdentityLookup> {
   const cards = await creditCardService.list(userId);
-  const byId = new Map(cards.map((c) => [c.id, c.color ?? null]));
-  const byKey = new Map(
-    cards.map((c) => [`${c.issuer.toLowerCase()}:${c.last4}`, c.color ?? null]),
-  );
+  const lookup = new Map<string, CardIdentity>();
 
-  return new Map([...byId.entries(), ...byKey.entries()]);
+  for (const card of cards) {
+    const identity: CardIdentity = {
+      color: card.color ?? null,
+      label: card.label ?? null,
+    };
+    lookup.set(card.id, identity);
+    lookup.set(`${card.issuer.toLowerCase()}:${card.last4}`, identity);
+  }
+
+  return lookup;
 }
 
-function cardColorForStatement(
-  lookup: CardColorLookup,
+function cardIdentityForStatement(
+  lookup: CardIdentityLookup,
   statement: {
     creditCardId: string | null;
     issuerId: string;
     cardLast4: string;
   },
-): string | null {
+): CardIdentity {
   if (statement.creditCardId) {
     const byId = lookup.get(statement.creditCardId);
-    if (byId !== undefined) return byId;
+    if (byId) return byId;
   }
   return (
-    lookup.get(`${statement.issuerId.toLowerCase()}:${statement.cardLast4}`) ??
-    null
+    lookup.get(`${statement.issuerId.toLowerCase()}:${statement.cardLast4}`) ?? {
+      color: null,
+      label: null,
+    }
   );
 }
 
@@ -369,7 +384,8 @@ export const soaPeriodService = {
       userId,
       statement.transactions,
     );
-    const cardColors = await loadCardColorLookup(userId);
+    const cardLookup = await loadCardIdentityLookup(userId);
+    const identity = cardIdentityForStatement(cardLookup, statement);
 
     return {
       period: {
@@ -379,7 +395,8 @@ export const soaPeriodService = {
       statement: {
         ...statement,
         transactions,
-        cardColor: cardColorForStatement(cardColors, statement),
+        cardColor: identity.color,
+        cardDisplayLabel: identity.label,
       },
     };
   },
@@ -405,17 +422,21 @@ export const soaPeriodService = {
     });
 
     const stats = await aggregatePeriodStats(userId, period);
-    const cardColors = await loadCardColorLookup(userId);
+    const cardLookup = await loadCardIdentityLookup(userId);
 
     const enrichedStatements = await Promise.all(
-      statements.map(async (statement) => ({
-        ...statement,
-        cardColor: cardColorForStatement(cardColors, statement),
-        transactions: await transactionCategoryService.enrichTransactions(
-          userId,
-          statement.transactions,
-        ),
-      })),
+      statements.map(async (statement) => {
+        const identity = cardIdentityForStatement(cardLookup, statement);
+        return {
+          ...statement,
+          cardColor: identity.color,
+          cardDisplayLabel: identity.label,
+          transactions: await transactionCategoryService.enrichTransactions(
+            userId,
+            statement.transactions,
+          ),
+        };
+      }),
     );
 
     return {
@@ -423,6 +444,55 @@ export const soaPeriodService = {
       label: formatSoaPeriodRange(period),
       ...stats,
       statements: enrichedStatements,
+    };
+  },
+
+  /** Statements and due rows for an arbitrary month or year window. */
+  async loadRangeBundle(
+    userId: string,
+    range: {
+      fromMonth: number;
+      fromYear: number;
+      toMonth: number;
+      toYear: number;
+    },
+  ) {
+    await soaPersistService.collapseDuplicateStatements(userId);
+
+    const [statements, statsInputs, cardLookup] = await Promise.all([
+      db.query.soaStatements.findMany({
+        where: statementsInPeriodWhere(
+          userId,
+          range.fromMonth,
+          range.fromYear,
+          range.toMonth,
+          range.toYear,
+        ),
+        orderBy: [desc(soaStatements.createdAt)],
+        with: { transactions: true },
+      }),
+      loadPeriodStatsInputs(userId),
+      loadCardIdentityLookup(userId),
+    ]);
+
+    const enrichedStatements = await Promise.all(
+      statements.map(async (statement) => {
+        const identity = cardIdentityForStatement(cardLookup, statement);
+        return {
+          ...statement,
+          cardColor: identity.color,
+          cardDisplayLabel: identity.label,
+          transactions: await transactionCategoryService.enrichTransactions(
+            userId,
+            statement.transactions,
+          ),
+        };
+      }),
+    );
+
+    return {
+      statements: enrichedStatements,
+      dueRows: statsInputs.dueRows,
     };
   },
 

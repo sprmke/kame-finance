@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Calendar, FileText, Receipt } from "lucide-react";
+import { Calendar, Receipt } from "lucide-react";
 
+import { MissingSoaNotice } from "@/components/shared/MissingSoaBadge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import {
   type StatementDueEntryRow,
 } from "@/lib/soa/statement-due-entry";
 import { StatementPayNowButton } from "./StatementPayNowButton";
+import { StatementSettlementRow } from "./StatementSettlement";
 
 type SoaStatementCardProps = {
   periodId: string;
@@ -33,6 +35,9 @@ type SoaStatementCardProps = {
   payNowDisabled?: boolean;
   showMissingSoaNudge?: boolean;
   onPreviewSource: () => void;
+  onPreviewPayment?: () => void;
+  paymentCount?: number;
+  paidReady?: boolean;
 };
 
 export function SoaStatementCard({
@@ -44,6 +49,9 @@ export function SoaStatementCard({
   payNowDisabled,
   showMissingSoaNudge,
   onPreviewSource,
+  onPreviewPayment,
+  paymentCount = 0,
+  paidReady = true,
 }: SoaStatementCardProps) {
   const accent = resolveCardAccent(statement.issuerId, statement.cardColor);
   const days = daysUntilDue(statement.dueDateYmd);
@@ -54,14 +62,15 @@ export function SoaStatementCard({
     !statement.soaUnavailable;
   const txCount = statement.transactions?.length ?? 0;
   const detailHref = ROUTES.dashboard.soaStatement(periodId, statement.id);
+  const isPaid = paidReady && Boolean(paid);
   const payNow = shouldOfferStatementPayNow(
     statement,
     dueEntries,
-    Boolean(paid),
+    isPaid || !paidReady,
   );
 
   const urgencyVariant =
-    paid || days === null
+    isPaid || days === null
       ? ("muted" as const)
       : days < 0
         ? ("destructive" as const)
@@ -81,10 +90,9 @@ export function SoaStatementCard({
               <CardBankLabel
                 issuerId={statement.issuerId}
                 color={statement.cardColor}
-                label={statement.bankLabel}
+                label={statement.cardDisplayLabel}
               />
-              {paid && <StatusBadge label="Paid" variant="success" />}
-              {countdown && !paid && (
+              {countdown && paidReady && !isPaid && (
                 <StatusBadge label={countdown} variant={urgencyVariant} />
               )}
             </div>
@@ -130,41 +138,33 @@ export function SoaStatementCard({
           </div>
         </div>
 
-        {showMissingSoaNudge ? (
-          <div className="flex gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-            <p>
-              No SOA yet for this period. Check Gmail or upload the PDF manually.
-            </p>
-          </div>
-        ) : null}
+        {showMissingSoaNudge ? <MissingSoaNotice /> : null}
+
+        <StatementSettlementRow
+          paid={isPaid}
+          paidReady={paidReady}
+          onPreviewSoa={hasPdf ? onPreviewSource : undefined}
+          onPreviewPayment={
+            paymentCount > 0 ? onPreviewPayment : undefined
+          }
+          paymentCount={paymentCount}
+        />
 
         <div className="flex flex-wrap gap-2">
           {payNow.show && payNow.dueEntryId && onPayNow ? (
             <StatementPayNowButton
-              fullWidth={txCount === 0 && !hasPdf}
-              className={cn(txCount === 0 && !hasPdf && "min-h-9")}
+              fullWidth={txCount === 0}
+              className={cn(txCount === 0 && "min-h-11")}
               onClick={() => onPayNow(payNow.dueEntryId!)}
               disabled={payNowDisabled}
             />
           ) : null}
           {txCount > 0 && (
-            <Button variant="default" size="sm" className="h-8" asChild>
+            <Button variant="default" size="sm" className="h-11" asChild>
               <Link href={detailHref}>
                 <Receipt className="mr-1.5 h-3.5 w-3.5" />
-                View
+                Transactions
               </Link>
-            </Button>
-          )}
-          {hasPdf && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8"
-              onClick={onPreviewSource}
-            >
-              <FileText className="mr-1.5 h-3.5 w-3.5" />
-              Source PDF
             </Button>
           )}
         </div>

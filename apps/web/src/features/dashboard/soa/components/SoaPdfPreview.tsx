@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Download, ExternalLink, FileText, X } from "lucide-react";
 
 import { PdfPreviewSkeleton } from "@/components/shared/skeletons";
@@ -17,6 +17,7 @@ type SoaPdfPreviewProps = {
   onOpenChange: (open: boolean) => void;
   title: string;
   pdfUrl: string | null;
+  actions?: ReactNode;
 };
 
 type PreviewKind = "pdf" | "image";
@@ -42,6 +43,7 @@ export function SoaPdfPreview({
   onOpenChange,
   title,
   pdfUrl,
+  actions,
 }: SoaPdfPreviewProps) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [previewKind, setPreviewKind] = useState<PreviewKind | null>(null);
@@ -120,6 +122,7 @@ export function SoaPdfPreview({
             {title}
           </DialogTitle>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {actions}
             {pdfUrl && (
               <>
                 {downloadHref && !loading && (

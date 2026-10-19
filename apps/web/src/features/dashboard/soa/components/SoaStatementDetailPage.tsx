@@ -15,22 +15,31 @@ import {
 } from 'lucide-react';
 
 import { DashboardPageHeader } from '@/components/shared/DashboardPageHeader';
+import { MissingSoaNotice } from '@/components/shared/MissingSoaBadge';
 import { SoaStatementDetailContentSkeleton } from '@/components/shared/skeletons';
 import { StatCard } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { ViewPaymentReceiptButton } from '@/components/shared/ViewPaymentReceiptButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ROUTES } from '@/config/routes';
 import { api } from '@/lib/api/client';
 import type { AppRouter } from '@/server/routers/_app';
+import { isMissingSoaForStatementPeriod } from '@/lib/credit-cards/billing-cycle';
+import { normalizeCardLast4 } from '@/lib/due/normalize';
+import { todayYmdLocal } from '@/lib/reminders/reminder-status';
 import { formatPhpAmount } from '@/lib/utils/format-money';
 import { isStatementMarkedPaid } from '@/lib/soa/paid-status';
+import { receiptsForStatement } from '@/lib/soa/statement-receipts';
+import type { ReceiptListItem } from '@/features/dashboard/receipts/lib/receipt-utils';
 
 import {
   CategorizeWithAiProvider,
   useCategorizeWithAiActions,
 } from './CategorizeWithAiProvider';
 import { SoaPdfPreview } from './SoaPdfPreview';
+import { PaymentReceiptPreview } from '@/features/dashboard/receipts/components/PaymentReceiptPreview';
+import { StatementPaidBadge } from './StatementSettlement';
 import { SoaTransactionList } from './SoaTransactionList';
 import { CardBankLabel } from '@/lib/credit-cards/CardBankLabel';
 import { resolveCardAccent } from '@/lib/credit-cards/card-accent';
@@ -40,6 +49,7 @@ import {
   dueCountdownLabel,
   formatDisplayAmount,
   periodLabel,
+  statementTitle,
 } from '../lib/soa-utils';
 import {
   classifyTransaction,
@@ -174,28 +184,41 @@ function SoaStatementDetailBody({
   statement: SoaStatementDetail['statement'];
 }) {
   const { data: dues } = api.reminders.listDue.useQuery({ unpaidOnly: false });
+  const { data: receipts } = api.receipts.list.useQuery();
+  const { data: cards } = api.creditCards.list.useQuery(undefined, {
+    enabled: Boolean(statement.soaUnavailable),
+  });
   const categorize = useCategorizeWithAiActions();
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
-  const paid = useMemo(() => {
-    if (!dues) return false;
-    return isStatementMarkedPaid(
-      {
-        issuerId: statement.issuerId,
-        cardLast4: statement.cardLast4,
-        dueDateYmd: statement.dueDateYmd,
-        statementMonth: statement.statementMonth,
-        statementYear: statement.statementYear,
-      },
-      dues.map((due) => ({
+  const dueEntries = useMemo(
+    () =>
+      (dues ?? []).map((due) => ({
+        id: due.id,
         issuerId: due.issuerId,
         cardLast4: due.cardLast4,
         dueDateYmd: due.dueDateYmd,
         paidAt: due.paidAt,
         statementPeriodKey: due.statementPeriodKey,
       })),
-    );
-  }, [statement, dues]);
+    [dues],
+  );
+
+  const paid = useMemo(() => {
+    if (!dues) return false;
+    return isStatementMarkedPaid(statement, dueEntries);
+  }, [statement, dues, dueEntries]);
+
+  const linkedReceipts = useMemo(
+    () =>
+      receiptsForStatement(
+        statement,
+        dueEntries,
+        (receipts ?? []) as ReceiptListItem[],
+      ) as ReceiptListItem[],
+    [statement, dueEntries, receipts],
+  );
 
   const txStats = useMemo(() => {
     const transactions = statement.transactions ?? [];
@@ -220,6 +243,17 @@ function SoaStatementDetailBody({
     !!statement.pdfFileName &&
     statement.pdfFileName !== '—' &&
     !statement.soaUnavailable;
+  const matchedCard = (cards ?? []).find(
+    (card) =>
+      card.issuer.toLowerCase() === statement.issuerId.toLowerCase() &&
+      normalizeCardLast4(card.last4) ===
+        normalizeCardLast4(statement.cardLast4),
+  );
+  const missingSoa = isMissingSoaForStatementPeriod(
+    todayYmdLocal(),
+    statement,
+    matchedCard?.statementDay,
+  );
 
   const urgencyVariant =
     paid || days === null
@@ -253,12 +287,12 @@ function SoaStatementDetailBody({
         </Link>
         <span className="shrink-0">/</span>
         <span className="min-w-0 truncate text-foreground">
-          {statement.bankLabel} ···· {statement.cardLast4}
+          {statementTitle(statement)}
         </span>
       </div>
 
       <DashboardPageHeader
-        title={`${statement.bankLabel} ···· ${statement.cardLast4}`}
+        title={statementTitle(statement)}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
@@ -280,8 +314,16 @@ function SoaStatementDetailBody({
             {hasPdf && (
               <Button variant="outline" onClick={() => setPdfOpen(true)}>
                 <FileText className="mr-2 w-4 h-4" />
-                Source PDF
+                SOA
               </Button>
+            )}
+            {linkedReceipts.length > 0 && (
+              <ViewPaymentReceiptButton
+                count={linkedReceipts.length}
+                label="Payment"
+                className="h-10 w-auto"
+                onClick={() => setPaymentOpen(true)}
+              />
             )}
           </div>
         }
@@ -296,12 +338,12 @@ function SoaStatementDetailBody({
             <CardBankLabel
               issuerId={statement.issuerId}
               color={statement.cardColor}
-              label={statement.bankLabel}
+              label={statement.cardDisplayLabel}
             />
             <span className="text-xs text-muted-foreground">
               {stmtMonthLabel}
             </span>
-            {paid && <StatusBadge label="Paid" variant="success" />}
+            {dues ? <StatementPaidBadge paid={paid} /> : null}
             {countdown && !paid && (
               <StatusBadge label={countdown} variant={urgencyVariant} />
             )}
@@ -340,6 +382,8 @@ function SoaStatementDetailBody({
           </div>
         </CardHeader>
       </Card>
+
+      {missingSoa ? <MissingSoaNotice /> : null}
 
       {txStats.count > 0 && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -383,10 +427,15 @@ function SoaStatementDetailBody({
         <SoaPdfPreview
           open={pdfOpen}
           onOpenChange={setPdfOpen}
-          title={`${statement.bankLabel} ···· ${statement.cardLast4}`}
+          title={statementTitle(statement)}
           pdfUrl={`/api/soa/pdf?statementId=${statement.id}`}
         />
       )}
+
+      <PaymentReceiptPreview
+        receipts={paymentOpen ? linkedReceipts : null}
+        onOpenChange={setPaymentOpen}
+      />
     </div>
   );
 }
