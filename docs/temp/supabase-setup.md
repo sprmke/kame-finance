@@ -64,7 +64,7 @@ Use **URI** format. Replace `[PASSWORD]` with your database password (URL-encode
 Comment out local Docker `DATABASE_URL` and set Supabase values:
 
 ```env
-# DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kame_finance
+# DATABASE_URL=postgresql://postgres:postgres@localhost:5434/kame_finance
 
 DATABASE_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true
 DIRECT_URL=postgresql://postgres.[REF]:[PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres
@@ -132,7 +132,7 @@ bun run dev
 
 | Mode       | `DATABASE_URL`            | Docker          |
 | ---------- | ------------------------- | --------------- |
-| Local only | `localhost:5432/kame_finance` | `bun run db:up` |
+| Local only | `localhost:5434/kame_finance` | `bun run db:up` |
 | Supabase   | Supabase pooler URL       | Not needed      |
 
 `bun run setup:local` skips Docker when `DATABASE_URL` is not localhost.
