@@ -1,18 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Download,
-  ExternalLink,
-  Loader2,
-  Sparkles,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Download, ExternalLink, Loader2, Sparkles, Trash2, X } from "lucide-react";
 
-import { MediaPreviewSkeleton } from "@/components/shared/skeletons";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +17,6 @@ import {
   buildReceiptPaymentCoverage,
   coverageBadgeVariant,
   formatReceiptCardTitle,
-  isPdfReceipt,
 } from "../lib/receipt-display";
 import {
   formatReceiptDate,
@@ -35,6 +24,7 @@ import {
   receiptFileUrl,
   type ReceiptListItem,
 } from "../lib/receipt-utils";
+import { ReceiptImageCarousel } from "./ReceiptImageCarousel";
 import {
   paymentStatusLabel,
   ReceiptAiVerdictBadge,
@@ -92,9 +82,6 @@ export function ReceiptPreviewDialog({
   onRevalidate,
   isRevalidatePending,
 }: ReceiptPreviewDialogProps) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [failed, setFailed] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
 
   const slides = images && images.length > 0 ? images : receipt ? [receipt] : [];
@@ -130,7 +117,6 @@ export function ReceiptPreviewDialog({
 
   const receiptId = activeImage?.id ?? null;
   const fileUrl = receiptId ? receiptFileUrl(receiptId) : null;
-  const isPdf = isPdfReceipt(activeImage?.originalFileName);
   const title = receipt ? formatReceiptCardTitle(receipt) : "Receipt";
   const coverage = receipt ? buildReceiptPaymentCoverage(receipt) : null;
 
@@ -139,46 +125,6 @@ export function ReceiptPreviewDialog({
     receipt.paymentStatus === "pending" &&
     receipt.aiVerdict &&
     receipt.aiVerdict !== "invalid";
-
-  useEffect(() => {
-    if (!open || !fileUrl) {
-      setBlobUrl(null);
-      setFailed(false);
-      setLoading(false);
-      return;
-    }
-
-    let revoked: string | null = null;
-    const controller = new AbortController();
-
-    async function loadFile() {
-      setLoading(true);
-      setFailed(false);
-      setBlobUrl(null);
-
-      try {
-        const res = await fetch(fileUrl!, {
-          signal: controller.signal,
-          credentials: "same-origin",
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
-        revoked = URL.createObjectURL(blob);
-        setBlobUrl(revoked);
-      } catch {
-        if (!controller.signal.aborted) setFailed(true);
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    }
-
-    void loadFile();
-
-    return () => {
-      controller.abort();
-      if (revoked) URL.revokeObjectURL(revoked);
-    };
-  }, [open, fileUrl]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -219,67 +165,13 @@ export function ReceiptPreviewDialog({
         {receipt ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-              <div className="max-h-[45dvh] min-h-0 shrink-0 overflow-y-auto overscroll-contain border-b border-border bg-muted/20 p-4 lg:max-h-none lg:min-h-0 lg:flex-1 lg:border-b-0 lg:border-r">
-                <div className="mx-auto w-full max-w-md">
-                  {loading ? (
-                    <MediaPreviewSkeleton className="min-h-[240px] w-full lg:min-h-[280px]" />
-                  ) : failed || !blobUrl ? (
-                    <p className="py-8 text-sm text-muted-foreground">
-                      Could not load receipt
-                    </p>
-                  ) : isPdf ? (
-                    <iframe
-                      src={blobUrl}
-                      title={title}
-                      className="h-[min(60dvh,520px)] w-full rounded-md border border-border bg-background lg:h-[min(100%,520px)] lg:min-h-[320px]"
-                    />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={blobUrl}
-                      alt={title}
-                      className="h-auto w-full max-w-full rounded-md"
-                    />
-                  )}
-                  {slides.length > 1 ? (
-                    <div className="mt-3 flex items-center justify-center gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9"
-                        aria-label="Previous receipt"
-                        onClick={() =>
-                          setImageIndex((current) =>
-                            current === 0 ? slides.length - 1 : current - 1,
-                          )
-                        }
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <span
-                        className="min-w-12 text-center text-xs tabular-nums text-muted-foreground"
-                        aria-live="polite"
-                      >
-                        {imageIndex + 1} / {slides.length}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9"
-                        aria-label="Next receipt"
-                        onClick={() =>
-                          setImageIndex((current) =>
-                            current === slides.length - 1 ? 0 : current + 1,
-                          )
-                        }
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : null}
-                </div>
+              <div className="relative h-[min(42dvh,520px)] min-h-0 shrink-0 overflow-hidden border-b border-border bg-muted/20 max-sm:max-h-[42dvh] lg:h-full lg:max-h-full lg:min-h-0 lg:flex-1 lg:border-b-0 lg:border-r">
+                <ReceiptImageCarousel
+                  slides={slides}
+                  index={imageIndex}
+                  onIndexChange={setImageIndex}
+                  title={title}
+                />
               </div>
 
               <div className="flex min-h-0 w-full flex-col overflow-y-auto overscroll-contain lg:w-[380px] lg:shrink-0">
