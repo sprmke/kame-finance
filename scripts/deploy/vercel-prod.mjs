@@ -2,16 +2,13 @@
 /**
  * Production deploy for GitHub Actions CD.
  *
- * Uploads the git tree and creates the deployment through the Vercel API. The
- * CLI reads team settings before the project, so a project-scoped token fails
- * with "Could not retrieve Project Settings" even though it can deploy.
+ * Asks Vercel to build the git commit. A file upload does not match the Git
+ * layout this project builds with: the root directory is apps/web, and
+ * `cd ../..` only finds the workspace lockfile after a Git clone.
  *
  * Requires: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
  */
-import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { lstatSync, readFileSync } from "node:fs";
-import path from "node:path";
 
 const token = process.env.VERCEL_TOKEN;
 const orgId = process.env.VERCEL_ORG_ID;
@@ -24,18 +21,16 @@ if (!token || !orgId || !projectId) {
   process.exit(1);
 }
 
-const git = (args) =>
-  execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+/** sprmke/kame-finance, linked on the kame-ops Vercel project. */
+const GITHUB_REPO_ID = 1253966369;
+
 const root = execFileSync("git", ["rev-parse", "--show-toplevel"], {
   encoding: "utf8",
 }).trim();
+const git = (args) =>
+  execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
 const sha = git(["rev-parse", "HEAD"]);
 const message = git(["log", "-1", "--format=%s"]);
-const files = execFileSync("git", ["ls-files", "-z"], { cwd: root })
-  .toString()
-  .split("\0")
-  .filter(Boolean)
-  .filter((file) => lstatSync(path.join(root, file)).isFile());
 
 const api = "https://api.vercel.com";
 const team = `teamId=${encodeURIComponent(orgId)}`;
@@ -69,36 +64,7 @@ async function vercel(pathname, { method = "GET", body, headers } = {}) {
   return payload;
 }
 
-async function mapPool(items, limit, worker) {
-  const queue = items.slice();
-  await Promise.all(
-    Array.from({ length: Math.min(limit, items.length) }, async () => {
-      while (queue.length) await worker(queue.shift());
-    }),
-  );
-}
-
-console.log(`→ upload ${files.length} files from ${sha.slice(0, 7)}`);
-
-const uploaded = [];
-await mapPool(files, 12, async (file) => {
-  const bytes = readFileSync(path.join(root, file));
-  const digest = createHash("sha1").update(bytes).digest("hex");
-  await vercel(`/v2/files?${team}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/octet-stream",
-      "x-vercel-digest": digest,
-    },
-    body: bytes,
-  });
-  uploaded.push({ file, sha: digest, size: bytes.length });
-  if (uploaded.length % 200 === 0 || uploaded.length === files.length) {
-    console.log(`  uploaded ${uploaded.length}/${files.length}`);
-  }
-});
-
-console.log("→ create production deployment");
+console.log(`→ create production deployment for ${sha.slice(0, 7)}`);
 const deployment = await vercel(`/v13/deployments?${team}&forceNew=1`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
@@ -106,7 +72,11 @@ const deployment = await vercel(`/v13/deployments?${team}&forceNew=1`, {
     name: "kame-ops",
     project: projectId,
     target: "production",
-    files: uploaded,
+    gitSource: {
+      type: "github",
+      repoId: GITHUB_REPO_ID,
+      ref: sha,
+    },
     meta: {
       githubCommitSha: sha,
       githubCommitRef: "main",

@@ -127,7 +127,7 @@ Dashboard pages are Server Components that call `prefetchForPage` and render ins
 | `apps/web` `scripts/perf-probe.ts` | Times the hot dashboard tRPC procedures against the real database (`bun --conditions=react-server run scripts/perf-probe.ts`) |
 | `apps/web` `prepare-server-native` | Copies qpdf.wasm, Linux canvas `.node`, and Tesseract WASM/traineddata into `src/server/lib/native` for Vercel tracing        |
 | `apps/web` `db:migrate:deploy`     | Applies pending `drizzle/migrations` (`DIRECT_URL` → `DATABASE_URL`); baselines `0000`/`0001` on `db:push`-bootstrapped databases with no journal. Run by CD before deploy |
-| `scripts/deploy/vercel-prod.mjs`   | CD production deploy via the Vercel API (uploads the git tree, waits for `READY`)                                            |
+| `scripts/deploy/vercel-prod.mjs`   | CD production deploy via the Vercel API (builds the git commit, waits for `READY`)                                           |
 | `.github/workflows/ci.yml`         | Branches/PRs (and reused by CD): type-check, `bun test`, production build                                                    |
 | `.github/workflows/cd.yml`         | `main`: quality → migrate → Vercel deploy → `/api/health` + `/login` smoke → `cd-failure` issue on failure                   |
 
