@@ -23,7 +23,7 @@ Card create/edit lists **e-wallets that issue credit cards** (Maya), plus the sa
 
 | Issuer ID | Label | Gmail SOA notes |
 | --------- | ----- | ---------------- |
-| `maya` | Maya | Billing-statement subject phrase from the card (default: Maya Black or Maya Credit Card). Received-date window picks the month — Maya periods are `YYYY-MM-DD`, not "October 2026". Security-deposit statements are excluded |
+| `maya` | Maya | Billing-statement subject phrase; received-date window (periods are `YYYY-MM-DD`). Security-deposit mail excluded. Parse reads billing date, due/total pair, minimum, and `Description amount DD Mon DD Mon` rows from the text layer (summary labels are vectors) |
 
 Dedicated SOA parsers:
 

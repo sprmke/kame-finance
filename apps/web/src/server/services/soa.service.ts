@@ -109,6 +109,8 @@ async function loadCoveredSoaKeys(userId: string) {
       statementMonth: true,
       statementYear: true,
       soaUnavailable: true,
+      totalDue: true,
+      dueDate: true,
     },
   });
   return coveredKeysByMonth(rows);

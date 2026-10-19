@@ -413,6 +413,51 @@ function extractUnionbank(lines: string[]): TransactionLine[] {
   return dedupeTransactions(out);
 }
 
+const MAYA_TXN_END =
+  /^(.*?)\s+(-?)\s*([\d,]+\.\d{2})\s+(\d{1,2}\s+[A-Za-z]{3,9})\s+(\d{1,2}\s+[A-Za-z]{3,9})$/;
+
+/**
+ * Maya transaction rows are `Description  718.00  11 Sep  13 Sep`.
+ * A wrapped merchant name sits on the lines above the amount.
+ */
+function extractMaya(lines: string[]): TransactionLine[] {
+  const start = lines.findIndex((line) => /^transactions$/i.test(line));
+  const body = start >= 0 ? lines.slice(start + 1) : lines;
+  const out: TransactionLine[] = [];
+  let pending = "";
+
+  for (const line of body) {
+    if (/^page\s+\d+\s+of\s+\d+$/i.test(line)) break;
+    if (
+      /^\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}\s+to\s+\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}$/i.test(
+        line,
+      )
+    ) {
+      continue;
+    }
+    const combined = pending ? `${pending} ${line}` : line;
+    const match = combined.match(MAYA_TXN_END);
+    if (!match) {
+      pending = combined;
+      continue;
+    }
+    const description = match[1]!.replace(/\s+/g, " ").trim();
+    pending = "";
+    if (!description || SKIP_DESC.test(description) || description.length < 2) {
+      continue;
+    }
+    const amount = match[3]!;
+    out.push({
+      date: `${match[4]} / ${match[5]}`,
+      description: description.slice(0, 220),
+      amount: match[2] === "-" ? `${amount} (CR)` : amount,
+    });
+    if (out.length >= MAX_EXTRACT) break;
+  }
+
+  return dedupeTransactions(out);
+}
+
 function fallbackFromFlat(id: string, text: string): TransactionLine[] {
   const flat = text.replace(/\s+/g, " ").trim();
   const out: TransactionLine[] = [];
@@ -499,6 +544,8 @@ export function extractTransactions(
   else if (id === "unionbank") rows = extractUnionbank(lines);
   else if (id === "bpi") {
     rows = extractBpi(lines);
+  } else if (id === "maya") {
+    rows = extractMaya(lines);
   } else {
     rows = extractMetrobank(lines);
   }

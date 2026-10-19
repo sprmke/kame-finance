@@ -6,7 +6,26 @@ export type SoaCoverageStatement = {
   statementMonth: number;
   statementYear: number;
   soaUnavailable?: boolean | null;
+  totalDue?: string | null;
+  dueDate?: string | null;
 };
+
+function isBlankSoaAmount(value: string | null | undefined): boolean {
+  const trimmed = value?.trim() ?? "";
+  return trimmed.length === 0 || trimmed === "—";
+}
+
+/** A saved row with no due date and no total still needs a parse. */
+function statementHasParsedAmounts(
+  statement: SoaCoverageStatement,
+): boolean {
+  if (statement.totalDue === undefined && statement.dueDate === undefined) {
+    return true;
+  }
+  return (
+    !isBlankSoaAmount(statement.totalDue) || !isBlankSoaAmount(statement.dueDate)
+  );
+}
 
 export function statementMonthKey(year: number, month: number): string {
   return `${year}-${month}`;
@@ -28,6 +47,7 @@ export function coveredKeysByMonth(
 
   for (const statement of statements) {
     if (statement.soaUnavailable) continue;
+    if (!statementHasParsedAmounts(statement)) continue;
     if (!statement.cardLast4 || statement.cardLast4 === "—") continue;
 
     const monthKey = statementMonthKey(

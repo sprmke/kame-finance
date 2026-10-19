@@ -125,6 +125,69 @@ function extractRawPaymentDueValue(flat: string): string {
   return "";
 }
 
+/** Maya prints values as `6,577.79 PHP` and omits the summary labels from the text layer. */
+function mayaAmount(raw: string): string {
+  return raw.replace(/\s+/g, "");
+}
+
+/**
+ * Maya SOA text layer keeps the billing date, the due-date/total pair, the
+ * following minimum, and transaction rows. Labels such as "Total amount due"
+ * are drawn as vectors and are absent from extracted text.
+ */
+function parseMayaSoaFields(text: string): {
+  statementDate: string;
+  dueDate: string;
+  totalDue: string;
+  minimumDue: string;
+} {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  const flat = flatten(text);
+
+  let statementDate = "";
+  let dueDate = "";
+  let totalDue = "";
+  let minimumDue = "";
+
+  const billing = flat.match(
+    /billing\s+date\s*:\s*(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i,
+  );
+  if (billing?.[1]) statementDate = billing[1].trim();
+
+  const labeledTotal = flat.match(
+    /total\s+amount\s+due\s+(-?\s*[\d,]+\.\d{2})\s*PHP/i,
+  );
+  const labeledMinimum = flat.match(
+    /minimum\s+amount\s+due\s+(-?\s*[\d,]+\.\d{2})\s*PHP/i,
+  );
+  const labeledDue = flat.match(
+    /due\s+date\s*:?\s*(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i,
+  );
+  if (labeledTotal?.[1]) totalDue = mayaAmount(labeledTotal[1]);
+  if (labeledMinimum?.[1]) minimumDue = mayaAmount(labeledMinimum[1]);
+  if (labeledDue?.[1]) dueDate = labeledDue[1].trim();
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (!dueDate || !totalDue) {
+      const pair = line.match(
+        /^(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})\s+(-?\s*[\d,]+\.\d{2})\s*PHP$/i,
+      );
+      if (pair?.[1] && pair[2]) {
+        dueDate = pair[1].trim();
+        totalDue = mayaAmount(pair[2]);
+        const next = lines[i + 1]?.match(/^(-?\s*[\d,]+\.\d{2})\s*PHP$/i);
+        if (next?.[1] && !minimumDue) minimumDue = mayaAmount(next[1]);
+      }
+    }
+  }
+
+  return { statementDate, dueDate, totalDue, minimumDue };
+}
+
 function pickFirst(regexes: RegExp[], text: string): string {
   const flat = flatten(text);
   for (const re of regexes) {
@@ -800,6 +863,14 @@ export function parseSoaText(
   if (!dueDate) {
     const rawDue = extractRawPaymentDueValue(flatten(text));
     if (rawDue) dueDate = rawDue;
+  }
+
+  if (issuerId.toLowerCase() === "maya") {
+    const maya = parseMayaSoaFields(text);
+    if (maya.statementDate) statementDate = maya.statementDate;
+    if (maya.dueDate) dueDate = maya.dueDate;
+    if (maya.totalDue) totalDue = maya.totalDue;
+    if (maya.minimumDue) minimumDue = maya.minimumDue;
   }
 
   if (issuerId.toLowerCase() === "bpi") {

@@ -53,6 +53,22 @@ describe("coveredKeysByMonth", () => {
     expect(cardHasSoaForMonth(covered, 2026, 10, "bpi", "1234")).toBe(false);
   });
 
+  test("retries a saved row that has no due date and no total", () => {
+    const covered = coveredKeysByMonth([
+      {
+        issuerId: "maya",
+        cardLast4: "0884",
+        statementMonth: 10,
+        statementYear: 2026,
+        soaUnavailable: false,
+        totalDue: "—",
+        dueDate: "—",
+      },
+    ]);
+
+    expect(cardHasSoaForMonth(covered, 2026, 10, "maya", "0884")).toBe(false);
+  });
+
   test("normalizes issuer and last-4", () => {
     const covered = coveredKeysByMonth([
       {
