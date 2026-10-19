@@ -7,6 +7,7 @@ import {
   TableRowActions,
 } from "@/components/shared/ClickableTableRow";
 import { TableCard } from "@/components/shared/TableCard";
+import { MissingSoaBadge } from "@/components/shared/MissingSoaBadge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +42,7 @@ export type CreditCardRow = {
   dueDay: number | null;
   statementDay: number | null;
   isActive: boolean;
+  soaMissing?: boolean;
   googleAccountLabel?: string | null;
 };
 
@@ -88,6 +90,7 @@ export function CreditCardsTable({
                   <CardBankLabel
                     issuerId={card.issuer}
                     color={card.color}
+                    label={card.label}
                     showSwatch={false}
                   />
                 </TableCell>
@@ -98,10 +101,13 @@ export function CreditCardsTable({
                   {card.googleAccountLabel ?? "—"}
                 </TableCell>
                 <TableCell>
-                  <StatusBadge
-                    label={card.isActive ? "Active" : "Inactive"}
-                    variant={card.isActive ? "success" : "muted"}
-                  />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <StatusBadge
+                      label={card.isActive ? "Active" : "Inactive"}
+                      variant={card.isActive ? "success" : "muted"}
+                    />
+                    {card.soaMissing ? <MissingSoaBadge /> : null}
+                  </div>
                 </TableCell>
                 <TableCell className="tabular-nums text-sm">
                   {card.statementDay ? `Stmt ${card.statementDay}` : "—"}

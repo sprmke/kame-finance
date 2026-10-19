@@ -17,6 +17,7 @@ import { GoogleAccountSelect } from "@/components/shared/GoogleAccountSelect";
 import { ListViewToolbar } from "@/components/shared/ListViewToolbar";
 import { ViewModeLayout } from "@/components/shared/ViewModeLayout";
 import { CardFormSkeleton } from "@/components/shared/skeletons";
+import { MissingSoaBadge } from "@/components/shared/MissingSoaBadge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,7 +81,6 @@ import { CreditCardsLoadingView } from "./CreditCardsLoadingView";
 import { useHasHydrated } from "@/hooks/use-has-hydrated";
 import { useGoogleLinkCallback } from "@/hooks/use-google-link-callback";
 import { usePersistedViewMode } from "@/hooks/use-persisted-view-mode";
-import { CardBankLabel } from "@/lib/credit-cards/CardBankLabel";
 import { resolveCardAccent } from "@/lib/credit-cards/card-accent";
 import {
   clearAddCardDraft,
@@ -527,14 +527,11 @@ export function CreditCardsPage() {
                               •••• {card.last4}
                             </p>
                             <div className="flex flex-wrap gap-1.5">
-                              <CardBankLabel
-                                issuerId={card.issuer}
-                                color={card.color}
-                              />
                               <StatusBadge
                                 label={card.isActive ? "Active" : "Inactive"}
                                 variant={card.isActive ? "success" : "muted"}
                               />
+                              {card.soaMissing ? <MissingSoaBadge /> : null}
                             </div>
                           </div>
                           <DropdownMenu>
@@ -874,37 +871,35 @@ function CardForm({
           required={fullPanRequired}
         />
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor={`statement-day-${creditCardId ?? "add"}`}>
-            Statement date
-          </Label>
-          <Input
-            id={`statement-day-${creditCardId ?? "add"}`}
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={31}
-            value={statementDay}
-            onChange={(e) => setStatementDay(e.target.value)}
-            placeholder="Day of month"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor={`due-day-${creditCardId ?? "add"}`}>Due date</Label>
-          <Input
-            id={`due-day-${creditCardId ?? "add"}`}
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={31}
-            value={dueDay}
-            onChange={(e) => setDueDay(e.target.value)}
-            placeholder="Day of month"
-            required
-          />
-        </div>
+      <div className="space-y-2">
+        <Label htmlFor={`statement-day-${creditCardId ?? "add"}`}>
+          Statement date
+        </Label>
+        <Input
+          id={`statement-day-${creditCardId ?? "add"}`}
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={31}
+          value={statementDay}
+          onChange={(e) => setStatementDay(e.target.value)}
+          placeholder="Day of month"
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor={`due-day-${creditCardId ?? "add"}`}>Due date</Label>
+        <Input
+          id={`due-day-${creditCardId ?? "add"}`}
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={31}
+          value={dueDay}
+          onChange={(e) => setDueDay(e.target.value)}
+          placeholder="Day of month"
+          required
+        />
       </div>
 
       <div className="space-y-2">

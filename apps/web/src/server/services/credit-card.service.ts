@@ -2,7 +2,11 @@ import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { z } from "zod";
 
 import { inferDueDayFromYmds } from "@/lib/credit-cards/expected-due";
-import { inferStatementDayFromStatementDates } from "@/lib/credit-cards/billing-cycle";
+import {
+  inferStatementDayFromStatementDates,
+  isCardMissingCurrentSoa,
+} from "@/lib/credit-cards/billing-cycle";
+import { todayYmdLocal } from "@/lib/reminders/reminder-status";
 import { db } from "@/lib/db";
 import {
   BANK_ISSUERS,
@@ -196,16 +200,29 @@ export const creditCardService = {
       if (filledStmt > 0) cards = await loadCards();
     }
 
-    const [defaultGoogleAccountId, googleAccountRows] = await Promise.all([
-      gmailService.getDefaultGoogleAccountId(userId),
-      db.query.accounts.findMany({
-        where: and(
-          eq(accounts.userId, userId),
-          eq(accounts.provider, "google"),
-        ),
-        columns: { id: true, googleEmail: true, googleName: true },
-      }),
-    ]);
+    const [defaultGoogleAccountId, googleAccountRows, statements] =
+      await Promise.all([
+        gmailService.getDefaultGoogleAccountId(userId),
+        db.query.accounts.findMany({
+          where: and(
+            eq(accounts.userId, userId),
+            eq(accounts.provider, "google"),
+          ),
+          columns: { id: true, googleEmail: true, googleName: true },
+        }),
+        db.query.soaStatements.findMany({
+          where: eq(soaStatements.userId, userId),
+          columns: {
+            creditCardId: true,
+            issuerId: true,
+            cardLast4: true,
+            statementYear: true,
+            statementMonth: true,
+            soaUnavailable: true,
+            dueDateYmd: true,
+          },
+        }),
+      ]);
     const labelByAccountId = new Map(
       googleAccountRows.map((row) => [
         row.id,
@@ -216,6 +233,7 @@ export const creditCardService = {
       ]),
     );
 
+    const asOfYmd = todayYmdLocal();
     return cards.map((card) => {
       const stripped = stripEncryptedPassword(card);
       const resolvedAccountId =
@@ -225,6 +243,7 @@ export const creditCardService = {
         googleAccountLabel: resolvedAccountId
           ? (labelByAccountId.get(resolvedAccountId) ?? null)
           : null,
+        soaMissing: isCardMissingCurrentSoa(asOfYmd, card, statements),
       };
     });
   }),

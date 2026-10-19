@@ -25,6 +25,8 @@ const DEFAULT_WINDOW_DAYS = Math.max(
   Number(process.env.DUE_REMINDERS_WINDOW_DAYS ?? "4") || 4,
 );
 const EXPECTED_DUE_OVERDUE_DAYS = 7;
+/** Missing-SOA rows stay on the due list after the reminder follow-up window. */
+const MISSING_SOA_VISIBLE_AFTER_DUE_DAYS = 45;
 
 function cardKey(issuerId: string, last4: string) {
   return `${issuerId.toLowerCase()}:${last4}`;
@@ -41,7 +43,8 @@ export const reminderService = {
     return rows.filter(
       (row) =>
         row.source !== "expected" ||
-        daysUntilYmd(row.dueDateYmd, asOf) >= -EXPECTED_DUE_OVERDUE_DAYS,
+        daysUntilYmd(row.dueDateYmd, asOf) >=
+          -MISSING_SOA_VISIBLE_AFTER_DUE_DAYS,
     );
   },
 

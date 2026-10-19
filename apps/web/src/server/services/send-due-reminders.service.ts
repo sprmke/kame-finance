@@ -6,6 +6,7 @@ import {
   buildTelegramReminderMessage,
   type DueReminderEntry,
 } from "@/lib/reminders/reminder-messages";
+import { reminderFingerprint } from "@/lib/reminders/fingerprint";
 import { daysUntilYmd, todayYmdLocal } from "@/lib/reminders/reminder-status";
 import { db } from "@/lib/db";
 import { dueEntries } from "@/lib/db/schema";

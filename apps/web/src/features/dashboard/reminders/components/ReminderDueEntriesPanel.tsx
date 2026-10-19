@@ -11,14 +11,17 @@ import { ReceiptBatchUploadProgressDialog } from "@/components/shared/ReceiptBat
 import { RemindersContentSkeleton } from "@/components/shared/skeletons";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
+import { PaymentReceiptPreview } from "@/features/dashboard/receipts/components/PaymentReceiptPreview";
+import type { ReceiptListItem } from "@/features/dashboard/receipts/lib/receipt-utils";
 import { api } from "@/lib/api/client";
 import type { DueActionType } from "@/lib/due-action-progress";
 import { useReceiptUploadFlow } from "@/hooks/use-receipt-upload-flow";
-import { dueMonthPaidSummary } from "@/lib/soa/due-month";
 import {
   formatDaysBeforeDue,
   inWindowCountLabel,
 } from "@/lib/reminders/reminder-labels";
+import { dueMonthPaidSummary } from "@/lib/soa/due-month";
+import { receiptsForStatement } from "@/lib/soa/statement-receipts";
 
 import {
   DueActionProgressDialog,
@@ -52,6 +55,9 @@ export function ReminderDueEntriesPanel() {
     useState<DueEntryListItem | null>(null);
   const [markPaidChoiceEntry, setMarkPaidChoiceEntry] =
     useState<DueEntryListItem | null>(null);
+  const [paymentReceipts, setPaymentReceipts] = useState<
+    ReceiptListItem[] | null
+  >(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(GROUP_MODE_KEY);
@@ -68,6 +74,7 @@ export function ReminderDueEntriesPanel() {
   const { data: dues, isLoading } = api.reminders.listDue.useQuery({
     unpaidOnly: false,
   });
+  const { data: receipts } = api.receipts.list.useQuery();
   const { data: status } = api.reminders.status.useQuery();
   const { data: integrations } = api.integrations.list.useQuery();
 
@@ -96,6 +103,47 @@ export function ReminderDueEntriesPanel() {
     () => new Map(status?.cards.map((c) => [c.dueEntryId, c]) ?? []),
     [status?.cards],
   );
+
+  const receiptsByDueId = useMemo(() => {
+    const items = (receipts ?? []) as ReceiptListItem[];
+    const dueRows = dueItems.map((due) => ({
+      id: due.id,
+      issuerId: due.issuerId,
+      cardLast4: due.cardLast4,
+      dueDateYmd: due.dueDateYmd,
+      paidAt: due.paidAt,
+      statementPeriodKey: due.statementPeriodKey,
+    }));
+    const map = new Map<string, ReceiptListItem[]>();
+
+    for (const entry of dueItems) {
+      const periodParts = entry.statementPeriodKey.split("-");
+      let year = Number(periodParts[0]);
+      let month = Number(periodParts[1]);
+      if (!year || !month) {
+        const dueParts = entry.dueDateYmd.split("-");
+        year = Number(dueParts[0]);
+        month = Number(dueParts[1]);
+      }
+      if (!year || !month) continue;
+      const linked = receiptsForStatement(
+        {
+          issuerId: entry.issuerId,
+          cardLast4: entry.cardLast4,
+          dueDateYmd: entry.dueDateYmd,
+          statementMonth: month,
+          statementYear: year,
+        },
+        dueRows,
+        items,
+      );
+      if (linked.length > 0) {
+        map.set(entry.id, linked as ReceiptListItem[]);
+      }
+    }
+
+    return map;
+  }, [dueItems, receipts]);
 
   const unpaidCount = dueItems.filter(
     (d) => !d.paidAt && d.source !== "expected",
@@ -245,6 +293,13 @@ export function ReminderDueEntriesPanel() {
         disabled={actionPending}
       />
 
+      <PaymentReceiptPreview
+        receipts={paymentReceipts}
+        onOpenChange={(open) => {
+          if (!open) setPaymentReceipts(null);
+        }}
+      />
+
       <ReceiptBatchUploadProgressDialog
         open={receiptUpload.progressOpen}
         onOpenChange={receiptUpload.handleProgressOpenChange}
@@ -338,6 +393,15 @@ export function ReminderDueEntriesPanel() {
                       disabled={actionPending}
                       onMarkPaid={() => setMarkPaidChoiceEntry(entry)}
                       onMarkUnpaid={() => setConfirmUnpaidEntry(entry)}
+                      paymentCount={receiptsByDueId.get(entry.id)?.length ?? 0}
+                      onViewPayment={
+                        receiptsByDueId.has(entry.id)
+                          ? () =>
+                              setPaymentReceipts(
+                                receiptsByDueId.get(entry.id) ?? null,
+                              )
+                          : undefined
+                      }
                     />
                   ))}
                 </div>

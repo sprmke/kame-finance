@@ -1,8 +1,13 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, RotateCcw } from "lucide-react";
+import { CheckCircle2, RotateCcw } from "lucide-react";
 
+import {
+  MISSING_SOA_LABEL,
+  MissingSoaNotice,
+} from "@/components/shared/MissingSoaBadge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { ViewPaymentReceiptButton } from "@/components/shared/ViewPaymentReceiptButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
@@ -31,6 +36,8 @@ type DueEntryCardProps = {
   showCardMeta?: boolean;
   onMarkPaid?: () => void;
   onMarkUnpaid?: () => void;
+  onViewPayment?: () => void;
+  paymentCount?: number;
   disabled?: boolean;
 };
 
@@ -40,6 +47,8 @@ export function DueEntryCard({
   showCardMeta = true,
   onMarkPaid,
   onMarkUnpaid,
+  onViewPayment,
+  paymentCount = 0,
   disabled,
 }: DueEntryCardProps) {
   const paid = Boolean(entry.paidAt);
@@ -68,24 +77,24 @@ export function DueEntryCard({
           </p>
         </div>
         <StatusBadge
-          label={soaMissing ? "SOA missing" : paid ? "Paid" : "Unpaid"}
+          label={soaMissing ? MISSING_SOA_LABEL : paid ? "Paid" : "Unpaid"}
           variant={paid ? "success" : "warning"}
         />
       </CardHeader>
       <CardContent className="space-y-3">
-        {soaMissing ? (
-          <div className="flex gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-            <p>Check your email, bank app, or contact the bank.</p>
-          </div>
-        ) : null}
-        {reminderStatus && (
+        {soaMissing ? <MissingSoaNotice /> : null}
+        {paid && onViewPayment ? (
+          <ViewPaymentReceiptButton
+            count={paymentCount}
+            onClick={onViewPayment}
+          />
+        ) : reminderStatus && !paid ? (
           <StatusBadge
             label={reminderStatus.statusLabel}
             variant={statusVariant(reminderStatus.status)}
             className="w-full justify-center truncate py-1"
           />
-        )}
+        ) : null}
         {showCardMeta && !soaMissing && (
           <>
             <div className="flex justify-between text-sm">
