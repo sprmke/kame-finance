@@ -146,6 +146,7 @@ function normalizeVisionMimeType(mimeType: string, path?: string): string {
 function buildCreditCardReceiptPrompt(
   knownCards: ReceiptKnownCard[],
   dueContext?: ReceiptDueContext,
+  imageCount = 1,
 ): string {
   const cardLines =
     knownCards.length > 0
@@ -170,13 +171,28 @@ Expected payment target (if this receipt should match it):
 
   const issuerIds = BANK_ISSUERS.join("|");
 
+  const multiImageBlock =
+    imageCount > 1
+      ? `
+You are looking at ${imageCount} images for the SAME credit card and statement period.
+Return ONE JSON object for the whole set, not one result per image.
+- amount_php: sum of distinct payments. If two images show the same reference number, count that amount once.
+- has_amount, has_date, has_reference, and is_credit_card_payment: true when ANY image shows that field.
+- payment_date: a date visible on any image. Prefer a date in the due month.
+- reference_number: distinct reference numbers separated by ", ".
+- card_last4: the destination card shared by the set.
+- summary: one sentence about the combined payment, max 120 characters.
+`
+      : "";
+
   return `You are validating a Philippine credit card payment receipt screenshot or PDF.
 The payer may use GCash, Maya, MariBank, BDO, Metrobank, BPI, RCBC, Unionbank, or other bank/e-wallet apps to pay a credit card bill.
+${multiImageBlock}
 
 Known cards for this account:
 ${cardLines}
 ${dueBlock}
-Analyze the image and return ONLY valid JSON (no markdown) with this exact shape:
+Analyze the image${imageCount > 1 ? "s" : ""} and return ONLY valid JSON (no markdown) with this exact shape:
 {
   "verdict": "valid" | "likely_valid" | "unclear" | "invalid",
   "confidence": number between 0 and 1,
@@ -208,11 +224,15 @@ Verdict rules:
 - summary: plain English, max 120 characters, no line breaks.`;
 }
 
+type VisionImagePart = {
+  base64: string;
+  mimeType: string;
+};
+
 async function tryGeminiKey(
   apiKey: string,
   prompt: string,
-  base64: string,
-  safeMime: string,
+  images: VisionImagePart[],
   logTag: string,
 ): Promise<CreditCardReceiptAiResult | null> {
   try {
@@ -224,7 +244,9 @@ async function tryGeminiKey(
           {
             parts: [
               { text: prompt },
-              { inline_data: { mime_type: safeMime, data: base64 } },
+              ...images.map((image) => ({
+                inline_data: { mime_type: image.mimeType, data: image.base64 },
+              })),
             ],
           },
         ],
@@ -233,7 +255,7 @@ async function tryGeminiKey(
           responseMimeType: "application/json",
         },
       }),
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(images.length > 1 ? 60_000 : 45_000),
     });
 
     if (!res.ok) {
@@ -274,13 +296,15 @@ async function tryGeminiKey(
 async function tryGroq(
   groqKey: string,
   prompt: string,
-  base64: string,
-  safeMime: string,
+  images: VisionImagePart[],
   logTag: string,
 ): Promise<CreditCardReceiptAiResult | null> {
-  if (!GROQ_SUPPORTED_MIME_TYPES.has(safeMime)) {
+  const unsupported = images.find(
+    (image) => !GROQ_SUPPORTED_MIME_TYPES.has(image.mimeType),
+  );
+  if (unsupported) {
     console.warn(
-      `[${logTag}] Groq skipped — unsupported MIME type: ${safeMime}`,
+      `[${logTag}] Groq skipped — unsupported MIME type: ${unsupported.mimeType}`,
     );
     return null;
   }
@@ -299,18 +323,20 @@ async function tryGroq(
             role: "user",
             content: [
               { type: "text", text: prompt },
-              {
+              ...images.map((image) => ({
                 type: "image_url",
-                image_url: { url: `data:${safeMime};base64,${base64}` },
-              },
+                image_url: {
+                  url: `data:${image.mimeType};base64,${image.base64}`,
+                },
+              })),
             ],
           },
         ],
         temperature: 0.1,
-        max_tokens: 512,
+        max_tokens: images.length > 1 ? 768 : 512,
         response_format: { type: "json_object" },
       }),
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(images.length > 1 ? 60_000 : 45_000),
     });
 
     if (!res.ok) {
@@ -340,11 +366,18 @@ async function tryGroq(
   }
 }
 
+const MAX_RECEIPT_IMAGES = 8;
+
+export type ReceiptVisionImage = {
+  bytes: Uint8Array;
+  mimeType: string;
+  path?: string;
+};
+
 async function callVisionProviders(
   userId: string,
   prompt: string,
-  imageBytes: Uint8Array,
-  mimeType: string,
+  images: ReceiptVisionImage[],
   logTag: string,
 ): Promise<CreditCardReceiptAiResult> {
   // User-scoped keys from Settings only (ai_api_keys) — no process.env fallback.
@@ -355,12 +388,18 @@ async function callVisionProviders(
     console.warn(`[${logTag}] No AI API keys configured — skipping`);
     return skippedReceiptAi(AI_SKIP_NO_KEYS_MESSAGE, "no_keys");
   }
-  if (!imageBytes?.length) {
+
+  const prepared = images
+    .filter((image) => image.bytes?.length)
+    .slice(0, MAX_RECEIPT_IMAGES)
+    .map((image) => ({
+      base64: bytesToBase64(image.bytes),
+      mimeType: normalizeVisionMimeType(image.mimeType, image.path),
+    }));
+
+  if (prepared.length === 0) {
     return skippedReceiptAi("No image data to validate", "no_image");
   }
-
-  const safeMime = normalizeVisionMimeType(mimeType);
-  const base64 = bytesToBase64(imageBytes);
 
   if (geminiKeys.length > 0) {
     const startIdx =
@@ -370,8 +409,7 @@ async function callVisionProviders(
       const result = await tryGeminiKey(
         geminiKeys[idx]!,
         prompt,
-        base64,
-        safeMime,
+        prepared,
         logTag,
       );
       if (result) {
@@ -386,7 +424,7 @@ async function callVisionProviders(
 
   if (groqKeys.length > 0) {
     for (const groqKey of groqKeys) {
-      const result = await tryGroq(groqKey, prompt, base64, safeMime, logTag);
+      const result = await tryGroq(groqKey, prompt, prepared, logTag);
       if (result) return result;
     }
   }
@@ -420,6 +458,27 @@ export function formatReceiptVerdictLabel(
   }
 }
 
+export async function validateCreditCardReceiptImages(
+  userId: string,
+  images: ReceiptVisionImage[],
+  opts: {
+    knownCards?: ReceiptKnownCard[];
+    dueContext?: ReceiptDueContext;
+  } = {},
+): Promise<CreditCardReceiptAiResult> {
+  const prompt = buildCreditCardReceiptPrompt(
+    opts.knownCards ?? [],
+    opts.dueContext,
+    images.length,
+  );
+  return callVisionProviders(
+    userId,
+    prompt,
+    images,
+    "cc-receipt-validation",
+  );
+}
+
 export async function validateCreditCardReceiptImage(
   userId: string,
   imageBytes: Uint8Array,
@@ -429,16 +488,10 @@ export async function validateCreditCardReceiptImage(
     dueContext?: ReceiptDueContext;
   } = {},
 ): Promise<CreditCardReceiptAiResult> {
-  const prompt = buildCreditCardReceiptPrompt(
-    opts.knownCards ?? [],
-    opts.dueContext,
-  );
-  return callVisionProviders(
+  return validateCreditCardReceiptImages(
     userId,
-    prompt,
-    imageBytes,
-    mimeType,
-    "cc-receipt-validation",
+    [{ bytes: imageBytes, mimeType }],
+    opts,
   );
 }
 
