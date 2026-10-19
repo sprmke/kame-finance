@@ -63,9 +63,9 @@ describe("coveredKeysByMonth", () => {
       },
     ]);
 
-    expect(soaCoverageKey("unionbank", "0344")).toBe(
-      [...(covered.get("2026-10") ?? [])][0],
-    );
+    expect([...(covered.get("2026-10") ?? [])]).toEqual([
+      soaCoverageKey("unionbank", "0344"),
+    ]);
     expect(cardHasSoaForMonth(covered, 2026, 10, "unionbank", "0344")).toBe(
       true,
     );

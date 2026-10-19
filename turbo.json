@@ -24,8 +24,6 @@
         "NEXT_PUBLIC_APP_NAME",
         "SKIP_ENV_VALIDATION",
         "NODE_ENV",
-        "VERCEL_ENV",
-        "MIGRATE_ON_BUILD",
         "BPI_OCR",
         "BPI_OCR_PAGES",
         "BPI_OCR_SCALE",

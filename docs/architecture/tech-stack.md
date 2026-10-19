@@ -278,7 +278,9 @@ For full guidance, see [Mobile Readiness Plan](./mobile-readiness.md).
   - Edge functions
   - Built-in analytics
   - Preview deployments
-- **Schema migrations**: production builds run `db:migrate:deploy` before `next build`, so a deploy fails instead of shipping code ahead of its schema. Preview builds never migrate. New migrations after `0001` must stay idempotent (`IF NOT EXISTS`, guarded constraints).
+- **Release path (CI/CD)**: GitHub Actions owns production. Pushes to `main` run `.github/workflows/cd.yml`: quality (type-check, `bun test`, build) → `db:migrate:deploy` against production → Vercel API deploy → `/api/health` + `/login` smoke → `cd-failure` issue on failure. `apps/web/vercel.json` sets `git.deploymentEnabled.main = false`, so Vercel only builds previews from Git. Re-run a release with Actions → CD → Run workflow.
+- **CD secrets** (GitHub Environment `production`): `DATABASE_URL` (Supabase session pooler, port 5432), `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`; optional `PRODUCTION_URL`.
+- **Schema migrations**: new migrations after `0001` must stay idempotent (`IF NOT EXISTS`, guarded constraints) because push-bootstrapped databases are baselined at `0001`.
 
 ### Database Hosting
 
@@ -355,9 +357,9 @@ For full guidance, see [Mobile Readiness Plan](./mobile-readiness.md).
 
 ### Testing
 
-**Vitest (Unit Tests)**
+**Bun test (Unit Tests)**
 
-- Fast, Vite-powered testing
+- `bun run test` → `bun test src`; runs both `bun:test` and `vitest`-style files
 - Compatible with Jest APIs
 
 **Playwright (E2E Tests)**

@@ -1,9 +1,6 @@
 /**
- * Applies Drizzle migrations before `next build` so production code never ships
- * ahead of its schema.
- *
- * Runs only on Vercel production builds (or when MIGRATE_ON_BUILD=1). Preview
- * builds skip it so unmerged migrations never touch the shared database.
+ * Applies pending Drizzle migrations. GitHub Actions CD runs this against
+ * production before deploying, so code never ships ahead of its schema.
  *
  * Databases bootstrapped with `drizzle-kit push` have no migrations journal; the
  * non-idempotent baseline migrations are recorded as applied instead of re-run.
@@ -18,15 +15,6 @@ import postgres from "postgres";
 
 const appRoot = join(fileURLToPath(import.meta.url), "..", "..");
 const migrationsFolder = join(appRoot, "drizzle", "migrations");
-
-const shouldRun =
-  process.env.MIGRATE_ON_BUILD === "1" ||
-  process.env.VERCEL_ENV === "production";
-
-if (!shouldRun) {
-  console.log("Skipping database migrations (not a production build)");
-  process.exit(0);
-}
 
 const url = process.env.DIRECT_URL || process.env.DATABASE_URL;
 if (!url) {

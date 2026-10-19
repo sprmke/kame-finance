@@ -1,6 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "cd ../.. && bun install --linker hoisted",
+  "git": {
+    "deploymentEnabled": {
+      "main": false
+    }
+  },
   "regions": ["sin1"],
   "crons": [
     {

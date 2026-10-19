@@ -1,0 +1,143 @@
+name: CD
+
+# Production delivery for main: quality → migrate → deploy → smoke.
+# Migrations land before the new code, so production never runs ahead of its schema.
+#
+# GitHub Environment "production" secrets:
+#   DATABASE_URL       — Supabase session pooler URL (port 5432), same database as Vercel Production
+#   VERCEL_TOKEN       — https://vercel.com/account/tokens
+#   VERCEL_ORG_ID      — Vercel team ID
+#   VERCEL_PROJECT_ID  — kame-ops → Settings → General → Project ID
+# Optional:
+#   PRODUCTION_URL     — defaults to https://kame-ops.vercel.app
+#
+# apps/web/vercel.json disables Git deploys for main, so this workflow is the only
+# production release path. Other branches still get Vercel preview deploys.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-main
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    name: Quality
+    uses: ./.github/workflows/ci.yml
+
+  migrate:
+    name: Migrate
+    needs: quality
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        working-directory: .
+      - name: Apply pending migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: bun run db:migrate:deploy
+
+  deploy:
+    name: Deploy
+    needs: migrate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Deploy to Vercel production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: node scripts/deploy/vercel-prod.mjs
+      - name: Smoke test production health
+        env:
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+        run: |
+          BASE="${PRODUCTION_URL:-https://kame-ops.vercel.app}"
+          echo "GET ${BASE}/api/health"
+          for attempt in 1 2 3 4 5; do
+            body="$(curl -sS "${BASE}/api/health" || true)"
+            if echo "$body" | grep -q '"ok":true'; then
+              echo "$body"
+              exit 0
+            fi
+            echo "Attempt ${attempt}/5 not ready yet: ${body:-curl failed}"
+            sleep 15
+          done
+          echo "::error title=Production smoke test failed::${BASE}/api/health did not return ok:true. Migrations may be pending or the deploy is unhealthy."
+          exit 1
+      - name: Smoke login page
+        env:
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+        run: |
+          BASE="${PRODUCTION_URL:-https://kame-ops.vercel.app}"
+          code="$(curl -s -o /dev/null -w "%{http_code}" "${BASE}/login")"
+          echo "GET ${BASE}/login → ${code}"
+          test "$code" = "200"
+
+  notify-failure:
+    name: Notify on failure
+    needs: [quality, migrate, deploy]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update CD alert issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const results = {
+              quality: '${{ needs.quality.result }}',
+              migrate: '${{ needs.migrate.result }}',
+              deploy: '${{ needs.deploy.result }}'
+            };
+            const failed = Object.entries(results)
+              .filter(([, result]) => result === 'failure')
+              .map(([name]) => name);
+            const body = [
+              `Workflow [${context.runId}](${runUrl}) failed on \`${context.sha.substring(0, 7)}\`.`,
+              '',
+              '**Failed jobs:** ' + (failed.length ? failed.join(', ') : 'see run'),
+              '',
+              'Production may be on stale code, missing migrations, or an unhealthy deploy.',
+              'Fix forward, then re-run Actions → CD (workflow_dispatch).',
+            ].join('\n');
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'cd-failure',
+              per_page: 1
+            });
+            if (issues.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues[0].number,
+                body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Production CD failed',
+                body,
+                labels: ['cd-failure']
+              });
+            }

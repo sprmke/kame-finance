@@ -48,6 +48,7 @@
 | `GET /api/auth/google/link/callback` | OAuth callback — upserts `accounts`, links selected credit cards, redirects to `callbackUrl` with status                                                                                                                                     | Implemented |
 | `POST /api/auth/register`            | Removed — use Google sign-in                                                                                                                                                                                                                 | —           |
 | `GET /api/cron/dispatch`             | Cron: run due `automation_jobs` + payment reminders (Bearer `CRON_SECRET`); **Supabase pg_cron** + Vercel both **once daily** (`0 4 * * *` UTC); overdue jobs run when `next_run_at` is past — see `docs/temp/scheduled-jobs-and-testing.md` | Implemented |
+| `GET /api/health`                    | Public readiness probe: DB connectivity + pending Drizzle migrations (journal vs `drizzle.__drizzle_migrations`); `200 {ok:true}` or `503`. CD smoke test target                                                                         | Implemented |
 | `GET /api/health/engines`            | Local prod verify: pdf/qpdf engine status (localhost only). Tesseract WASM is vendored separately via `prepare-server-native` and is not a preflight blocker.                                                                                | Implemented |
 | `GET /api/soa/pdf`                   | Stream SOA source or period summary PDF (auth); resolves storage paths or temp workdir                                                                                                                                                       | Implemented |
 | `POST /api/soa/manual-upload`        | Store a manually uploaded SOA PDF or image (auth); processing is `soa.processManualUpload`                                                                                                                                                   | Implemented |
@@ -97,6 +98,7 @@
 | `soa-ai-extract.service.ts`     | Gemini/Groq extraction of SOA fields + transactions from text or images (`ai_api_keys`)                                                                                                                                                       |
 | `soa-manual-upload.service.ts`  | Manual SOA upload: unlock/OCR/parse, bank + last-4 detection (auto-create card via `ensureForManualUpload`), period alignment, persist + due upsert                                                                                           |
 | `soa-manual-entry.service.ts`   | Manual SOA entry: summary dues and optional transactions for a selected card in a period; total due is net of lines when transactions are sent; due upsert + statement/due-day sync                                                          |
+| `migration-status.service.ts`   | Compares the bundled migrations journal with applied rows for `/api/health`                                                                                                                                                                   |
 | `user-rows.service.ts`          | Per-request loaders for the user-scoped row sets most reads share (`due_entries`, `soa_statements`, `credit_cards`) plus their invalidate helpers                                                                                             |
 
 SOA pipeline lives in **`src/lib/soa/`** (Gmail fetch, bank parsers, summary PDF, `calendar-sync-rows.ts` + `google-calendar.ts`). Each active card resolves a `googleAccountId` (explicit or default); `runSoaSingleMonth` switches Gmail clients per issuer search config. Mark-paid, reminders, and due sync are native in `server/services/`. Workdir: `/tmp/kame-finance-{userId}/`. See `docs/temp/pay-credit-cards-migration.md`.
@@ -124,7 +126,10 @@ Dashboard pages are Server Components that call `prefetchForPage` and render ins
 | `scripts/dev/free-local-ports.sh`  | Stops stale listeners on `:3005` before `next dev` (so Next does not silently jump to 3006)                                   |
 | `apps/web` `scripts/perf-probe.ts` | Times the hot dashboard tRPC procedures against the real database (`bun --conditions=react-server run scripts/perf-probe.ts`) |
 | `apps/web` `prepare-server-native` | Copies qpdf.wasm, Linux canvas `.node`, and Tesseract WASM/traineddata into `src/server/lib/native` for Vercel tracing        |
-| `apps/web` `db:migrate:deploy`     | Runs in `build` before `next build`: applies `drizzle/migrations` on Vercel production (`VERCEL_ENV=production`) or with `MIGRATE_ON_BUILD=1`; uses `DIRECT_URL` → `DATABASE_URL`; baselines `0000`/`0001` on `db:push`-bootstrapped databases with no journal. Preview/CI builds skip it |
+| `apps/web` `db:migrate:deploy`     | Applies pending `drizzle/migrations` (`DIRECT_URL` → `DATABASE_URL`); baselines `0000`/`0001` on `db:push`-bootstrapped databases with no journal. Run by CD before deploy |
+| `scripts/deploy/vercel-prod.mjs`   | CD production deploy via the Vercel API (uploads the git tree, waits for `READY`)                                            |
+| `.github/workflows/ci.yml`         | Branches/PRs (and reused by CD): type-check, `bun test`, production build                                                    |
+| `.github/workflows/cd.yml`         | `main`: quality → migrate → Vercel deploy → `/api/health` + `/login` smoke → `cd-failure` issue on failure                   |
 
 ## Cursor / VS Code run tasks
 
