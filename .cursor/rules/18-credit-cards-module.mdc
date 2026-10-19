@@ -54,6 +54,8 @@ Order of operations (`lib/soa/run.ts`):
 8. Notify via `notification.service` (Telegram PDF + Slack text)
 9. Optional: calendar events via `google-calendar.service` → `lib/soa/google-calendar.ts`
 
+**Re-run** can set `skipExistingCards` (UI default on). Cards with a real statement for that month are not searched or parsed again. Cards without one still run, and Telegram, Slack, and Calendar still apply to new statements.
+
 ## Due Entries
 
 - Key: `issuerId` + normalized `cardLast4` + `dueDateYmd`
@@ -77,6 +79,7 @@ Side effects: update due entry, suppress/restore reminder fingerprints, patch ca
 - API keys: **Settings only** (`ai_api_keys` table) — never `GEMINI_*` / `GROQ_*` env vars
 - Extract card last-4, amount, bank/wallet from PH e-wallet/bank screenshots
 - Amount must meet minimum due (or total when `RECEIPT_REQUIRE_TOTAL_DUE=1`) to mark paid and silence reminders; partial amounts are saved and summed across receipts until threshold is met
+- Same card and statement period display as one receipt card. The viewer pages through each image. AI validation of that set returns one summary and checklist; each image keeps its own amount so the due total is not counted twice
 - Store uploads in Supabase Storage under `receipts/{userId}/`
 
 ## Security
