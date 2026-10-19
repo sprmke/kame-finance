@@ -26,9 +26,17 @@ function parsedRow(overrides: Partial<SoaRow> = {}): SoaRow {
 }
 
 describe("estimatedDueYmdForStatementMonth", () => {
-  test("due in month after statement month", () => {
+  test("due in month after statement month when the due day is not later", () => {
     expect(estimatedDueYmdForStatementMonth(2026, 3, 25)).toBe("2026-04-25");
     expect(estimatedDueYmdForStatementMonth(2026, 12, 10)).toBe("2027-01-10");
+    expect(estimatedDueYmdForStatementMonth(2026, 10, 3, 12)).toBe("2026-11-03");
+  });
+
+  test("keeps the due in the statement month when the due day is later", () => {
+    expect(estimatedDueYmdForStatementMonth(2026, 10, 28, 7)).toBe("2026-10-28");
+    expect(estimatedDueYmdForStatementMonth(2026, 10, 30, 10)).toBe(
+      "2026-10-30",
+    );
   });
 });
 

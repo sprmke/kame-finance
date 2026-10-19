@@ -53,6 +53,8 @@ export async function searchAndDownloadPdfs(options: {
   bankLabel: string;
   downloadsDir: string;
   maxResults?: number;
+  /** Drop messages whose subject is not this card's statement (e.g. Maya security-deposit mail). */
+  subjectMatches?: (subject: string) => boolean;
 }): Promise<{ pdfs: DownloadedPdf[]; messageCount: number }> {
   const { gmail, query, bankId, bankLabel, downloadsDir } = options;
   // Raised from 15 and paginated: a single monthly query should rarely return this
@@ -76,6 +78,7 @@ export async function searchAndDownloadPdfs(options: {
     pageToken = list.data.nextPageToken ?? undefined;
   } while (pageToken && ids.length < maxResults);
   const results: DownloadedPdf[] = [];
+  let matchedMessages = 0;
 
   for (const id of ids) {
     if (!id) continue;
@@ -85,6 +88,8 @@ export async function searchAndDownloadPdfs(options: {
       format: "full",
     });
     const subject = getHeader(full.data.payload?.headers, "Subject");
+    if (options.subjectMatches && !options.subjectMatches(subject)) continue;
+    matchedMessages += 1;
     const parts: gmail_v1.Schema$MessagePart[] = [];
     collectAttachmentParts(full.data.payload, parts);
 
@@ -120,5 +125,8 @@ export async function searchAndDownloadPdfs(options: {
     }
   }
 
-  return { pdfs: results, messageCount: ids.length };
+  return {
+    pdfs: results,
+    messageCount: options.subjectMatches ? matchedMessages : ids.length,
+  };
 }

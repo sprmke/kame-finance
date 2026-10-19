@@ -1,4 +1,8 @@
-import { formatExpectedDueDate, expectedDueDateYmd } from "@/lib/credit-cards/expected-due";
+import {
+  expectedDueDateYmd,
+  formatExpectedDueDate,
+  isValidDueDay,
+} from "@/lib/credit-cards/expected-due";
 import {
   formatExpectedStatementDate,
 } from "@/lib/credit-cards/billing-cycle";
@@ -47,13 +51,26 @@ export function formatStatementPeriodEnd(year: number, month1: number): string {
 }
 
 /**
- * Typical PH SOA: statement for month M, payment due in month M+1 on the card's due day.
+ * Due date for a statement month.
+ * When the due day falls after the statement day, payment is in that same month
+ * (BPI statement day 7, due day 28 → October 28). Otherwise it is the next month
+ * (statement day 12, due day 3 → November 3). Without a statement day, keep the
+ * next-month estimate.
  */
 export function estimatedDueYmdForStatementMonth(
   year: number,
   statementMonth1: number,
   dueDay: number,
+  statementDay?: number | null,
 ): string {
+  const sameMonth =
+    statementDay != null &&
+    isValidDueDay(statementDay) &&
+    isValidDueDay(dueDay) &&
+    dueDay > statementDay;
+  if (sameMonth) {
+    return expectedDueDateYmd(year, statementMonth1, dueDay);
+  }
   const dueMonth1 = statementMonth1 === 12 ? 1 : statementMonth1 + 1;
   const dueYear = statementMonth1 === 12 ? year + 1 : year;
   return expectedDueDateYmd(dueYear, dueMonth1, dueDay);
@@ -106,6 +123,7 @@ function missingSoaCalendarRow(
     month.year,
     month.month,
     card.dueDay,
+    card.statementDay,
   );
   const statementDate = formatExpectedStatementDate(
     { statementDay: card.statementDay ?? null },

@@ -1,3 +1,9 @@
+import { and, eq, isNull } from "drizzle-orm";
+
+import { isOnOrPastStatementDateForPeriod } from "@/lib/credit-cards/billing-cycle";
+import { db } from "@/lib/db";
+import { creditCards } from "@/lib/db/schema";
+import { normalizeCardLast4 } from "@/lib/due/normalize";
 import { reminderFingerprint } from "@/lib/reminders/fingerprint";
 import {
   alreadySentRemindersMessage,
@@ -38,14 +44,45 @@ export const reminderService = {
       ensureDefaultAutomationJobs(userId),
       expectedDueEntryService.ensureForUser(userId),
     ]);
-    const rows = await listDueEntriesWithCorrectIdentity(userId, unpaidOnly);
+    const [rows, cards] = await Promise.all([
+      listDueEntriesWithCorrectIdentity(userId, unpaidOnly),
+      db.query.creditCards.findMany({
+        where: and(
+          eq(creditCards.userId, userId),
+          isNull(creditCards.deletedAt),
+        ),
+        columns: { issuer: true, last4: true, statementDay: true },
+      }),
+    ]);
     const asOf = todayYmdLocal();
-    return rows.filter(
-      (row) =>
-        row.source !== "expected" ||
-        daysUntilYmd(row.dueDateYmd, asOf) >=
-          -MISSING_SOA_VISIBLE_AFTER_DUE_DAYS,
+    const statementDayByCard = new Map(
+      cards.map((card) => [
+        cardKey(card.issuer, normalizeCardLast4(card.last4)),
+        card.statementDay,
+      ]),
     );
+    return rows
+      .filter(
+        (row) =>
+          row.source !== "expected" ||
+          daysUntilYmd(row.dueDateYmd, asOf) >=
+            -MISSING_SOA_VISIBLE_AFTER_DUE_DAYS,
+      )
+      .map((row) => {
+        const statementDay = statementDayByCard.get(
+          cardKey(row.issuerId, normalizeCardLast4(row.cardLast4)),
+        );
+        const [year, month] = row.statementPeriodKey.split("-").map(Number);
+        const soaMissing =
+          row.source === "expected" &&
+          statementDay != null &&
+          year != null &&
+          month != null &&
+          isOnOrPastStatementDateForPeriod(asOf, year, month, {
+            statementDay,
+          });
+        return { ...row, soaMissing };
+      });
   },
 
   async getReminderStatus(userId: string): Promise<{

@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { BANK_ISSUER_LABELS, BANK_ISSUERS } from "@/lib/db/schema/credit-cards";
 
+import { mayaGmailSubjectClause } from "./maya-statement-subject";
 import type {
   BankDefinition,
   CardCredential,
@@ -97,12 +98,9 @@ function genericSoaQuery(label: string, ctx: GmailMonthContext): string {
 }
 
 const SPECIFIC_QUERIES: Record<string, (ctx: GmailMonthContext) => string> = {
-  maya: (ctx) =>
-    [
-      'subject:("Maya Black Credit Card" OR "Maya Credit Card")',
-      '(billing OR statement OR "Statement of Account")',
-      `("${ctx.monthShort} ${ctx.year}" OR "${ctx.monthLong} ${ctx.year}")`,
-    ].join(" "),
+  // Period text is `2026-09-11 to 2026-10-10`, not "October 2026". The
+  // after:/before: window on the received date selects the statement month.
+  maya: () => mayaGmailSubjectClause(),
   metrobank: (ctx) =>
     [
       'subject:"Metrobank Credit Card MSOA Statement of Account"',
@@ -148,6 +146,9 @@ export function buildGmailQueryWithSubject(
   ctx: GmailMonthContext,
   subject: string,
 ): string {
+  if (bank.id === "maya") {
+    return `(${mayaGmailSubjectClause(subject)}) after:${ctx.afterYMD} before:${ctx.beforeYMD}`;
+  }
   const escaped = subject.trim().replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   let monthPart: string;
   switch (bank.id) {

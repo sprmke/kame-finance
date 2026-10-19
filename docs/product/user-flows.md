@@ -4,7 +4,7 @@
 
 ## Onboarding
 
-1. Sign up / sign in (Supabase Auth)
+1. Sign in with Google. Local development can also continue with a local session (no Gmail access).
 2. Connect integrations (Telegram, Slack, Gmail, Calendar)
 3. Add credit cards (or import from migration script)
 4. Run first SOA
@@ -15,6 +15,7 @@
 2. Previous and next, beside **Run SOA**, move one month at a time. The period control switches between **Month** and **Year**; in year view, previous and next move one year.
 3. The mission panel, category breakdown, and period summary follow that selection. A year adds each month’s own totals. **This month** or **This year** returns to the current period.
 4. **View SOA** opens that month’s period, or the SOA list when a year is selected.
+5. A category on **Spend by category** opens that month’s SOA on **Analytics** with that category’s transactions (`?tab=analytics&category=`). A year has no single period, so the chart stays a summary.
 
 ## Monthly SOA cycle
 
@@ -31,11 +32,12 @@
 ### Missing SOA fallback
 
 1. Each card has a required recurring **statement date** and **due date** (day of month, 1–31; shorter months use their last day). On add and edit, statement date sits under the full card number and before the due date. Parsed SOA fills a blank day from that card’s statement or due history.
-2. Once today is on or after the statement date for the current billing month and no parsed SOA exists, Kame Finance creates an expected due entry. Before that date the missing-SOA warning stays hidden.
-3. **SOA missing** shows on the credit cards list, the overview banner and attention list, reminder due cards, the SOA period table and cards, the statement page, and receipt slots (including a receipt that was uploaded before the statement arrived). The card copy is “Statement date passed. SOA not available.”
-4. Dashboard, Telegram/Slack, and Google Calendar flag the missing SOA. Calendar descriptions stay short: waiting for the statement during the billing period, or—after the period ends—check the bank or upload the PDF in Kame Finance.
-5. Expected entries cannot be marked paid because the amount is unknown. They stay on the due list for 45 days after the estimated due date.
-6. A later SOA replaces the expected entry with the bank-provided date and amounts.
+2. The open billing month is the current calendar month (plus the card’s Gmail month offset). Reminders and receipts show that month only, with one row per registered card. The next month is not opened early. When the due day is after the statement day, the payment date stays in the statement month (statement day 7, due day 28 → the 28th of that month). When the due day is on or before the statement day, payment is the following month, still grouped under the statement month.
+3. Once today is on or after the statement date for that month and no parsed SOA exists, the row is marked **SOA missing**. Before that date the card still appears as pending, and the missing-SOA warning stays hidden.
+4. **SOA missing** shows on the credit cards list, the overview banner and attention list, reminder due cards, the SOA period table and cards, the statement page, and receipt slots (including a receipt that was uploaded before the statement arrived). The card copy is “Statement date passed. SOA not available.”
+5. Dashboard, Telegram/Slack, and Google Calendar flag the missing SOA. Calendar descriptions stay short: waiting for the statement during the billing period, or—after the period ends—check the bank or upload the PDF in Kame Finance.
+6. Expected entries cannot be marked paid because the amount is unknown. They stay on the due list for 45 days after the estimated due date.
+7. A later SOA replaces the expected entry with the bank-provided date and amounts.
 
 ### Manual SOA upload
 
@@ -67,9 +69,9 @@
 
 ### SOA period analytics
 
-1. Open a period → **Analytics**.
-2. Click a category (or a distribution slice) to see that category’s transactions on the same card.
-3. **Back** (or Escape) returns to the breakdown.
+1. Open a period → **Analytics**, or open `?tab=analytics&category=<slug>` for a category.
+2. Click a category (chart, legend, or distribution slice) to see that category’s transactions. The selection is stored in the URL.
+3. **Back** (or Escape) returns to the breakdown and clears `category`.
 
 ## Reminders & schedule
 

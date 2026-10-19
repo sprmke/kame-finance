@@ -16,6 +16,8 @@ export type DueEntryListItem = {
   totalDue: string;
   paidAt: Date | null;
   source?: string;
+  /** Expected row whose statement day has already passed with no parsed SOA. */
+  soaMissing?: boolean;
 };
 
 export type ReminderEntryGroup = {

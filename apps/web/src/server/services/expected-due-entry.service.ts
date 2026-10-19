@@ -4,18 +4,18 @@ import { and, eq, isNull } from "drizzle-orm";
 
 import {
   cardHasParsedSoaForStatementMonth,
-  isOnOrPastExpectedStatementDate,
-  targetStatementMonthForCard,
   type CardBillingSchedule,
 } from "@/lib/credit-cards/billing-cycle";
 import {
-  expectedDueDateCandidates,
-  formatExpectedDueDate,
-} from "@/lib/credit-cards/expected-due";
-import { estimatedDueYmdForStatementMonth } from "@/lib/soa/calendar-sync-rows";
+  currentStatementMonth,
+  expectedDueYmdsToEnsure,
+  isStaleFutureExpectedDue,
+} from "@/lib/credit-cards/expected-cycle";
+import { formatExpectedDueDate } from "@/lib/credit-cards/expected-due";
+import { normalizeCardLast4 } from "@/lib/due/normalize";
 import { db } from "@/lib/db";
 import { creditCards, dueEntries, formatBankIssuer, soaStatements } from "@/lib/db/schema";
-import { daysUntilYmd, todayYmdLocal } from "@/lib/reminders/reminder-status";
+import { todayYmdLocal } from "@/lib/reminders/reminder-status";
 
 import { invalidateDueEntryRows } from "./user-rows.service";
 
@@ -75,57 +75,52 @@ export const expectedDueEntryService = {
     ]);
     let added = 0;
     let updated = 0;
+    let removed = 0;
+    const removedIds = new Set<string>();
 
     for (const card of cards) {
       if (!card.dueDay) continue;
 
       const schedule = cardSchedule(card);
-      const { year, month } = targetStatementMonthForCard(
-        asOfYmd,
-        schedule.gmailMonthOffset,
-      );
-      const hasParsedSoa = cardHasParsedSoaForStatementMonth(
-        statements,
-        card,
-        year,
-        month,
-      );
-      const pastStatementDate = isOnOrPastExpectedStatementDate(
+      const current = currentStatementMonth(asOfYmd, schedule.gmailMonthOffset);
+      const targets = expectedDueYmdsToEnsure({
         asOfYmd,
         schedule,
-      );
+        windowDays: card.reminderWindowDays ?? DEFAULT_WINDOW_DAYS,
+        overdueFollowUpDays: OVERDUE_FOLLOW_UP_DAYS,
+        hasParsedSoa: (year, month) =>
+          cardHasParsedSoaForStatementMonth(statements, card, year, month),
+      });
+      const keep = new Set(targets);
 
-      const dueCandidates = new Set(
-        pastStatementDate && !hasParsedSoa
-          ? [
-              estimatedDueYmdForStatementMonth(
-                year,
-                month,
-                card.dueDay,
-              ),
-            ]
-          : expectedDueDateCandidates(asOfYmd, card.dueDay),
-      );
-
-      for (const dueDateYmd of dueCandidates) {
-        const daysAway = daysUntilYmd(dueDateYmd, asOfYmd);
-        const windowDays = card.reminderWindowDays ?? DEFAULT_WINDOW_DAYS;
-        const inDueWindow =
-          daysAway <= windowDays && daysAway >= -OVERDUE_FOLLOW_UP_DAYS;
-        const missingSoaForCycle =
-          pastStatementDate &&
-          !hasParsedSoa &&
-          dueDateYmd ===
-            estimatedDueYmdForStatementMonth(year, month, card.dueDay);
-
-        if (!inDueWindow && !missingSoaForCycle) {
+      for (const entry of existing) {
+        if (!sameCard(entry, card)) continue;
+        if (entry.source !== "expected" || entry.paidAt) continue;
+        if (
+          !isStaleFutureExpectedDue(
+            entry.dueDateYmd,
+            schedule,
+            current,
+            keep,
+          )
+        ) {
           continue;
         }
+        await db
+          .delete(dueEntries)
+          .where(
+            and(eq(dueEntries.id, entry.id), eq(dueEntries.userId, userId)),
+          );
+        removedIds.add(entry.id);
+        removed++;
+      }
 
+      for (const dueDateYmd of targets) {
         const dueMonth = dueDateYmd.slice(0, 7);
         const forMonth = existing.filter(
           (entry) =>
-            entry.creditCardId === card.id &&
+            !removedIds.has(entry.id) &&
+            sameCard(entry, card) &&
             entry.dueDateYmd.startsWith(dueMonth),
         );
         if (forMonth.some((entry) => entry.source === "soa")) continue;
@@ -142,7 +137,7 @@ export const expectedDueEntryService = {
           minimumDue: "—",
           totalDue: "—",
           contactLine: card.contactLine,
-          source: "expected",
+          source: "expected" as const,
           creditCardId: card.id,
           updatedAt: new Date(),
         };
@@ -170,7 +165,18 @@ export const expectedDueEntryService = {
       }
     }
 
-    if (added > 0 || updated > 0) invalidateDueEntryRows();
-    return { added, updated };
+    if (added > 0 || updated > 0 || removed > 0) invalidateDueEntryRows();
+    return { added, updated, removed };
   },
 };
+
+function sameCard(
+  entry: { creditCardId: string | null; issuerId: string; cardLast4: string },
+  card: { id: string; issuer: string; last4: string },
+): boolean {
+  if (entry.creditCardId && entry.creditCardId === card.id) return true;
+  return (
+    entry.issuerId.trim().toLowerCase() === card.issuer.trim().toLowerCase() &&
+    normalizeCardLast4(entry.cardLast4) === normalizeCardLast4(card.last4)
+  );
+}

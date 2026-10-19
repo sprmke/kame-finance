@@ -10,6 +10,7 @@ import {
   loadCardCredentials,
 } from "@/lib/soa/config";
 import { dedupeDownloadedPdfs } from "@/lib/soa/dedupe-downloaded-pdfs";
+import { mayaStatementSubjectMatches } from "@/lib/soa/maya-statement-subject";
 import {
   getGmailClient,
   searchAndDownloadPdfs,
@@ -380,6 +381,11 @@ export async function runSoaSingleMonth(options: {
         bankId: bank.id,
         bankLabel: bank.label,
         downloadsDir: monthDownloadsDir,
+        subjectMatches:
+          bank.id === "maya"
+            ? (emailSubject) =>
+                mayaStatementSubjectMatches(emailSubject, config.soaSubject)
+            : undefined,
       });
       gmailSearches.push({
         bankId: bank.id,

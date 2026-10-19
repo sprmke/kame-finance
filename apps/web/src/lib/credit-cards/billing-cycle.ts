@@ -180,6 +180,41 @@ export function isMissingSoaForStatementPeriod(
   );
 }
 
+/**
+ * Billing month a due date belongs to.
+ * A due day on or before the statement day is the payment for the previous
+ * statement month. A later due day belongs to the same month as the due date.
+ */
+export function statementMonthForDueYmd(
+  dueYmd: string,
+  schedule: Pick<CardBillingSchedule, "statementDay" | "dueDay">,
+): StatementMonth {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dueYmd);
+  if (!match) throw new Error("Invalid due date");
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const dueDayFromDate = Number(match[3]);
+  const dueDay =
+    schedule.dueDay != null && isValidDueDay(schedule.dueDay)
+      ? schedule.dueDay
+      : dueDayFromDate;
+  const statementDay = schedule.statementDay;
+  if (
+    statementDay != null &&
+    isValidDueDay(statementDay) &&
+    isValidDueDay(dueDay) &&
+    dueDay <= statementDay
+  ) {
+    const prev = new Date(year, month - 2, 1);
+    return { year: prev.getFullYear(), month: prev.getMonth() + 1 };
+  }
+  return { year, month };
+}
+
+export function statementPeriodOrdinal(period: StatementMonth): number {
+  return period.year * 12 + period.month;
+}
+
 export function statementPeriodKeyForCardAsOf(
   asOfYmd: string,
   gmailMonthOffset: number,
