@@ -170,6 +170,11 @@ function labelForCard(
   return formatCardDisplayLabel(card.issuerId, card.label ?? card.bankLabel);
 }
 
+function compareUnpaidFirst(a: ReceiptSlot, b: ReceiptSlot): number {
+  if (a.paid !== b.paid) return a.paid ? 1 : -1;
+  return a.label.localeCompare(b.label);
+}
+
 function paidSummary(slots: ReceiptSlot[]): {
   paidCount: number;
   totalCount: number;
@@ -326,7 +331,7 @@ export function buildReceiptBoard(input: {
             );
           })
           .map(([cardKey]) => makeSlot(cardKey, monthKey))
-          .sort((a, b) => a.label.localeCompare(b.label));
+          .sort(compareUnpaidFirst);
 
         const looseReceipts = loose.filter(
           (receipt) => receiptMonthGroup(receipt, dueContext).key === monthKey,
@@ -387,7 +392,12 @@ export function buildReceiptBoard(input: {
     });
   }
 
-  groups.sort((a, b) => a.label.localeCompare(b.label));
+  groups.sort((a, b) => {
+    const aUnpaid = a.slots.some((slot) => !slot.paid);
+    const bUnpaid = b.slots.some((slot) => !slot.paid);
+    if (aUnpaid !== bUnpaid) return aUnpaid ? -1 : 1;
+    return a.label.localeCompare(b.label);
+  });
 
   const orphanMap = new Map<string, ReceiptListItem[]>();
   for (const receipt of loose) {

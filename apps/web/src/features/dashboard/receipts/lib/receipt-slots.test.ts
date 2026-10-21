@@ -146,6 +146,26 @@ describe("buildReceiptBoard", () => {
     ).toBe(false);
   });
 
+  it("lists unpaid cards before paid cards in a month", () => {
+    const groups = buildReceiptBoard({
+      mode: "month",
+      receipts: [],
+      cards,
+      dues: dues.map((due) =>
+        due.id === "due-bpi"
+          ? { ...due, paidAt: new Date("2026-10-18T00:00:00Z") }
+          : due,
+      ),
+      now,
+    });
+
+    expect(
+      groups
+        .find((group) => group.key === "2026-10")
+        ?.slots.map((slot) => slot.cardLast4),
+    ).toEqual(["7015", "0018"]);
+  });
+
   it("marks paid dues and skips a placeholder when a receipt exists", () => {
     const groups = buildReceiptBoard({
       mode: "month",

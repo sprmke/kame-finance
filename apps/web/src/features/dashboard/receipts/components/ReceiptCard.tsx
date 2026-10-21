@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, MoreVertical, Sparkles, Trash2 } from "lucide-react";
+import { Eye, CreditCard, MoreVertical, Sparkles, Trash2, Upload } from "lucide-react";
 
 import { MissingSoaBadge } from "@/components/shared/MissingSoaBadge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -40,6 +40,9 @@ type ReceiptCardProps = {
   onView: (receipt: ReceiptListItem) => void;
   onDelete: (receipt: ReceiptListItem) => void;
   onRevalidate: (receipt: ReceiptListItem) => void;
+  onAddReceipt?: (receipt: ReceiptListItem) => void;
+  onCardInfo?: (receipt: ReceiptListItem) => void;
+  addReceiptDisabled?: boolean;
   isRevalidatePending?: boolean;
   soaMissing?: boolean;
 };
@@ -52,6 +55,9 @@ export function ReceiptCard({
   onView,
   onDelete,
   onRevalidate,
+  onAddReceipt,
+  onCardInfo,
+  addReceiptDisabled = false,
   isRevalidatePending,
   soaMissing = false,
 }: ReceiptCardProps) {
@@ -76,18 +82,41 @@ export function ReceiptCard({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-1 top-1 z-10 h-8 w-8 shrink-0"
+            className="absolute right-0.5 top-0.5 z-10 h-11 w-11 shrink-0"
             aria-label="Receipt actions"
           >
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onView(receipt)}>
+          <DropdownMenuItem
+            className="min-h-11"
+            onClick={() => onView(receipt)}
+          >
             <Eye className="mr-2 h-4 w-4" />
             View
           </DropdownMenuItem>
+          {onCardInfo ? (
+            <DropdownMenuItem
+              className="min-h-11"
+              onSelect={() => onCardInfo(receipt)}
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              Card info
+            </DropdownMenuItem>
+          ) : null}
+          {onAddReceipt ? (
+            <DropdownMenuItem
+              className="min-h-11"
+              disabled={addReceiptDisabled}
+              onSelect={() => onAddReceipt(receipt)}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Add receipt
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem
+            className="min-h-11"
             disabled={isRevalidatePending}
             onClick={() => onRevalidate(receipt)}
           >
@@ -96,7 +125,7 @@ export function ReceiptCard({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
+            className="min-h-11 text-destructive focus:text-destructive"
             onClick={() => onDelete(receipt)}
           >
             <Trash2 className="mr-2 h-4 w-4" />
@@ -106,7 +135,7 @@ export function ReceiptCard({
       </DropdownMenu>
 
       <div className="flex min-h-[7.5rem] items-stretch sm:min-h-[8rem]">
-        <div className="relative flex self-stretch">
+        <div className="relative w-[5.25rem] shrink-0 self-stretch sm:w-24">
           <ReceiptThumbnail
             receiptId={previewId}
             fileName={thumbnailFileName ?? receipt.originalFileName}
@@ -117,13 +146,13 @@ export function ReceiptCard({
             onClick={() => onView(receipt)}
           />
           {imageCount > 1 ? (
-            <span className="pointer-events-none absolute bottom-1.5 left-1.5 rounded-full bg-foreground/85 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-background">
+            <span className="pointer-events-none absolute bottom-1.5 left-1.5 z-10 rounded-full bg-foreground/85 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-background">
               {imageCount}
             </span>
           ) : null}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-2 p-3 pr-10">
+        <div className="flex min-w-0 flex-1 flex-col gap-2 p-3 pr-12">
           <div className="min-w-0 space-y-0.5">
             <h3
               className="truncate font-display text-sm font-semibold leading-snug"

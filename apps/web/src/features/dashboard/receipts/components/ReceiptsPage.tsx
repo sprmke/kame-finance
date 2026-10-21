@@ -8,7 +8,7 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DashboardPageHeader } from "@/components/shared/DashboardPageHeader";
 import { PageActionBar } from "@/components/shared/PageActionBar";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { ReceiptBatchUploadProgressDialog } from "@/components/shared/ReceiptBatchUploadProgressDialog";
+import { ReceiptUploadDialogs } from "@/components/shared/ReceiptUploadDialogs";
 import { ReceiptsContentSkeleton } from "@/components/shared/skeletons";
 import { Button } from "@/components/ui/button";
 import { useReceiptUploadFlow } from "@/hooks/use-receipt-upload-flow";
@@ -19,10 +19,8 @@ import {
 } from "@/lib/receipts/ai-skip";
 import { SoaPdfPreview } from "@/features/dashboard/soa/components/SoaPdfPreview";
 
-import {
-  buildReceiptBoard,
-  type ReceiptSlot,
-} from "../lib/receipt-slots";
+import { buildReceiptBoard, type ReceiptSlot } from "../lib/receipt-slots";
+import { buildCardInfoFields, type CardInfoRequest } from "../lib/card-info";
 import {
   dedupeReceiptsForDisplay,
   mergeReceiptFromRevalidation,
@@ -34,6 +32,7 @@ import {
 } from "../lib/receipt-utils";
 
 import { ReceiptCard } from "./ReceiptCard";
+import { CardInfoDialog } from "./CardInfoDialog";
 import { ReceiptGroupHeader } from "./ReceiptGroupHeader";
 import { ReceiptGroupToggle } from "./ReceiptGroupToggle";
 import { ReceiptPreviewDialog } from "./ReceiptPreviewDialog";
@@ -48,6 +47,8 @@ export function ReceiptsPage() {
   );
   const [deleteTargets, setDeleteTargets] = useState<ReceiptListItem[]>([]);
   const [soaSlot, setSoaSlot] = useState<ReceiptSlot | null>(null);
+  const [cardInfoRequest, setCardInfoRequest] =
+    useState<CardInfoRequest | null>(null);
   const utils = api.useUtils();
 
   useEffect(() => {
@@ -216,6 +217,50 @@ export function ReceiptsPage() {
     onError: (e) => toast.error(e.message),
   });
 
+  function openCardInfo(request: CardInfoRequest) {
+    setCardInfoRequest(request);
+  }
+
+  function cardInfoFromReceipt(receipt: ReceiptListItem): CardInfoRequest {
+    const due = (dues ?? []).find((row) => row.id === receipt.dueEntryId);
+    return {
+      issuerId: due?.issuerId ?? null,
+      cardLast4: due?.cardLast4 ?? receipt.parsedCardLast4,
+      label: receipt.cardDisplayLabel,
+      periodKey: receipt.statementPeriodKey ?? due?.statementPeriodKey ?? null,
+      minimumDue: receipt.minimumDue,
+      totalDue: receipt.totalDue,
+      dueDateYmd: receipt.dueDateYmd,
+      statementDate: receipt.statementDate,
+    };
+  }
+
+  const cardInfoFields = useMemo(
+    () =>
+      cardInfoRequest
+        ? buildCardInfoFields({
+            request: cardInfoRequest,
+            cards: (cards ?? []).map((card) => ({
+              issuer: card.issuer,
+              last4: card.last4,
+              label: card.label,
+              fullPan: card.fullPan,
+              cardNetwork: card.cardNetwork,
+              statementDay: card.statementDay,
+            })),
+            statements: (statements ?? []).map((statement) => ({
+              issuerId: statement.issuerId,
+              cardLast4: statement.cardLast4,
+              statementMonth: statement.statementMonth,
+              statementYear: statement.statementYear,
+              statementDate: statement.statementDate,
+              soaUnavailable: statement.soaUnavailable,
+            })),
+          })
+        : [],
+    [cardInfoRequest, cards, statements],
+  );
+
   const previewReceipt = previewStack ? mergeReceiptStack(previewStack) : null;
   const receiptCardCount = groups.reduce(
     (sum, group) =>
@@ -229,6 +274,7 @@ export function ReceiptsPage() {
     items: ReceiptListItem[],
     stackKey: string,
     soaMissing = false,
+    dueEntryId?: string | null,
   ) {
     const cover = [...items].sort(
       (a, b) =>
@@ -245,7 +291,14 @@ export function ReceiptsPage() {
         thumbnailReceiptId={cover.id}
         thumbnailFileName={cover.originalFileName}
         onView={() => setPreviewStack(items)}
+        onCardInfo={(receipt) => openCardInfo(cardInfoFromReceipt(receipt))}
         onDelete={() => setDeleteTargets(items)}
+        onAddReceipt={
+          dueEntryId
+            ? () => receiptUpload.triggerFilePicker(dueEntryId)
+            : undefined
+        }
+        addReceiptDisabled={receiptUpload.isPending}
         onRevalidate={() => handleRevalidate(items.map((item) => item.id))}
         soaMissing={soaMissing}
         isRevalidatePending={
@@ -265,48 +318,36 @@ export function ReceiptsPage() {
         actions={
           <PageActionBar
             primary={
-          <>
-            <input
-              ref={receiptUpload.fileRef}
-              type="file"
-              accept="image/*,application/pdf"
-              multiple
-              className="hidden"
-              onChange={receiptUpload.handleFileInputChange}
-            />
-            <Button
-              onClick={() => receiptUpload.triggerFilePicker()}
-              disabled={receiptUpload.isPending}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              Upload receipt
-            </Button>
-          </>
+              <>
+                <input
+                  ref={receiptUpload.fileRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  multiple
+                  className="hidden"
+                  onChange={receiptUpload.handleFileInputChange}
+                />
+                <Button
+                  onClick={() => receiptUpload.triggerFilePicker()}
+                  disabled={receiptUpload.isPending}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload receipt
+                </Button>
+              </>
             }
           />
         }
       />
 
-      <ReceiptBatchUploadProgressDialog
-        open={receiptUpload.progressOpen}
-        onOpenChange={receiptUpload.handleProgressOpenChange}
-        jobs={receiptUpload.cardJobs}
-        options={receiptUpload.uploadOptions}
-        isPending={receiptUpload.isPending}
-        batchProgress={receiptUpload.batchProgress}
-        onComplete={receiptUpload.handleProgressComplete}
-      />
+      <ReceiptUploadDialogs flow={receiptUpload} />
 
       <SoaPdfPreview
         open={soaSlot !== null}
         onOpenChange={(open) => {
           if (!open) setSoaSlot(null);
         }}
-        title={
-          soaSlot
-            ? `${soaSlot.label} · ${soaSlot.periodLabel}`
-            : "SOA"
-        }
+        title={soaSlot ? `${soaSlot.label} · ${soaSlot.periodLabel}` : "SOA"}
         pdfUrl={
           soaSlot?.statementId
             ? `/api/soa/pdf?type=source&statementId=${soaSlot.statementId}`
@@ -355,7 +396,9 @@ export function ReceiptsPage() {
         onOpenChange={(open) => {
           if (!open) setDeleteTargets([]);
         }}
-        title={deleteTargets.length > 1 ? "Remove receipts?" : "Remove receipt?"}
+        title={
+          deleteTargets.length > 1 ? "Remove receipts?" : "Remove receipt?"
+        }
         description={
           deleteTargets.length > 1
             ? `This deletes ${deleteTargets.length} uploaded files. Paid status on the due entry is kept.`
@@ -382,6 +425,14 @@ export function ReceiptsPage() {
             }
           })();
         }}
+      />
+
+      <CardInfoDialog
+        open={cardInfoRequest !== null}
+        onOpenChange={(open) => {
+          if (!open) setCardInfoRequest(null);
+        }}
+        fields={cardInfoFields}
       />
 
       {isLoading || cardsLoading || duesLoading ? (
@@ -425,24 +476,48 @@ export function ReceiptsPage() {
               <div className="grid gap-3 md:grid-cols-2">
                 {group.slots.map((slot) =>
                   slot.receipts.length > 0 ? (
-                    renderReceiptStack(slot.receipts, slot.key, slot.soaMissing)
+                    renderReceiptStack(
+                      slot.receipts,
+                      slot.key,
+                      slot.soaMissing,
+                      slot.dueEntryId,
+                    )
                   ) : (
                     <ReceiptSlotPlaceholder
                       key={slot.key}
                       slot={slot}
                       emphasizePeriod={groupMode === "card"}
-                      onViewSoa={setSoaSlot}
+                      onViewSoa={(item) => {
+                        if (item.statementId) setSoaSlot(item);
+                      }}
                       onUpload={(item) =>
                         receiptUpload.triggerFilePicker(
                           item.dueEntryId ?? undefined,
                         )
+                      }
+                      onCardInfo={(item) =>
+                        openCardInfo({
+                          issuerId: item.issuerId,
+                          cardLast4: item.cardLast4,
+                          label: item.label,
+                          periodKey: item.periodKey,
+                          minimumDue: item.minimumDue,
+                          totalDue: item.totalDue,
+                          dueDateYmd: item.dueDateYmd,
+                          statementDate: null,
+                        })
                       }
                       uploadDisabled={receiptUpload.isPending}
                     />
                   ),
                 )}
                 {stackReceiptsByCard(group.looseReceipts).map((stack) =>
-                  renderReceiptStack(stack.items, stack.key),
+                  renderReceiptStack(
+                    stack.items,
+                    stack.key,
+                    false,
+                    stack.items.find((item) => item.dueEntryId)?.dueEntryId,
+                  ),
                 )}
               </div>
             </section>

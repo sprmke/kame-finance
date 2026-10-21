@@ -134,7 +134,7 @@ export function DueDatesSummarySkeleton() {
 
 export function DueEntryCardSkeleton() {
   return (
-    <Card className="border-border/80 shadow-card">
+    <Card className="flex h-full flex-col border-border/80 shadow-card">
       <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
         <div className="min-w-0 flex-1 space-y-2">
           <Skeleton className="h-5 w-3/4" />
@@ -142,8 +142,8 @@ export function DueEntryCardSkeleton() {
         </div>
         <Skeleton className="h-6 w-14 shrink-0 rounded-full" />
       </CardHeader>
-      <CardContent className="space-y-3">
-        <Skeleton className="h-6 w-full rounded-full" />
+      <CardContent className="flex flex-1 flex-col gap-3">
+        <Skeleton className="h-11 w-full rounded-full" />
         <div className="flex justify-between">
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-4 w-20" />
@@ -152,7 +152,10 @@ export function DueEntryCardSkeleton() {
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-4 w-24" />
         </div>
-        <Skeleton className="h-9 w-full rounded-md" />
+        <div className="mt-auto flex flex-col gap-2">
+          <Skeleton className="h-11 w-full rounded-lg" />
+          <Skeleton className="h-11 w-full rounded-lg" />
+        </div>
       </CardContent>
     </Card>
   );
@@ -662,7 +665,7 @@ export function ThumbnailSkeleton({
         "rounded-none",
         layout === "cover"
           ? "aspect-[4/3] w-full"
-          : "h-full min-h-full w-[5.25rem] sm:w-24",
+          : "absolute inset-0 h-full w-full",
       )}
     />
   );

@@ -71,10 +71,10 @@ export function ReceiptThumbnail({
   }, [receiptId, isPdf]);
 
   const shellClass = cn(
-    "relative flex shrink-0 items-center justify-center overflow-hidden bg-muted/30",
+    "flex shrink-0 items-center justify-center overflow-hidden bg-muted/30",
     layout === "cover"
-      ? "aspect-[4/3] w-full border-b border-border/80"
-      : "h-auto min-h-full w-[5.25rem] self-stretch border-r border-border/80 sm:w-24",
+      ? "relative aspect-[4/3] w-full border-b border-border/80"
+      : "absolute inset-0 h-full w-full border-r border-border/80",
     className,
   );
 
@@ -97,10 +97,9 @@ export function ReceiptThumbnail({
           src={src}
           alt={alt}
           className={cn(
-            "object-contain object-center",
             layout === "cover"
-              ? "h-full w-full p-2"
-              : "max-h-full max-w-full p-1",
+              ? "h-full w-full object-contain object-center p-2"
+              : "h-full w-full object-cover object-top",
           )}
         />
       )}

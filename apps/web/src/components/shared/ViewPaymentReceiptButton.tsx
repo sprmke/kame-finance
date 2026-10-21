@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 
 type ViewPaymentReceiptButtonProps = {
-  onClick: () => void;
+  onClick?: () => void;
   count?: number;
+  disabled?: boolean;
   layout?: "icon" | "block";
   /** Visible text for the block layout. Icon layout stays icon-only. */
   label?: string;
@@ -23,6 +24,7 @@ function paymentSummaryLabel(count: number): string {
 export function ViewPaymentReceiptButton({
   onClick,
   count = 1,
+  disabled = false,
   layout = "block",
   label,
   className,
@@ -37,6 +39,7 @@ export function ViewPaymentReceiptButton({
         size="icon"
         className={cn("h-11 w-11 shrink-0", className)}
         aria-label={accessible}
+        disabled={disabled}
         onClick={onClick}
       >
         <Receipt className="size-4" />
@@ -51,6 +54,7 @@ export function ViewPaymentReceiptButton({
       size="sm"
       className={cn("h-11 w-full", className)}
       aria-label={accessible}
+      disabled={disabled}
       onClick={onClick}
     >
       <Receipt className="mr-1.5 size-3.5" />
