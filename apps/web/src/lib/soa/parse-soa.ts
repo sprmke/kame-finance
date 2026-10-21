@@ -450,6 +450,26 @@ function unionbankPairedStatementDue(flat: string): {
   return {};
 }
 
+const UB_MONEY = "(-?[\\d]{1,3}(?:,\\d{3})*\\.\\d{2}|-?\\d+\\.\\d{2})";
+
+/** UnionBank statement balance, including `:PHP` with no space and a credit balance. */
+function unionbankStatementBalance(flat: string): string {
+  const summary = flat.match(
+    new RegExp(
+      `Statement\\s+Balance\\s*:?\\s*(?:PHP|Php|₱|P)\\s*${UB_MONEY}`,
+      "i",
+    ),
+  );
+  if (summary?.[1]) return summary[1].trim();
+  const coupon = flat.match(
+    new RegExp(
+      `TOTAL\\s+AMOUNT\\s+DUE\\s+MINIMUM\\s+AMOUNT\\s+DUE\\s+[A-Za-z]{3}\\s+\\d{1,2},?\\s+\\d{4}\\s+₱\\s*${UB_MONEY}`,
+      "i",
+    ),
+  );
+  return coupon?.[1]?.trim() ?? "";
+}
+
 /** After OCR, normalize punctuation and spaced-out `PHP` before regexes (any bank). */
 function preprocessOcrArtifacts(text: string): string {
   return text
@@ -567,68 +587,48 @@ function rcbcTotalFromColumnMajorLabels(flat: string): string {
   return m?.[1]?.trim() ?? "";
 }
 
-/** Amounts in a slice: word-bounded tokens plus P/PHP-prefixed (handles `P1,956,246.60` where `\b` before `1` fails). */
-function rcbcMoneyTokensInSlice(slice: string): string[] {
-  const out: string[] = [];
-  const pesoLed = slice.matchAll(
-    /(?:PHP|Php|₱|(?<![A-Za-z])P(?=[\d]))\s*([\d]{1,3}(?:,\d{3})+\.\d{2}|\d+\.\d{2})\b/gi,
-  );
-  for (const m of pesoLed) out.push(m[1]!.trim());
-  for (const m of slice.matchAll(new RegExp(`\\b${RCBC_AMOUNT}\\b`, "g"))) {
-    out.push(m[1]!.trim());
-  }
-  return out;
-}
-
 /**
- * For every "TOTAL BALANCE DUE" occurrence, take text until the next "MINIMUM PAYMENT DUE"
- * (or a limited span) and return the **largest** money token. The true total is never smaller
- * than the minimum payment on the same summary, and PDF text order sometimes puts the wrong
- * amount first or lets pickFirst capture the minimum as "total".
+ * RCBC often prints the total in the cell immediately before "MINIMUM PAYMENT DUE"
+ * (`P 3,499.72 MINIMUM PAYMENT DUE P 500.00`, or amounts then labels).
+ * A wide window after "TOTAL BALANCE DUE" also contains spend-analyzer year-to-date
+ * figures, which are larger than a small balance and must not win.
  */
-function rcbcTotalDueSlicesToMin(flat: string): string {
-  const totalRe = /\bTOTAL\s+BALANCE\s+DUE\b/gi;
-  let bestN = -1;
-  let bestStr = "";
-  let tm: RegExpExecArray | null;
-  while ((tm = totalRe.exec(flat)) !== null) {
-    const start = tm.index + tm[0].length;
-    const rest = flat.slice(start, start + 600);
-    const minPos = rest.search(/\bMINIMUM\s+PAYMENT\s+DUE\b/i);
-    const slice = minPos >= 0 ? rest.slice(0, minPos) : rest;
-    for (const raw of rcbcMoneyTokensInSlice(slice)) {
-      const n = Number.parseFloat(raw.replace(/,/g, ""));
-      if (Number.isFinite(n) && n > bestN) {
-        bestN = n;
-        bestStr = raw;
-      }
+function rcbcTotalAdjacentToMinimumLabel(flat: string): string {
+  const re = new RegExp(
+    `(?:PHP|Php|₱|(?<![A-Za-z])P\\s*)?${RCBC_AMOUNT}\\s+MINIMUM\\s+PAYMENT\\s+DUE\\b`,
+    "gi",
+  );
+  let best = "";
+  let bestDist = Number.POSITIVE_INFINITY;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(flat)) !== null) {
+    const amount = m[1]?.trim() ?? "";
+    if (!amount) continue;
+    const windowStart = Math.max(0, m.index - 320);
+    const before = flat.slice(windowStart, m.index);
+    const after = flat.slice(m.index, m.index + m[0].length + 80);
+    const totalAt = before.search(/TOTAL\s+BALANCE\s+DUE/i);
+    const totalAfter = /TOTAL\s+BALANCE\s+DUE/i.test(after);
+    if (totalAt < 0 && !totalAfter) continue;
+    const dist = totalAt < 0 ? 0 : before.length - totalAt;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = amount;
     }
   }
-  return bestStr;
+  return best;
 }
 
 /**
- * Merge regex pick + layout-specific captures; choose the **maximum** numeric candidate.
- * Fixes cases where pickFirst matched MINIMUM as TOTAL or the first amount in a slice was wrong.
+ * Prefer the amount tied to the total/minimum pair. Do not take the largest
+ * number near the label — that picks year-to-date spend on Flex statements.
  */
 function rcbcPickBestTotalDue(flat: string, pickFallback: string): string {
-  const candidates = [
-    pickFallback.trim(),
-    rcbcTotalFromColumnMajorLabels(flat),
-    rcbcTotalDueSlicesToMin(flat),
-  ];
-  let bestN = -1;
-  let bestStr = "";
-  for (const s of candidates) {
-    if (!s || s === "—") continue;
-    const n = Number.parseFloat(s.replace(/,/g, ""));
-    if (!Number.isFinite(n)) continue;
-    if (n > bestN) {
-      bestN = n;
-      bestStr = s;
-    }
-  }
-  return bestStr;
+  const adjacent = rcbcTotalAdjacentToMinimumLabel(flat);
+  if (adjacent) return adjacent;
+  const column = rcbcTotalFromColumnMajorLabels(flat);
+  if (column) return column;
+  return pickFallback.trim();
 }
 
 /** When both labels appear before both amounts, generic MINIMUM…P regex can capture the total. */
@@ -855,9 +855,12 @@ export function parseSoaText(
   }
 
   if (issuerId.toLowerCase() === "unionbank") {
-    const ub = unionbankPairedStatementDue(flatten(text));
+    const flat = flatten(text);
+    const ub = unionbankPairedStatementDue(flat);
     if (ub.statement) statementDate = ub.statement;
     if (ub.due) dueDate = ub.due;
+    const ubTotal = unionbankStatementBalance(flat);
+    if (ubTotal) totalDue = ubTotal;
   }
 
   if (!dueDate) {

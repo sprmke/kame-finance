@@ -8,6 +8,7 @@ import { dueStatementAmountKey } from "@/lib/soa/due-statement-match";
 import { db } from "@/lib/db";
 import { creditCards, dueEntries } from "@/lib/db/schema";
 
+import { googleCalendarService } from "./google-calendar.service";
 import { invalidateDueEntryRows } from "./user-rows.service";
 
 type SoaRow = {
@@ -77,7 +78,9 @@ export const dueEntryUpsertService = {
     let added = 0;
     let updated = 0;
     let skipped = 0;
+    let calendarDirty = false;
     const cardsWithSoaUpsert = new Set<string>();
+    const convertedExpectedIds = new Set<string>();
 
     for (const r of rows) {
       if (r.soaUnavailable) {
@@ -134,8 +137,12 @@ export const dueEntryUpsertService = {
         byKey.set(key, inserted!);
         if (card?.id) cardsWithSoaUpsert.add(card.id);
         added++;
+        calendarDirty = true;
         continue;
       }
+
+      if (existing.source === "expected") convertedExpectedIds.add(existing.id);
+      if (existing.dueDateYmd !== ymd || existing.paidAt) calendarDirty = true;
 
       await db
         .update(dueEntries)
@@ -153,6 +160,14 @@ export const dueEntryUpsertService = {
     }
 
     if (cardsWithSoaUpsert.size > 0) {
+      const removedEstimate = existingRows.some(
+        (entry) =>
+          entry.source === "expected" &&
+          entry.creditCardId != null &&
+          cardsWithSoaUpsert.has(entry.creditCardId) &&
+          !convertedExpectedIds.has(entry.id),
+      );
+      if (removedEstimate) calendarDirty = true;
       for (const cardId of cardsWithSoaUpsert) {
         await db
           .delete(dueEntries)
@@ -168,6 +183,10 @@ export const dueEntryUpsertService = {
 
     if (added > 0 || updated > 0 || cardsWithSoaUpsert.size > 0) {
       invalidateDueEntryRows();
+    }
+
+    if (calendarDirty) {
+      await googleCalendarService.reconcileDueEvents(userId);
     }
 
     return { added, updated, skipped };

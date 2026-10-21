@@ -49,6 +49,15 @@ function garbledCharRatio(text: string): number {
  */
 const DIVIDER_CHARS = new Set(["*", "-", "=", "_", "~", ".", "#", "•", "+"]);
 
+/** Box-drawing and rule characters banks print as section lines (UnionBank uses U+2500). */
+function isRuleChar(ch: string): boolean {
+  if (DIVIDER_CHARS.has(ch)) return true;
+  const code = ch.codePointAt(0) ?? 0;
+  return (
+    (code >= 0x2500 && code <= 0x257f) || code === 0x2014 || code === 0x2015
+  );
+}
+
 /**
  * Long runs of the *same* non-divider punctuation character, or repeating bracket
  * clusters (e.g. "()()()…"), signal a broken font/glyph remap — a pattern real
@@ -57,7 +66,7 @@ const DIVIDER_CHARS = new Set(["*", "-", "=", "_", "~", ".", "#", "•", "+"]);
 function hasGlyphSubstitutionArtifacts(text: string): boolean {
   const repeatedSameChar = text.match(/([^\w\s])\1{4,}/g) ?? [];
   for (const run of repeatedSameChar) {
-    if (!DIVIDER_CHARS.has(run[0]!)) return true;
+    if (!isRuleChar(run[0]!)) return true;
   }
   return /(\(\)){4,}/.test(text);
 }

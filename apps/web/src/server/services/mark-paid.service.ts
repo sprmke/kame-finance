@@ -523,17 +523,11 @@ export const markPaidService = {
       excludeReceiptId?: string;
     },
   ): Promise<ReceiptPayResult> {
-    if (!parsed.cardLast4) {
-      return { ok: false, reason: "no_card_detected", parsed };
-    }
-    if (parsed.amount === undefined || !Number.isFinite(parsed.amount)) {
-      return { ok: false, reason: "no_amount_detected", parsed };
-    }
-
     const monthYM = opts?.caption ? extractMonthYearLoose(opts.caption) : null;
 
     let entry: DueEntryRow | undefined;
     let monthResolved: string | undefined;
+    let receipt = parsed;
 
     if (opts?.dueEntryId) {
       const byId = await db.query.dueEntries.findFirst({
@@ -542,62 +536,66 @@ export const markPaidService = {
           eq(dueEntries.userId, userId),
         ),
       });
-      if (!byId) {
+      if (!byId || byId.source === "expected") {
         return {
           ok: false,
           reason: "no_due_entry",
-          cardLast4: parsed.cardLast4,
+          cardLast4: parsed.cardLast4 ?? byId?.cardLast4 ?? "????",
           parsed,
         };
       }
-      if (byId.source === "expected") {
-        return {
-          ok: false,
-          reason: "no_due_entry",
-          cardLast4: parsed.cardLast4,
-          parsed,
-        };
+      if (!receipt.cardLast4) {
+        receipt = { ...receipt, cardLast4: byId.cardLast4 };
       }
-      if (await isDueEntryFullyPaid(userId, byId)) {
-        return {
-          ok: false,
-          reason: "already_paid",
-          cardLast4: parsed.cardLast4,
-          parsed,
-        };
+      if (receipt.amount === undefined || !Number.isFinite(receipt.amount)) {
+        return { ok: false, reason: "no_amount_detected", parsed: receipt };
       }
-      entry = byId;
-      monthResolved = byId.dueDateYmd.slice(0, 7);
-    } else if (monthYM) {
+      const result = await applyReceiptToDueEntry(userId, byId, receipt, {
+        skipCalendar: opts?.skipCalendar,
+        excludeReceiptId: opts?.excludeReceiptId,
+      });
+      return { ...result, monthYM: byId.dueDateYmd.slice(0, 7) };
+    }
+
+    if (!receipt.cardLast4) {
+      return { ok: false, reason: "no_card_detected", parsed: receipt };
+    }
+    if (receipt.amount === undefined || !Number.isFinite(receipt.amount)) {
+      return { ok: false, reason: "no_amount_detected", parsed: receipt };
+    }
+
+    const cardLast4 = receipt.cardLast4;
+
+    if (monthYM) {
       const byMonth = await dueEntryQueryService.findByCardAndMonth(
         userId,
-        parsed.cardLast4,
+        cardLast4,
         monthYM,
       );
       if (byMonth === null) {
         return {
           ok: false,
           reason: "no_due_entry",
-          cardLast4: parsed.cardLast4,
+          cardLast4,
           monthYM,
-          parsed,
+          parsed: receipt,
         };
       }
       if (Array.isArray(byMonth)) {
         return {
           ok: false,
           reason: "ambiguous_card",
-          cardLast4: parsed.cardLast4,
+          cardLast4,
           matches: byMonth,
-          parsed,
+          parsed: receipt,
         };
       }
       if (await isDueEntryFullyPaid(userId, byMonth)) {
         return {
           ok: false,
           reason: "already_paid",
-          cardLast4: parsed.cardLast4,
-          parsed,
+          cardLast4,
+          parsed: receipt,
         };
       }
       entry = byMonth;
@@ -605,36 +603,33 @@ export const markPaidService = {
     } else {
       const nearest = await dueEntryQueryService.findNearestUnpaidByLast4(
         userId,
-        parsed.cardLast4,
+        cardLast4,
       );
       if (nearest === null) {
         return {
           ok: false,
           reason: "no_due_entry",
-          cardLast4: parsed.cardLast4,
-          parsed,
+          cardLast4,
+          parsed: receipt,
         };
       }
       if (nearest === "already_paid") {
-        const open = await findNearestNotFullyPaidByLast4(
-          userId,
-          parsed.cardLast4,
-        );
+        const open = await findNearestNotFullyPaidByLast4(userId, cardLast4);
         if (open === null) {
           return {
             ok: false,
             reason: "already_paid",
-            cardLast4: parsed.cardLast4,
-            parsed,
+            cardLast4,
+            parsed: receipt,
           };
         }
         if (Array.isArray(open)) {
           return {
             ok: false,
             reason: "ambiguous_card",
-            cardLast4: parsed.cardLast4,
+            cardLast4,
             matches: open,
-            parsed,
+            parsed: receipt,
           };
         }
         entry = open;
@@ -642,16 +637,25 @@ export const markPaidService = {
         return {
           ok: false,
           reason: "ambiguous_card",
-          cardLast4: parsed.cardLast4,
+          cardLast4,
           matches: nearest,
-          parsed,
+          parsed: receipt,
         };
       } else {
         entry = nearest;
       }
     }
 
-    const result = await applyReceiptToDueEntry(userId, entry, parsed, {
+    if (!entry) {
+      return {
+        ok: false,
+        reason: "no_due_entry",
+        cardLast4,
+        parsed: receipt,
+      };
+    }
+
+    const result = await applyReceiptToDueEntry(userId, entry, receipt, {
       skipCalendar: opts?.skipCalendar,
       excludeReceiptId: opts?.excludeReceiptId,
     });

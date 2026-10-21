@@ -17,6 +17,7 @@ import { db } from "@/lib/db";
 import { creditCards, dueEntries, formatBankIssuer, soaStatements } from "@/lib/db/schema";
 import { todayYmdLocal } from "@/lib/reminders/reminder-status";
 
+import { googleCalendarService } from "./google-calendar.service";
 import { invalidateDueEntryRows } from "./user-rows.service";
 
 const DEFAULT_WINDOW_DAYS = Math.max(
@@ -76,6 +77,7 @@ export const expectedDueEntryService = {
     let added = 0;
     let updated = 0;
     let removed = 0;
+    let calendarDirty = false;
     const removedIds = new Set<string>();
 
     for (const card of cards) {
@@ -113,6 +115,7 @@ export const expectedDueEntryService = {
           );
         removedIds.add(entry.id);
         removed++;
+        calendarDirty = true;
       }
 
       for (const dueDateYmd of targets) {
@@ -143,6 +146,7 @@ export const expectedDueEntryService = {
         };
 
         if (expected) {
+          if (expected.dueDateYmd !== dueDateYmd) calendarDirty = true;
           await db
             .update(dueEntries)
             .set(values)
@@ -161,11 +165,15 @@ export const expectedDueEntryService = {
           .values({ userId, ...values })
           .onConflictDoNothing()
           .returning({ id: dueEntries.id });
+        if (inserted.length > 0) calendarDirty = true;
         added += inserted.length;
       }
     }
 
     if (added > 0 || updated > 0 || removed > 0) invalidateDueEntryRows();
+    if (calendarDirty) {
+      await googleCalendarService.reconcileDueEvents(userId);
+    }
     return { added, updated, removed };
   },
 };

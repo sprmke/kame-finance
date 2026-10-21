@@ -2,13 +2,21 @@ import { eq } from "drizzle-orm";
 
 import { GOOGLE_OAUTH_SCOPES } from "@/lib/auth/google-scopes";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
-import { todayYmdInTimezone } from "@/lib/soa/calendar-dates";
+import { dueEntries, users } from "@/lib/db/schema";
+import { isDueMonthEligible, todayYmdInTimezone } from "@/lib/soa/calendar-dates";
+import {
+  payCcDueKey,
+  seriesIsComplete,
+  shiftYmd,
+} from "@/lib/soa/calendar-fingerprint";
 import { applyIntegrationsToEnv } from "./integration-env.service";
 import { gmailService } from "./gmail.service";
 import { integrationService } from "./integration.service";
 import type { DueEntryRow } from "./due-entry-query.service";
-import type { CalendarDueEntry } from "@/lib/soa/google-calendar";
+import type {
+  CalendarDueEntry,
+  CalendarEventInput,
+} from "@/lib/soa/google-calendar";
 
 function toCalendarDueEntry(entry: DueEntryRow): CalendarDueEntry {
   return {
@@ -100,4 +108,116 @@ export const googleCalendarService = {
       todayYmd: todayYmdInTimezone(timeZone),
     });
   },
+
+  /**
+   * Make Google Calendar match current due entries.
+   * Estimated events stay behind when a statement replaces that due date,
+   * because the fingerprint includes the old date. Drop those, fill any
+   * missing D-4…D-0 series for the current month onward, and re-apply paid.
+   */
+  async reconcileDueEvents(userId: string): Promise<{
+    deleted: number;
+    created: number;
+    paid: number;
+    error?: string;
+  }> {
+    const empty = { deleted: 0, created: 0, paid: 0 };
+    try {
+      const calendar = await integrationService.getConfig(
+        userId,
+        "google_calendar",
+      );
+      if (!calendar) return empty;
+
+      const dues = await db.query.dueEntries.findMany({
+        where: eq(dueEntries.userId, userId),
+      });
+      const keepDueKeys = new Set(
+        dues.map((entry) =>
+          payCcDueKey(entry.issuerId, entry.cardLast4, entry.dueDateYmd),
+        ),
+      );
+      const timeZone = await resolveUserTimezone(userId);
+      const todayYmd = todayYmdInTimezone(timeZone);
+      const calendarId = await prepareCalendarEnv(userId);
+      const {
+        createDueDateCalendarEvents,
+        deleteStalePayCcEvents,
+        keptPayCcFingerprints,
+        listPayCcEventsInRange,
+        markCalendarEventsPaid,
+      } = await import("@/lib/soa/google-calendar");
+
+      const events = await listPayCcEventsInRange(
+        calendarId,
+        shiftYmd(todayYmd, -80),
+        shiftYmd(todayYmd, 130),
+      );
+      const deleted = await deleteStalePayCcEvents(
+        calendarId,
+        events,
+        keepDueKeys,
+      );
+      const kept = keptPayCcFingerprints(events, keepDueKeys);
+
+      const missing = dues.filter((entry) => {
+        if (!isDueMonthEligible(entry.dueDateYmd, todayYmd)) return false;
+        return !seriesIsComplete(
+          payCcDueKey(entry.issuerId, entry.cardLast4, entry.dueDateYmd),
+          kept,
+        );
+      });
+
+      let created = 0;
+      if (missing.length > 0) {
+        const telegram = await integrationService.getConfig<{
+          webLink?: string;
+        }>(userId, "telegram");
+        if (telegram?.webLink) {
+          process.env.TELEGRAM_WEB_LINK = telegram.webLink;
+        }
+        const createdResult = await createDueDateCalendarEvents(
+          missing.map(dueEntryToCalendarInput),
+          calendarId,
+          { timeZone, todayYmd },
+        );
+        created = createdResult.created;
+      }
+
+      let paid = 0;
+      for (const entry of dues) {
+        if (!entry.paidAt) continue;
+        if (!isDueMonthEligible(entry.dueDateYmd, todayYmd)) continue;
+        const result = await markCalendarEventsPaid(
+          toCalendarDueEntry(entry),
+          calendarId,
+        );
+        paid += result.updated;
+      }
+
+      return { deleted, created, paid };
+    } catch (error) {
+      return {
+        ...empty,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  },
 };
+
+function dueEntryToCalendarInput(entry: DueEntryRow): CalendarEventInput {
+  const expected = entry.source === "expected";
+  return {
+    issuerId: entry.issuerId,
+    cardLast4: entry.cardLast4,
+    bankLabel: entry.bankLabel,
+    cardDisplayLabel: entry.cardDisplayLabel,
+    fullPan: entry.fullPan,
+    contactLine: entry.contactLine,
+    dueDate: entry.dueDate,
+    minimumDue: entry.minimumDue,
+    totalDue: entry.totalDue,
+    source: expected ? "expected" : undefined,
+    soaUnavailable: expected,
+  };
+}

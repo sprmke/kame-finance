@@ -1,6 +1,11 @@
 // @ts-nocheck
 import { google } from "googleapis";
 
+import {
+  dueKeyFromPayCcFingerprint,
+  eventFingerprintsAreStale,
+  shiftYmd,
+} from "@/lib/soa/calendar-fingerprint";
 import { parseDueDateToYmd } from "@/lib/due/parse-due-date";
 import { createGoogleOAuth2Client } from "@/lib/google/google-oauth";
 import {
@@ -563,4 +568,81 @@ export async function markCalendarEventsUnpaid(
   }
 
   return result;
+}
+
+export type PayCcCalendarEvent = {
+  id: string;
+  fingerprints: string[];
+};
+
+function ymdStartIso(ymd: string): string {
+  return `${ymd}T00:00:00Z`;
+}
+
+/** List pay-cc events in an inclusive YYYY-MM-DD window. */
+export async function listPayCcEventsInRange(
+  calendarId: string,
+  timeMinYmd: string,
+  timeMaxYmd: string,
+): Promise<PayCcCalendarEvent[]> {
+  const calendar = await getCalendarClient();
+  const out: PayCcCalendarEvent[] = [];
+  let pageToken: string | undefined;
+  do {
+    const res = await calendar.events.list({
+      calendarId,
+      timeMin: ymdStartIso(timeMinYmd),
+      timeMax: ymdStartIso(shiftYmd(timeMaxYmd, 1)),
+      maxResults: 250,
+      singleEvents: true,
+      orderBy: "startTime",
+      pageToken,
+    });
+    for (const ev of res.data.items ?? []) {
+      if (!ev.id) continue;
+      const fingerprints = collectFingerprintsFromExistingEvent(ev);
+      if (fingerprints.length === 0) continue;
+      out.push({ id: ev.id, fingerprints });
+    }
+    pageToken = res.data.nextPageToken ?? undefined;
+  } while (pageToken);
+  return out;
+}
+
+/** Delete events whose pay-cc due date is not in `keepDueKeys`. */
+export async function deleteStalePayCcEvents(
+  calendarId: string,
+  events: PayCcCalendarEvent[],
+  keepDueKeys: ReadonlySet<string>,
+): Promise<number> {
+  const calendar = await getCalendarClient();
+  let deleted = 0;
+  for (const ev of events) {
+    if (!eventFingerprintsAreStale(ev.fingerprints, keepDueKeys)) continue;
+    try {
+      await calendar.events.delete({ calendarId, eventId: ev.id });
+      deleted++;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!/410|gone/i.test(msg)) {
+        log.warn(`Could not delete stale calendar event: ${msg}`);
+      }
+    }
+  }
+  return deleted;
+}
+
+export function keptPayCcFingerprints(
+  events: PayCcCalendarEvent[],
+  keepDueKeys: ReadonlySet<string>,
+): Set<string> {
+  const kept = new Set<string>();
+  for (const ev of events) {
+    if (eventFingerprintsAreStale(ev.fingerprints, keepDueKeys)) continue;
+    for (const fp of ev.fingerprints) {
+      const dueKey = dueKeyFromPayCcFingerprint(fp);
+      if (dueKey && keepDueKeys.has(dueKey)) kept.add(fp);
+    }
+  }
+  return kept;
 }

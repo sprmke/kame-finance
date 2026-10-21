@@ -58,6 +58,13 @@ describe("assessSoaTextQuality", () => {
     expect(assessSoaTextQuality(undefined).looksUsable).toBe(false);
   });
 
+  test("keeps a UnionBank statement usable when section rules are box-drawing characters", () => {
+    const withRules = `${"─".repeat(80)}\n${UNIONBANK_SAMPLE}`;
+    const quality = assessSoaTextQuality(withRules);
+    expect(quality.looksUsable).toBe(true);
+    expect(quality.reasons).toEqual([]);
+  });
+
   test("flags garbled/broken-font text as unusable regardless of issuer", () => {
     const quality = assessSoaTextQuality(GARBLED_SAMPLE);
     expect(quality.looksUsable).toBe(false);
