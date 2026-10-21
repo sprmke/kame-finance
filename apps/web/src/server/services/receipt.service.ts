@@ -35,6 +35,11 @@ import { ReceiptUploadProgressReporter } from "./receipt-upload-progress.service
 import { storageService } from "./storage.service";
 import { enrichDueEntriesWithSoaPeriod } from "./due-statement-period.service";
 import {
+  assignCombinedPayment,
+  planBatchGroups,
+  type ReceiptBatchTransactionMode,
+} from "@/lib/receipts/batch-transaction-mode";
+import {
   groupAnalyzedBatchItems,
   type AnalyzedBatchGroup,
   type AnalyzedBatchItem,
@@ -88,35 +93,6 @@ function shouldApplyRevalidationResult(
     return false;
   }
   return true;
-}
-
-function overlayGroupedReceiptAi(
-  item: AnalyzedBatchItem,
-  groupAi: CreditCardReceiptAiResult,
-): AnalyzedBatchItem {
-  return {
-    ...item,
-    ai: {
-      ...item.ai,
-      verdict: groupAi.verdict,
-      confidence: groupAi.confidence,
-      summary: groupAi.summary,
-      hasAmount: groupAi.hasAmount || item.ai.hasAmount,
-      hasDate: groupAi.hasDate || item.ai.hasDate,
-      hasReference: groupAi.hasReference || item.ai.hasReference,
-      isCreditCardPayment:
-        groupAi.isCreditCardPayment || item.ai.isCreditCardPayment,
-      provider: groupAi.provider ?? item.ai.provider,
-      extraction: {
-        ...item.ai.extraction,
-        paymentDate:
-          item.ai.extraction.paymentDate ?? groupAi.extraction.paymentDate,
-        referenceNumber:
-          item.ai.extraction.referenceNumber ??
-          groupAi.extraction.referenceNumber,
-      },
-    },
-  };
 }
 
 function aiToParsedReceipt(ai: CreditCardReceiptAiResult) {
@@ -286,9 +262,7 @@ export const receiptService = {
         parsedCardLast4: row.parsedCardLast4,
         dueDateYmd: linked?.dueDateYmd ?? null,
         aiAnalysis: row.aiAnalysis as
-          | { paymentDate?: string }
-          | null
-          | undefined,
+          { paymentDate?: string } | null | undefined,
         createdAt: row.createdAt,
       });
       const due = matchedCandidate
@@ -372,6 +346,9 @@ export const receiptService = {
       prefetchedAi?: CreditCardReceiptAiResult;
       skipPrepare?: boolean;
       batchMeta?: { index: number; total: number; isLast: boolean };
+      /** False saves the file on the same payment without adding its amount. */
+      recordPayment?: boolean;
+      linkedPaymentStatus?: "partial" | "marked_paid";
     },
   ): Promise<ReceiptProcessResult> {
     let reporter: ReceiptUploadProgressReporter | null = null;
@@ -533,6 +510,54 @@ export const receiptService = {
 
     await reporter?.completeStep("save");
 
+    if (input.recordPayment === false) {
+      const paymentStatus = input.linkedPaymentStatus ?? "pending";
+      const [linked] = await db
+        .update(receipts)
+        .set({
+          dueEntryId: input.dueEntryId ?? null,
+          paymentStatus,
+          parsedAmount: null,
+          parsedAmountRaw: null,
+        })
+        .where(eq(receipts.id, receiptRow!.id))
+        .returning();
+
+      if (!input.batchMeta || input.batchMeta.isLast) {
+        await reporter?.complete();
+      } else {
+        await reporter?.completeItemAndAdvance(input.batchMeta.index + 1);
+      }
+
+      const saved = linked ?? receiptRow!;
+      if (!input.dueEntryId) {
+        return {
+          receipt: saved,
+          ai,
+          payment: {
+            ok: false,
+            reason: "Saved with the other receipts",
+            code: "attach_only",
+          },
+        };
+      }
+
+      return {
+        receipt: saved,
+        ai,
+        payment: {
+          ok: true,
+          dueEntryId: input.dueEntryId,
+          amountPaid: 0,
+          cumulativePaid: 0,
+          coverage: paymentStatus === "marked_paid" ? "minimum_met" : "partial",
+          paymentSequenceLabel: "1/1",
+          thresholdMet: paymentStatus === "marked_paid",
+          belowTotalDue: paymentStatus !== "marked_paid",
+        },
+      };
+    }
+
     if (isReceiptAiSkipped(ai)) {
       if (!input.batchMeta || input.batchMeta.isLast) {
         await reporter?.complete();
@@ -636,6 +661,8 @@ export const receiptService = {
       .set({
         paymentStatus: receiptPaymentStatus,
         dueEntryId: payResult.entry.id,
+        parsedCardLast4:
+          receiptRow!.parsedCardLast4 ?? payResult.entry.cardLast4,
       })
       .where(eq(receipts.id, receiptRow!.id));
 
@@ -869,9 +896,7 @@ export const receiptService = {
           parsedCardLast4: row.parsedCardLast4,
           dueDateYmd: null,
           aiAnalysis: row.aiAnalysis as
-            | { paymentDate?: string }
-            | null
-            | undefined,
+            { paymentDate?: string } | null | undefined,
           createdAt: row.createdAt,
         },
       );
@@ -890,9 +915,10 @@ export const receiptService = {
       }
     }
 
-    const requestedIds = [
-      ...new Set([receiptId, ...(receiptIds ?? [])]),
-    ].slice(0, 8);
+    const requestedIds = [...new Set([receiptId, ...(receiptIds ?? [])])].slice(
+      0,
+      8,
+    );
     let siblingIds = requestedIds;
     if (!receiptIds?.length) {
       const listed = await this.list(userId, 200);
@@ -1041,6 +1067,7 @@ export const receiptService = {
     input: {
       items: BatchUploadItemInput[];
       dueEntryId?: string;
+      transactionMode?: ReceiptBatchTransactionMode;
     },
   ): Promise<{ groups: AnalyzedBatchGroup[] }> {
     if (input.items.length === 0) {
@@ -1100,6 +1127,8 @@ export const receiptService = {
 
     const analyzed: AnalyzedBatchItem[] = [];
     const imageByPath = new Map<string, ReceiptVisionImage>();
+    const hasKeys = await aiApiKeyService.hasConfiguredKeys(userId);
+    const transactionMode = input.transactionMode ?? "separate";
 
     for (const item of input.items) {
       const buffer = await storageService.readPrivate(item.storagePath);
@@ -1117,7 +1146,7 @@ export const receiptService = {
         path: item.originalFileName ?? item.storagePath,
       });
 
-      if (!(await aiApiKeyService.hasConfiguredKeys(userId))) {
+      if (!hasKeys) {
         analyzed.push({
           ...item,
           ai: skippedReceiptAi(AI_SKIP_NO_KEYS_MESSAGE, "no_keys"),
@@ -1138,35 +1167,42 @@ export const receiptService = {
       analyzed.push({ ...item, ai });
     }
 
-    const groups = groupAnalyzedBatchItems(analyzed, knownCards, {
-      forcedDueEntryId: input.dueEntryId,
-      forcedLabel,
-    });
+    const groups = planBatchGroups(
+      groupAnalyzedBatchItems(analyzed, knownCards, {
+        forcedDueEntryId: input.dueEntryId,
+        forcedLabel,
+      }),
+      transactionMode,
+    );
 
-    if (await aiApiKeyService.hasConfiguredKeys(userId)) {
+    if (transactionMode === "combined") {
       for (const group of groups) {
-        if (group.items.length < 2) continue;
-        const images = group.items.flatMap((item) => {
-          const stored = imageByPath.get(item.storagePath);
-          return stored ? [stored] : [];
-        });
-        if (images.length < 2) continue;
-
-        const groupAi = await validateCreditCardReceiptImages(
-          userId,
-          images,
-          { knownCards, dueContext },
-        );
-        if (
-          !shouldPersistReceiptValidation(groupAi) ||
-          isReceiptAiSkipped(groupAi)
-        ) {
+        if (group.items.length < 2) {
+          group.items = assignCombinedPayment(group.items, null);
           continue;
         }
 
-        group.items = group.items.map((item) =>
-          overlayGroupedReceiptAi(item, groupAi),
-        );
+        let groupAi: CreditCardReceiptAiResult | null = null;
+        if (hasKeys) {
+          const images = group.items.flatMap((item) => {
+            const stored = imageByPath.get(item.storagePath);
+            return stored ? [stored] : [];
+          });
+          if (images.length >= 2) {
+            const read = await validateCreditCardReceiptImages(userId, images, {
+              knownCards,
+              dueContext,
+            });
+            if (
+              shouldPersistReceiptValidation(read) &&
+              !isReceiptAiSkipped(read)
+            ) {
+              groupAi = read;
+            }
+          }
+        }
+
+        group.items = assignCombinedPayment(group.items, groupAi);
       }
     }
 
@@ -1201,23 +1237,34 @@ export const receiptService = {
       });
 
       const groupResults: ReceiptProcessResult[] = [];
+      let attachDueId = input.dueEntryId;
+      let attachStatus: "partial" | "marked_paid" | undefined;
 
       for (let i = 0; i < group.items.length; i++) {
         const item = group.items[i]!;
+        const recording = item.recordPayment !== false;
         const result = await this.processUploadedReceipt(userId, {
           storagePath: item.storagePath,
           originalFileName: item.originalFileName,
-          dueEntryId: input.dueEntryId,
+          dueEntryId: recording ? input.dueEntryId : attachDueId,
           markPaid: input.markPaid,
           processId: group.processId,
           prefetchedAi: item.ai,
           skipPrepare: i > 0,
+          recordPayment: recording,
+          linkedPaymentStatus: recording ? undefined : attachStatus,
           batchMeta: {
             index: i + 1,
             total: group.items.length,
             isLast: i === group.items.length - 1,
           },
         });
+        if (recording && result.payment.ok) {
+          attachDueId = result.payment.dueEntryId;
+          attachStatus = result.payment.thresholdMet
+            ? "marked_paid"
+            : "partial";
+        }
         groupResults.push(result);
       }
 

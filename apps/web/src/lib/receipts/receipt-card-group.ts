@@ -56,6 +56,8 @@ export type BatchUploadItemInput = {
 
 export type AnalyzedBatchItem = BatchUploadItemInput & {
   ai: CreditCardReceiptAiResult;
+  /** When false, the file is saved with the payment and its amount is not added again. */
+  recordPayment?: boolean;
 };
 
 export type AnalyzedBatchGroup = {

@@ -8,8 +8,17 @@ import type {
   ReceiptUploadOptions,
 } from "@/components/shared/ReceiptBatchUploadProgressDialog";
 import type { ReceiptBatchPrepProgress } from "@/lib/receipt-upload-progress";
+import type { ReceiptBatchTransactionMode } from "@/lib/receipts/batch-transaction-mode";
 import { api } from "@/lib/api/client";
 import { AI_SKIP_NO_KEYS_MESSAGE } from "@/lib/receipts/ai-skip";
+
+function isSoftPaymentCode(code: string | undefined): boolean {
+  return (
+    code === "ai_skipped_no_keys" ||
+    code === "validate_only" ||
+    code === "attach_only"
+  );
+}
 
 function summarizeGroupResults(
   receipts: Array<{
@@ -20,10 +29,7 @@ function summarizeGroupResults(
   }>,
 ): { settled: "success" | "error"; errorMessage: string | null } {
   const hardFailure = receipts.find(
-    (row) =>
-      !row.payment.ok &&
-      row.payment.code !== "ai_skipped_no_keys" &&
-      row.payment.code !== "validate_only",
+    (row) => !row.payment.ok && !isSoftPaymentCode(row.payment.code),
   );
 
   if (hardFailure && !hardFailure.payment.ok) {
@@ -48,6 +54,10 @@ export function useReceiptUploadFlow(
   const [cardJobs, setCardJobs] = useState<CardUploadJob[]>([]);
   const [batchProgress, setBatchProgress] =
     useState<ReceiptBatchPrepProgress | null>(null);
+  const [pendingBatch, setPendingBatch] = useState<{
+    files: File[];
+    dueEntryId?: string;
+  } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const uploadOptions = useMemo(
@@ -89,7 +99,11 @@ export function useReceiptUploadFlow(
     };
   }
 
-  async function uploadFiles(files: File[], dueEntryId?: string) {
+  async function uploadFiles(
+    files: File[],
+    dueEntryId?: string,
+    transactionMode: ReceiptBatchTransactionMode = "separate",
+  ) {
     if (files.length === 0) return;
 
     const total = files.length;
@@ -115,6 +129,7 @@ export function useReceiptUploadFlow(
       const analysis = await analyzeUploadBatch.mutateAsync({
         items: uploadedItems,
         dueEntryId,
+        transactionMode,
       });
 
       const jobs: CardUploadJob[] = analysis.groups.map((group) => ({
@@ -154,10 +169,7 @@ export function useReceiptUploadFlow(
 
       const successGroups = result.groups.filter((group) =>
         group.receipts.every(
-          (row) =>
-            row.payment.ok ||
-            row.payment.code === "ai_skipped_no_keys" ||
-            row.payment.code === "validate_only",
+          (row) => row.payment.ok || isSoftPaymentCode(row.payment.code),
         ),
       );
 
@@ -188,10 +200,7 @@ export function useReceiptUploadFlow(
 
       const failed = result.groups.find((group) =>
         group.receipts.some(
-          (row) =>
-            !row.payment.ok &&
-            row.payment.code !== "ai_skipped_no_keys" &&
-            row.payment.code !== "validate_only",
+          (row) => !row.payment.ok && !isSoftPaymentCode(row.payment.code),
         ),
       );
       if (failed) {
@@ -244,10 +253,23 @@ export function useReceiptUploadFlow(
     const fileList = event.target.files;
     const dueEntryId = pendingDueEntryIdRef.current ?? undefined;
     pendingDueEntryIdRef.current = null;
-    if (fileList?.length) {
-      void uploadFiles([...fileList], dueEntryId);
+    if (fileList && fileList.length > 1) {
+      setPendingBatch({ files: [...fileList], dueEntryId });
+    } else if (fileList?.length) {
+      void uploadFiles([...fileList], dueEntryId, "separate");
     }
     event.target.value = "";
+  }
+
+  function confirmTransactionChoice(mode: ReceiptBatchTransactionMode) {
+    if (!pendingBatch) return;
+    const batch = pendingBatch;
+    setPendingBatch(null);
+    void uploadFiles(batch.files, batch.dueEntryId, mode);
+  }
+
+  function cancelTransactionChoice() {
+    setPendingBatch(null);
   }
 
   function handleProgressComplete() {
@@ -274,9 +296,7 @@ export function useReceiptUploadFlow(
   }
 
   const isPending =
-    isUploading ||
-    analyzeUploadBatch.isPending ||
-    processUploadBatch.isPending;
+    isUploading || analyzeUploadBatch.isPending || processUploadBatch.isPending;
 
   return {
     fileRef,
@@ -290,5 +310,9 @@ export function useReceiptUploadFlow(
     triggerFilePicker,
     handleFileInputChange,
     uploadFiles,
+    transactionChoiceOpen: pendingBatch !== null,
+    transactionChoiceCount: pendingBatch?.files.length ?? 0,
+    confirmTransactionChoice,
+    cancelTransactionChoice,
   };
 }

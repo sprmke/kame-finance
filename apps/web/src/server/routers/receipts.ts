@@ -3,6 +3,7 @@ import { z } from "zod";
 import { protectedProcedure, router } from "@/server/trpc";
 import { receiptService } from "@/server/services/receipt.service";
 import { receiptUploadProgressService } from "@/server/services/receipt-upload-progress.service";
+import { RECEIPT_BATCH_TRANSACTION_MODES } from "@/lib/receipts/batch-transaction-mode";
 
 const batchItemSchema = z.object({
   storagePath: z.string().min(1),
@@ -11,7 +12,10 @@ const batchItemSchema = z.object({
 
 const analyzedBatchItemSchema = batchItemSchema.extend({
   ai: z.record(z.string(), z.unknown()),
+  recordPayment: z.boolean().optional(),
 });
+
+const transactionModeSchema = z.enum(RECEIPT_BATCH_TRANSACTION_MODES);
 
 export const receiptsRouter = router({
   list: protectedProcedure.query(({ ctx }) => receiptService.list(ctx.user.id)),
@@ -47,6 +51,7 @@ export const receiptsRouter = router({
       z.object({
         items: z.array(batchItemSchema).min(1).max(20),
         dueEntryId: z.string().uuid().optional(),
+        transactionMode: transactionModeSchema.default("separate"),
       }),
     )
     .mutation(({ ctx, input }) =>
@@ -78,6 +83,7 @@ export const receiptsRouter = router({
           items: group.items.map((item) => ({
             storagePath: item.storagePath,
             originalFileName: item.originalFileName,
+            recordPayment: item.recordPayment,
             ai: item.ai as never,
           })),
         })),
