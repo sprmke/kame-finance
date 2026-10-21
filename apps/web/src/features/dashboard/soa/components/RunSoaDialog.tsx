@@ -216,7 +216,11 @@ export function RunSoaDialog({
       >
         <DialogHeader>
           <DialogTitle className="font-display">
-            {showProgress ? "Running SOA" : "Run SOA"}
+            {showProgress
+              ? "Running SOA"
+              : showSkipExisting
+                ? "Re-run SOA"
+                : "Run SOA"}
           </DialogTitle>
         </DialogHeader>
 
@@ -256,6 +260,8 @@ export function RunSoaDialog({
                   : ""}
               </p>
             ) : null}
+            {showSkipExisting ? null : (
+              <>
             <div className="space-y-3">
               <Label>Period</Label>
               <RadioGroup
@@ -387,6 +393,8 @@ export function RunSoaDialog({
                   </div>
                 )}
               </div>
+            )}
+              </>
             )}
 
             {showSkipExisting ? (

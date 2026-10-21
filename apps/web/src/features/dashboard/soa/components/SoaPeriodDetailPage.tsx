@@ -21,7 +21,7 @@ import {
 
 import { DashboardPageHeader } from "@/components/shared/DashboardPageHeader";
 import { PageActionBar } from "@/components/shared/PageActionBar";
-import { ReceiptBatchUploadProgressDialog } from "@/components/shared/ReceiptBatchUploadProgressDialog";
+import { ReceiptUploadDialogs } from "@/components/shared/ReceiptUploadDialogs";
 import { SoaPeriodDetailContentSkeleton } from "@/components/shared/skeletons";
 import { StatCard, statGridClassName } from "@/components/shared/StatCard";
 import { ViewToggle } from "@/components/shared/ViewToggle";
@@ -32,9 +32,7 @@ import { ROUTES } from "@/config/routes";
 import { api } from "@/lib/api/client";
 import type { AppRouter } from "@/server/routers/_app";
 import { useReceiptUploadFlow } from "@/hooks/use-receipt-upload-flow";
-import {
-  type StatementDueEntryRow,
-} from "@/lib/soa/statement-due-entry";
+import { type StatementDueEntryRow } from "@/lib/soa/statement-due-entry";
 import { isMissingSoaForStatementPeriod } from "@/lib/credit-cards/billing-cycle";
 import { normalizeCardLast4 } from "@/lib/due/normalize";
 import { todayYmdLocal } from "@/lib/reminders/reminder-status";
@@ -181,8 +179,9 @@ function SoaPeriodDetailBody({
   }, [writePeriodQuery]);
 
   const redirectToReceiptsAfterUploadRef = useRef(false);
-  const { data: dues, isSuccess: duesReady } =
-    api.reminders.listDue.useQuery({ unpaidOnly: false });
+  const { data: dues, isSuccess: duesReady } = api.reminders.listDue.useQuery({
+    unpaidOnly: false,
+  });
   const { data: receipts } = api.receipts.list.useQuery();
   const { data: cards } = api.creditCards.list.useQuery();
   const { data: integrations } = api.integrations.list.useQuery();
@@ -440,13 +439,8 @@ function SoaPeriodDetailBody({
         className="hidden"
         onChange={receiptUpload.handleFileInputChange}
       />
-      <ReceiptBatchUploadProgressDialog
-        open={receiptUpload.progressOpen}
-        onOpenChange={receiptUpload.handleProgressOpenChange}
-        jobs={receiptUpload.cardJobs}
-        options={receiptUpload.uploadOptions}
-        isPending={receiptUpload.isPending}
-        batchProgress={receiptUpload.batchProgress}
+      <ReceiptUploadDialogs
+        flow={receiptUpload}
         onComplete={handleReceiptUploadDialogComplete}
       />
 

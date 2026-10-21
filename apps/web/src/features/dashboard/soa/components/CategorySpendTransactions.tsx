@@ -1,8 +1,10 @@
 "use client";
 
+import { CANNOT_ANALYZE_SLUG } from "@/lib/transactions/categories";
 import { cn } from "@/lib/utils/cn";
 
 import type { PeriodTransaction } from "../lib/period-overview-stats";
+import { TransactionCategorySelect } from "./TransactionCategorySelect";
 import {
   classifyTransaction,
   cleanTransactionDescription,
@@ -54,26 +56,34 @@ export function CategorySpendTransactions({
               meta.row,
             )}
           >
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium leading-snug">
-                {description}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                <p className="text-xs tabular-nums text-muted-foreground">
-                  {dateLabel}
-                  {showCard ? ` · ${cardIdentity(tx)}` : null}
+            <div className="min-w-0 flex-1 space-y-2">
+              <div>
+                <p className="truncate text-sm font-medium leading-snug">
+                  {description}
                 </p>
-                {meta.label ? (
-                  <span
-                    className={cn(
-                      "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
-                      meta.badge,
-                    )}
-                  >
-                    {meta.label}
-                  </span>
-                ) : null}
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <p className="text-xs tabular-nums text-muted-foreground">
+                    {dateLabel}
+                    {showCard ? ` · ${cardIdentity(tx)}` : null}
+                  </p>
+                  {meta.label ? (
+                    <span
+                      className={cn(
+                        "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                        meta.badge,
+                      )}
+                    >
+                      {meta.label}
+                    </span>
+                  ) : null}
+                </div>
               </div>
+              <TransactionCategorySelect
+                transactionId={tx.id}
+                value={tx.categorySlug ?? CANNOT_ANALYZE_SLUG}
+                ariaLabel={`Category for ${description}`}
+                className="h-11 w-full max-w-none sm:w-[11rem] sm:max-w-[11rem]"
+              />
             </div>
             <p
               className={cn(

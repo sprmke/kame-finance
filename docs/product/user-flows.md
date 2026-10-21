@@ -21,7 +21,7 @@
 
 1. From the configured calendar day each month (default **20**, Settings → SOA), signed-in users with at least one card see a one-time prompt to **Run SOA** for the **next** statement month if that period does not exist yet. **Not now** dismisses until the next target month.
 2. Bank emails SOA → manual **Run SOA** (or scheduled `run_soa_pipeline` automation)
-3. **Re-run** (SOA list or period) shows **Skip cards with SOA**, on by default. Cards that already have a statement for a month in the selected range are not fetched or parsed again. Cards without one still run. Telegram, Slack, and Google Calendar follow the run toggles for those new statements. Overview, transactions, and analytics update when a new statement is saved. Turn the switch off to process every card again.
+3. **Re-run** (SOA list or period) keeps that period’s month and year. The dialog hides Period, month, and year, and shows **Skip cards with SOA**, on by default. Cards that already have a statement for a month in that range are not fetched or parsed again. Cards without one still run. Telegram, Slack, and Google Calendar follow the run toggles for those new statements. Overview, transactions, and analytics update when a new statement is saved. Turn the switch off to process every card again.
 4. View parsed statement, transactions, summary PDF
 5. When **Add to Google Calendar** is enabled on the run, due-date events (D-4…D-0) are created for every active card with a due day — including cards with no SOA yet (estimated due from card settings). Calendar copy explains missing SOA; if the billing period has ended, it prompts a manual check or upload. A re-run that skips cards with an existing SOA does not replace those cards' events with a missing-SOA estimate.
 6. Reminder window start (D-4…D-0) for expected entries when no SOA exists
@@ -37,7 +37,7 @@
 4. **SOA missing** shows on the credit cards list, the overview banner and attention list, reminder due cards, the SOA period table and cards, the statement page, and receipt slots (including a receipt that was uploaded before the statement arrived). The card copy is “Statement date passed. SOA not available.”
 5. Dashboard, Telegram/Slack, and Google Calendar flag the missing SOA. Calendar descriptions stay short: waiting for the statement during the billing period, or—after the period ends—check the bank or upload the PDF in Kame Finance.
 6. Expected entries cannot be marked paid because the amount is unknown. They stay on the due list for 45 days after the estimated due date.
-7. A later SOA replaces the expected entry with the bank-provided date and amounts.
+7. A later SOA replaces the expected entry with the bank-provided date and amounts. Calendar events follow that date: the estimate’s events are removed, and the statement due date gets the D-4…D-0 series (marked paid when the due is already paid).
 
 ### Manual SOA upload
 
@@ -70,7 +70,7 @@
 ### SOA period analytics
 
 1. Open a period → **Analytics**, or open `?tab=analytics&category=<slug>` for a category.
-2. Click a category (chart, legend, or distribution slice) to see that category’s transactions. The selection is stored in the URL.
+2. Click a category (chart, legend, or distribution slice) to see that category’s transactions. Each row has the same category dropdown as the transactions table. Changing it saves the category and updates the breakdown. The selection is stored in the URL.
 3. **Back** (or Escape) returns to the breakdown and clears `category`.
 
 ## Reminders & schedule
@@ -78,7 +78,7 @@
 1. Open **Reminders** → **Schedule** (payment reminders + SOA Gmail check) and **Due dates** (cards in window)
 2. Toggle a job, edit daily time, or run now
 3. Mark paid/unpaid on due cards; upload receipt from mark-paid flow
-4. On a paid card with a receipt, **View payment** opens the receipt and its AI summary
+4. Every due card shows minimum and total due (`-` until a statement amount exists) and a full-width schedule line for past due or when reminders start. **View payment** sits above **Mark paid** or **Mark unpaid** and stays disabled until a receipt is linked.
 
 ## Automation management
 
@@ -90,9 +90,11 @@ Managed on **Reminders** (Schedule section). `/dashboard/automations` redirects 
 
 ## Receipt upload
 
-1. Upload payment receipt in **Receipts**
-2. Images for the same card and statement period show as one card. Open it to page through each image.
-3. AI validates that set together (card, combined amount, date, reference) and shows one summary
-4. Mark SOA paid when the combined amount meets minimum/total due
+1. Upload a payment receipt from **Receipts**. Each month lists unpaid cards first, then paid cards. Open a card’s menu and choose **Add receipt** to attach more files to that bank and statement month. A card with no statement yet shows **SOA not yet available**, and its SOA button stays disabled until a statement file exists. **Card info** on a placeholder or uploaded receipt opens the card name, masked number, card type, minimum and total due, statement date, and due date. Copy uses the full number with no spaces, amounts without commas, and dates as `YYYY-MM-DD`.
+2. If more than one file is selected, choose **One payment** or **Separate payments**. One payment counts the set once. Separate payments records each receipt. One file skips this choice. Receipts, Reminders, and an SOA period use the same step.
+3. Images for the same card and statement period show as one card. Open it to page through each image.
+4. AI validates that set together (card, combined amount, date, reference) and shows one summary
+5. Mark SOA paid when the combined amount meets minimum/total due
+6. **Add receipt** keeps later files on that statement after the due is already paid. A separate-payment upload adds each amount. A one-payment upload counts that set once
 
 Expand with screen-level steps when UI is implemented.

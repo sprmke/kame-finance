@@ -29,6 +29,7 @@ type TransactionCategorySelectProps = {
   value: TransactionCategorySlug | string;
   editable?: boolean;
   className?: string;
+  ariaLabel?: string;
   onUpdated?: () => void;
 };
 
@@ -37,6 +38,7 @@ export function TransactionCategorySelect({
   value,
   editable = true,
   className,
+  ariaLabel,
   onUpdated,
 }: TransactionCategorySelectProps) {
   const utils = api.useUtils();
@@ -48,6 +50,7 @@ export function TransactionCategorySelect({
       onSuccess: () => {
         void utils.soa.getStatement.invalidate();
         void utils.soa.getPeriod.invalidate();
+        void utils.overview.stats.invalidate();
         void utils.transactionCategories.listOptions.invalidate();
         onUpdated?.();
       },
@@ -87,6 +90,7 @@ export function TransactionCategorySelect({
           value === CANNOT_ANALYZE_SLUG && "text-muted-foreground",
           className,
         )}
+        aria-label={ariaLabel}
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >

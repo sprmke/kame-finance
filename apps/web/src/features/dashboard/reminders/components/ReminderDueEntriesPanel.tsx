@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DashboardSection } from "@/components/shared/DashboardSection";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { ReceiptBatchUploadProgressDialog } from "@/components/shared/ReceiptBatchUploadProgressDialog";
+import { ReceiptUploadDialogs } from "@/components/shared/ReceiptUploadDialogs";
 import { RemindersContentSkeleton } from "@/components/shared/skeletons";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -298,15 +298,7 @@ export function ReminderDueEntriesPanel() {
         }}
       />
 
-      <ReceiptBatchUploadProgressDialog
-        open={receiptUpload.progressOpen}
-        onOpenChange={receiptUpload.handleProgressOpenChange}
-        jobs={receiptUpload.cardJobs}
-        options={receiptUpload.uploadOptions}
-        isPending={receiptUpload.isPending}
-        batchProgress={receiptUpload.batchProgress}
-        onComplete={receiptUpload.handleProgressComplete}
-      />
+      <ReceiptUploadDialogs flow={receiptUpload} />
 
       {status && !isLoading && dueItems.length > 0 && (
         <Card className="border-border/80 shadow-card">
@@ -382,13 +374,17 @@ export function ReminderDueEntriesPanel() {
                       : undefined
                   }
                 />
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid items-stretch gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {group.items.map((entry) => (
                     <DueEntryCard
                       key={entry.id}
                       entry={entry}
                       reminderStatus={statusByDueId.get(entry.id)}
-                      showCardMeta={groupMode !== "card"}
+                      reserveScheduleRow={group.items.some(
+                        (item) =>
+                          !item.paidAt &&
+                          Boolean(statusByDueId.get(item.id)?.statusLabel),
+                      )}
                       disabled={actionPending}
                       onMarkPaid={() => setMarkPaidChoiceEntry(entry)}
                       onMarkUnpaid={() => setConfirmUnpaidEntry(entry)}

@@ -33,22 +33,31 @@ type DueEntryCardProps = {
     statusLabel: string;
     status: string;
   };
-  showCardMeta?: boolean;
   onMarkPaid?: () => void;
   onMarkUnpaid?: () => void;
   onViewPayment?: () => void;
   paymentCount?: number;
+  /** Keep the schedule row’s height when a sibling card in the group has one. */
+  reserveScheduleRow?: boolean;
   disabled?: boolean;
 };
+
+function displayDueAmount(value: string | null | undefined): string {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed || trimmed === "—" || trimmed === "–" || trimmed === "-") {
+    return "-";
+  }
+  return trimmed;
+}
 
 export function DueEntryCard({
   entry,
   reminderStatus,
-  showCardMeta = true,
   onMarkPaid,
   onMarkUnpaid,
   onViewPayment,
   paymentCount = 0,
+  reserveScheduleRow = false,
   disabled,
 }: DueEntryCardProps) {
   const paid = Boolean(entry.paidAt);
@@ -57,10 +66,17 @@ export function DueEntryCard({
   const title = formatDueCardTitle(entry);
   const cardLabel = dueCardLabel(entry);
   const showCardLabel = cardLabel !== title && !title.includes(cardLabel);
+  const canViewPayment = paymentCount > 0 && Boolean(onViewPayment);
+  const scheduleLabel = !paid ? reminderStatus?.statusLabel : null;
 
   return (
-    <Card className={cn("border-border/80 shadow-card", paid && "opacity-90")}>
-      <CardHeader className="flex flex-row items-start justify-between gap-2 pb-2">
+    <Card
+      className={cn(
+        "flex h-full flex-col border-border/80 shadow-card",
+        paid && "opacity-90",
+      )}
+    >
+      <CardHeader className="flex shrink-0 flex-row items-start justify-between gap-2 pb-2">
         <div className="min-w-0 space-y-0.5">
           <CardTitle
             className="truncate font-display text-sm font-semibold leading-snug"
@@ -88,58 +104,66 @@ export function DueEntryCard({
                   : "Unpaid"
           }
           variant={
-            paid ? "success" : awaitingStatement && !soaMissing ? "muted" : "warning"
+            paid
+              ? "success"
+              : awaitingStatement && !soaMissing
+                ? "muted"
+                : "warning"
           }
         />
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex flex-1 flex-col gap-3">
         {soaMissing ? <MissingSoaNotice /> : null}
-        {paid && onViewPayment ? (
+        {scheduleLabel ? (
+          <StatusBadge
+            label={scheduleLabel}
+            variant={statusVariant(reminderStatus?.status ?? "muted")}
+            className="h-11 w-full justify-center truncate px-3 text-center text-sm font-medium"
+          />
+        ) : reserveScheduleRow ? (
+          <div className="h-11" aria-hidden />
+        ) : null}
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Minimum</span>
+            <span className="font-medium tabular-nums">
+              {displayDueAmount(entry.minimumDue)}
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="text-muted-foreground">Total due</span>
+            <span className="font-semibold tabular-nums">
+              {displayDueAmount(entry.totalDue)}
+            </span>
+          </div>
+        </div>
+        <div className="mt-auto flex flex-col gap-2">
           <ViewPaymentReceiptButton
             count={paymentCount}
-            onClick={onViewPayment}
+            disabled={!canViewPayment}
+            onClick={canViewPayment ? onViewPayment : undefined}
           />
-        ) : reminderStatus && !paid ? (
-          <StatusBadge
-            label={reminderStatus.statusLabel}
-            variant={statusVariant(reminderStatus.status)}
-            className="w-full justify-center truncate py-1"
-          />
-        ) : null}
-        {showCardMeta && !awaitingStatement && (
-          <>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Minimum</span>
-              <span className="font-medium">{entry.minimumDue}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total due</span>
-              <span className="font-semibold">{entry.totalDue}</span>
-            </div>
-          </>
-        )}
-        {awaitingStatement ? null : paid ? (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={onMarkUnpaid}
-            disabled={disabled}
-          >
-            <RotateCcw className="mr-2 h-3 w-3" />
-            Mark unpaid
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            className="w-full"
-            onClick={onMarkPaid}
-            disabled={disabled}
-          >
-            <CheckCircle2 className="mr-2 h-3 w-3" />
-            Mark paid
-          </Button>
-        )}
+          {paid ? (
+            <Button
+              variant="outline"
+              className="h-11 w-full"
+              onClick={onMarkUnpaid}
+              disabled={disabled}
+            >
+              <RotateCcw />
+              Mark unpaid
+            </Button>
+          ) : (
+            <Button
+              className="h-11 w-full"
+              onClick={onMarkPaid}
+              disabled={disabled || awaitingStatement}
+            >
+              <CheckCircle2 />
+              Mark paid
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
