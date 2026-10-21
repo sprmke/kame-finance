@@ -76,6 +76,39 @@ export const BANK_ISSUERS = PH_BANK_ISSUERS.map((entry) => entry.id) as [
   ...BankIssuer[],
 ];
 
+/**
+ * Card networks issued in the Philippines. BDO issues all six; other banks
+ * issue a subset (most commonly Visa and Mastercard).
+ */
+export const CARD_NETWORKS = [
+  "visa",
+  "mastercard",
+  "amex",
+  "jcb",
+  "unionpay",
+  "diners",
+] as const;
+
+export type CardNetwork = (typeof CARD_NETWORKS)[number];
+
+export const CARD_NETWORK_LABELS: Record<CardNetwork, string> = {
+  visa: "Visa",
+  mastercard: "Mastercard",
+  amex: "American Express",
+  jcb: "JCB",
+  unionpay: "UnionPay",
+  diners: "Diners Club",
+};
+
+export function normalizeCardNetwork(
+  value: string | null | undefined,
+): CardNetwork | null {
+  if (!value) return null;
+  return (CARD_NETWORKS as readonly string[]).includes(value)
+    ? (value as CardNetwork)
+    : null;
+}
+
 const BANK_ISSUER_SET = new Set<string>(BANK_ISSUERS);
 
 export const BANK_ISSUER_LABELS: Record<BankIssuer, string> =
@@ -321,6 +354,8 @@ export const creditCards = pgTable(
     dueDay: integer("due_day"),
     /** Hex accent color (#RRGGBB) for SOA and card UI. */
     color: varchar("color", { length: 7 }),
+    /** Card network (Visa, Mastercard, and the other PH-issued brands). */
+    cardNetwork: varchar("card_network", { length: 32 }),
     /** Days before due date to start reminders (null = use global default). */
     reminderWindowDays: integer("reminder_window_days"),
     /** Minutes between pings while in window (default once per day). */
@@ -345,6 +380,10 @@ export const creditCards = pgTable(
     check(
       "credit_cards_statement_day_check",
       sql`${table.statementDay} between 1 and 31`,
+    ),
+    check(
+      "credit_cards_card_network_check",
+      sql`${table.cardNetwork} is null or ${table.cardNetwork} in ('visa', 'mastercard', 'amex', 'jcb', 'unionpay', 'diners')`,
     ),
     index("credit_cards_user_idx").on(table.userId),
     index("credit_cards_issuer_last4_idx").on(table.issuer, table.last4),

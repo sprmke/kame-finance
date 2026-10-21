@@ -11,6 +11,7 @@ import { db } from "@/lib/db";
 import {
   BANK_ISSUERS,
   BANK_ISSUER_LABELS,
+  CARD_NETWORKS,
   accounts,
   creditCards,
   normalizeCardColor,
@@ -156,6 +157,7 @@ const createCardSchema = z.object({
     .regex(/^#[0-9A-Fa-f]{6}$/, "Color must be a hex value like #E8720C")
     .optional()
     .nullable(),
+  cardNetwork: z.enum(CARD_NETWORKS).optional().nullable(),
   reminderWindowDays: z.number().int().min(0).max(60).optional().nullable(),
   reminderIntervalMinutes: z.number().int().min(60).max(1440).optional(),
   notes: z.string().optional(),
@@ -300,6 +302,7 @@ export const creditCardService = {
         dueDay: data.dueDay,
         statementDay: data.statementDay ?? null,
         color: normalizeCardColor(data.color, data.issuer),
+        cardNetwork: data.cardNetwork ?? null,
         reminderWindowDays: data.reminderWindowDays ?? null,
         reminderIntervalMinutes: data.reminderIntervalMinutes ?? 1440,
         notes: data.notes,
@@ -469,6 +472,7 @@ export const creditCardService = {
                 (input.issuer ?? existing.issuer) as BankIssuer,
               )
             : undefined,
+        cardNetwork: input.cardNetwork,
         reminderWindowDays: input.reminderWindowDays,
         reminderIntervalMinutes: input.reminderIntervalMinutes,
         notes: input.notes,

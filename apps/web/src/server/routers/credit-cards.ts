@@ -2,11 +2,12 @@ import { z } from "zod";
 
 import { TRPCError } from "@trpc/server";
 
-import { BANK_ISSUERS } from "@/lib/db/schema/credit-cards";
+import { BANK_ISSUERS, CARD_NETWORKS } from "@/lib/db/schema/credit-cards";
 import { protectedProcedure, router } from "@/server/trpc";
 import { creditCardService } from "@/server/services/credit-card.service";
 
 const bankIssuerSchema = z.enum(BANK_ISSUERS);
+const cardNetworkSchema = z.enum(CARD_NETWORKS).optional().nullable();
 
 const reminderFieldsSchema = {
   reminderWindowDays: z.number().int().min(0).max(60).optional().nullable(),
@@ -48,6 +49,7 @@ export const creditCardsRouter = router({
           .regex(/^#[0-9A-Fa-f]{6}$/)
           .optional()
           .nullable(),
+        cardNetwork: cardNetworkSchema,
         ...reminderFieldsSchema,
       }),
     )
@@ -73,6 +75,7 @@ export const creditCardsRouter = router({
           .regex(/^#[0-9A-Fa-f]{6}$/)
           .optional()
           .nullable(),
+        cardNetwork: cardNetworkSchema,
         isActive: z.boolean().optional(),
         ...reminderFieldsSchema,
       }),

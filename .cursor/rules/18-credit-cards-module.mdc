@@ -44,7 +44,10 @@ Order of operations (`lib/soa/run.ts`):
 2. Gmail search per bank → download PDFs
 3. Unlock PDF with card password(s)
 4. Assess extracted text quality (`lib/soa/text-quality.ts`); auto-OCR fallback
-   (`lib/soa/pdf-ocr.ts`) for **any** issuer when text looks unusable — override via
+   (`lib/soa/pdf-ocr.ts`) for **any** issuer when text looks unusable. Box-drawing
+   section rules (UnionBank `─` lines) are dividers, so that text layer is kept.
+   RCBC total due is the amount beside `MINIMUM PAYMENT DUE`, not the largest
+   nearby figure (spend-analyzer year-to-date). Override via
    `SOA_OCR_FORCE` / `SOA_OCR_DISABLE` (`lib/soa/ocr-env.ts`); legacy `BPI_OCR*` are
    BPI-only aliases. On Vercel, Tesseract WASM is vendored by `prepare-server-native`
    and OCR is time-capped so a missing core cannot stall the run.
@@ -68,7 +71,7 @@ Order of operations (`lib/soa/run.ts`):
 | Input | Behavior |
 | ----- | -------- |
 | `xxxx - month year - paid` | Text command (Telegram or API) |
-| Receipt image | AI vision → amount recorded; partial payments allowed; sums multiple receipts per due entry → marks paid when min/total due met |
+| Receipt image | AI vision → amount recorded. One file records that payment. Several files ask whether they are one payment or separate payments. Separate payments sum. One payment counts the set once. Marks paid when the minimum or total due is met |
 | `xxxx - month year - unpaid` | Reverse paid state |
 
 Side effects: update due entry, suppress/restore reminder fingerprints, patch calendar events.
@@ -79,7 +82,9 @@ Side effects: update due entry, suppress/restore reminder fingerprints, patch ca
 - API keys: **Settings only** (`ai_api_keys` table) — never `GEMINI_*` / `GROQ_*` env vars
 - Extract card last-4, amount, bank/wallet from PH e-wallet/bank screenshots
 - Amount must meet minimum due (or total when `RECEIPT_REQUIRE_TOTAL_DUE=1`) to mark paid and silence reminders; partial amounts are saved and summed across receipts until threshold is met
-- Same card and statement period display as one receipt card. The viewer pages through each image. AI validation of that set returns one summary and checklist; each image keeps its own amount so the due total is not counted twice
+- **Add receipt** on a receipts card passes that statement’s due entry. Later files stay on that bank and month after the due is already paid. A separate-payment upload adds each amount. A one-payment upload counts that set once. The page-level upload keeps matching a card on its own and leaves a fully paid due unchanged
+- Several files in one upload ask **One payment** or **Separate payments** on Receipts, Reminders, and an SOA period. One file skips the choice
+- Same card and statement period display as one receipt card. The viewer pages through each image
 - Store uploads in Supabase Storage under `receipts/{userId}/`
 
 ## Security

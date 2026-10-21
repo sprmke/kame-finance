@@ -57,6 +57,8 @@ import { api } from "@/lib/api/client";
 import { normalizeCardLast4 } from "@/lib/due/normalize";
 import { useListPagination } from "@/lib/hooks/use-list-pagination";
 import {
+  CARD_NETWORK_LABELS,
+  CARD_NETWORKS,
   DEFAULT_CARD_COLORS,
   DEFAULT_SOA_SUBJECTS,
   defaultSoaSubject,
@@ -65,9 +67,11 @@ import {
   formatBankIssuer,
   normalizeBankIssuer,
   normalizeCardColor,
+  normalizeCardNetwork,
   normalizeReminderIntervalMinutes,
   REMINDER_INTERVALS,
   type BankIssuer,
+  type CardNetwork,
   type ReminderIntervalMinutes,
 } from "@/lib/db/schema/credit-cards";
 
@@ -149,6 +153,7 @@ export function CreditCardsPage() {
   const [notes, setNotes] = useState("");
   const [soaSubject, setSoaSubject] = useState(defaultSoaSubject("bpi"));
   const [color, setColor] = useState(DEFAULT_CARD_COLORS.bpi);
+  const [cardNetwork, setCardNetwork] = useState<CardNetwork | null>(null);
   const [googleAccountId, setGoogleAccountId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [formPopulatedForId, setFormPopulatedForId] = useState<string | null>(
@@ -205,6 +210,7 @@ export function CreditCardsPage() {
         normalizeBankIssuer(editingCard.issuer),
       ) ?? DEFAULT_CARD_COLORS.bpi,
     );
+    setCardNetwork(normalizeCardNetwork(editingCard.cardNetwork));
     setGoogleAccountId(editingCard.googleAccountId ?? null);
     if (editingCard.secretsUnavailable) {
       toast.error("PDF password could not be decrypted. Re-enter it and save.");
@@ -226,6 +232,7 @@ export function CreditCardsPage() {
     setNotes("");
     setSoaSubject(defaultSoaSubject("bpi"));
     setColor(DEFAULT_CARD_COLORS.bpi);
+    setCardNetwork(null);
     setGoogleAccountId(null);
   }
 
@@ -244,6 +251,7 @@ export function CreditCardsPage() {
       notes,
       soaSubject,
       color,
+      cardNetwork,
       googleAccountId,
     };
   }
@@ -262,6 +270,7 @@ export function CreditCardsPage() {
     setNotes(draft.notes);
     setSoaSubject(draft.soaSubject);
     setColor(draft.color);
+    setCardNetwork(normalizeCardNetwork(draft.cardNetwork));
     setGoogleAccountId(draft.googleAccountId);
   }
 
@@ -298,6 +307,7 @@ export function CreditCardsPage() {
       notes: notes || undefined,
       soaSubject: normalizeSoaSubject(soaSubject, issuer),
       color: normalizeCardColor(color, issuer),
+      cardNetwork,
       googleAccountId,
     };
   }
@@ -466,6 +476,8 @@ export function CreditCardsPage() {
                 setSoaSubject={setSoaSubject}
                 color={color}
                 setColor={setColor}
+                cardNetwork={cardNetwork}
+                setCardNetwork={setCardNetwork}
                 googleAccountId={googleAccountId}
                 setGoogleAccountId={setGoogleAccountId}
                 onBeforeConnectOtherGmail={persistAddCardDraftBeforeConnect}
@@ -680,6 +692,8 @@ export function CreditCardsPage() {
                 setSoaSubject={setSoaSubject}
                 color={color}
                 setColor={setColor}
+                cardNetwork={cardNetwork}
+                setCardNetwork={setCardNetwork}
                 googleAccountId={googleAccountId}
                 setGoogleAccountId={setGoogleAccountId}
                 creditCardId={editingId}
@@ -779,6 +793,8 @@ function CardForm({
   setSoaSubject,
   color,
   setColor,
+  cardNetwork,
+  setCardNetwork,
   googleAccountId,
   setGoogleAccountId,
   creditCardId,
@@ -815,6 +831,8 @@ function CardForm({
   setSoaSubject: (v: string) => void;
   color: string;
   setColor: (v: string) => void;
+  cardNetwork: CardNetwork | null;
+  setCardNetwork: (v: CardNetwork | null) => void;
   googleAccountId: string | null;
   setGoogleAccountId: (v: string | null) => void;
   creditCardId?: string | null;
@@ -927,6 +945,34 @@ function CardForm({
 
         {advancedOpen ? (
           <div className="p-4 space-y-4 rounded-lg border border-border/80 bg-muted/20">
+            <div className="space-y-2">
+              <Label htmlFor={`card-type-${creditCardId ?? "add"}`}>
+                Card type
+              </Label>
+              <Select
+                value={cardNetwork ?? "unset"}
+                onValueChange={(value) =>
+                  setCardNetwork(
+                    value === "unset" ? null : (value as CardNetwork),
+                  )
+                }
+              >
+                <SelectTrigger
+                  id={`card-type-${creditCardId ?? "add"}`}
+                  className="min-h-11"
+                >
+                  <SelectValue placeholder="Not set" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unset">Not set</SelectItem>
+                  {CARD_NETWORKS.map((network) => (
+                    <SelectItem key={network} value={network}>
+                      {CARD_NETWORK_LABELS[network]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label>Contact line</Label>
               <Textarea

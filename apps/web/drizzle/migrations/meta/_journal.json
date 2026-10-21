@@ -43,6 +43,13 @@
       "when": 1787994000000,
       "tag": "0005_credit_cards_statement_day",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787995000000,
+      "tag": "0006_credit_cards_card_network",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,6 @@
 import {
   type BankIssuer,
+  type CardNetwork,
   type ReminderIntervalMinutes,
 } from "@/lib/db/schema/credit-cards";
 
@@ -19,6 +20,7 @@ export type AddCardDraft = {
   notes: string;
   soaSubject: string;
   color: string;
+  cardNetwork: CardNetwork | null;
   googleAccountId: string | null;
 };
 
