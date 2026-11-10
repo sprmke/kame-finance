@@ -4,23 +4,23 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils/cn';
 
 const inputVariants = cva(
-  'flex w-full rounded-lg border bg-background text-foreground ring-offset-background transition-all duration-200 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+  'flex w-full rounded-md border bg-card text-foreground transition-colors duration-120 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45 [&::-webkit-inner-spin-button]:opacity-60',
   {
     variants: {
       variant: {
         default:
-          'border-input hover:border-muted-foreground/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          'border-input hover:border-foreground/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         filled:
-          'border-transparent bg-muted hover:bg-muted/80 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+          'border-transparent bg-muted hover:bg-muted/80 focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         ghost:
           'border-transparent hover:bg-muted focus-visible:bg-muted focus-visible:ring-0',
         error:
-          'border-destructive/50 bg-destructive/5 focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2',
+          'border-destructive bg-card focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       },
       inputSize: {
-        default: 'h-10 px-3 py-2 text-sm',
-        sm: 'h-8 px-2.5 py-1.5 text-xs',
-        lg: 'h-12 px-4 py-3 text-base',
+        default: 'h-10 px-3 text-base sm:text-sm',
+        sm: 'h-9 px-2.5 text-sm',
+        lg: 'h-11 px-3.5 text-base',
       },
     },
     defaultVariants: {

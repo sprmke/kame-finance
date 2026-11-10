@@ -215,7 +215,7 @@ export function RunSoaDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle className="font-display">
+          <DialogTitle className="">
             {showProgress
               ? "Running SOA"
               : showSkipExisting

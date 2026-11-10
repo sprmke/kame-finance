@@ -40,7 +40,7 @@ export function CategoryDrillDownHeader({
         <div className="min-w-0">
           <h3
             id="category-drill-title"
-            className="flex min-w-0 items-center gap-2 font-display text-base font-semibold leading-tight tracking-tight text-foreground"
+            className="flex min-w-0 items-center gap-2 text-base font-semibold leading-tight tracking-tight text-foreground"
           >
             <span
               className="h-2 w-2 shrink-0 rounded-full"
@@ -60,7 +60,7 @@ export function CategoryDrillDownHeader({
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
-          <p className="font-display text-lg font-semibold tabular-nums leading-none text-foreground">
+          <p className="font-numeral text-lg font-semibold tabular-nums leading-none text-foreground">
             {formatPhpAmount(total)}
           </p>
           {sharePct > 0 ? (

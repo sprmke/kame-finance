@@ -162,7 +162,7 @@ import { FeatureListSkeleton } from '@/components/[feature]/feature-list-skeleto
 import { CreateFeatureButton } from '@/components/[feature]/create-feature-button';
 
 export const metadata = {
-  title: 'Features | Property Management',
+  title: 'Features | Kame Finance',
   description: 'Manage your features',
 };
 

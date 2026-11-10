@@ -46,13 +46,13 @@ describe("soa period query", () => {
       "tab=analytics&category=dining",
     );
     expect(soaPeriodHref("period-1", { tab: "overview" })).toBe(
-      "/dashboard/soa/period-1",
+      "/dashboard/statements/period-1",
     );
     expect(
       soaPeriodHref("period-1", {
         tab: "analytics",
         category: "interest_fees",
       }),
-    ).toBe("/dashboard/soa/period-1?tab=analytics&category=interest_fees");
+    ).toBe("/dashboard/statements/period-1?tab=analytics&category=interest_fees");
   });
 });

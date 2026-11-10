@@ -83,7 +83,7 @@ export function CategorizeWithAiProgressDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle className="font-display">
+          <DialogTitle className="">
             Categorizing with AI
           </DialogTitle>
         </DialogHeader>

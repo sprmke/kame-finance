@@ -10,7 +10,7 @@
 | -------- | ----------- |
 | [Tech stack](./tech.md) | Locked Vue/Nuxt tech stack, platform map, port-vs-rewrite, phases |
 | [Features inventory](./features-inventory.md) | Capability checklist — routes, modules, integrations, automations, edge cases |
-| [Design system](./design-system.md) | AtomIQ-style “playful depth” tokens, components, rollout notes for the new UI |
+| [Design system](../../apps/web/DESIGN.md) | The Kalendaryo system used by the current app |
 | [SOA ingestion alternatives](./soa-ingestion-alternatives.md) | Research: replacing the Gmail API (CASA-gated) with a forwarding inbox; Open Finance PH outlook |
 
 ## Related docs (behavior & data)
@@ -24,7 +24,7 @@ Use these when turning features into specs for the rebuild:
 | Schema (today) | [database/schema.md](../database/schema.md) |
 | Tech choices (today — Next.js app) | [architecture/tech-stack.md](../architecture/tech-stack.md) |
 | Tech choices (v2 rebuild) | [tech.md](./tech.md) |
-| Current design (amber SaaS) | [product/design-system.md](../product/design-system.md) |
+| Current design (Kalendaryo) | [apps/web/DESIGN.md](../../apps/web/DESIGN.md) |
 
 ## How to use this folder
 

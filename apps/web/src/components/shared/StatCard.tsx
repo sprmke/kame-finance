@@ -1,58 +1,41 @@
 import { type LucideIcon } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
 
+/**
+ * Figure strip: one ruled panel split into cells (not separate cards).
+ * Wrap StatCards in `statGridClassName`.
+ */
 export const statGridClassName =
-  "grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4";
+  "grid grid-cols-2 overflow-hidden rounded-lg border bg-card xl:grid-cols-4 [&>*]:border-border [&>*:nth-child(odd)]:border-r xl:[&>*]:border-r xl:[&>*:last-child]:border-r-0 [&>*:nth-child(-n+2)]:border-b xl:[&>*]:border-b-0";
 
 interface StatCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
+  /** Kept for API compatibility; figures carry no icon tiles. */
   icon?: LucideIcon;
   trend?: "up" | "down" | "neutral";
   className?: string;
 }
 
-export function StatCard({
-  title,
-  value,
-  subtitle,
-  icon: Icon,
-  className,
-}: StatCardProps) {
+export function StatCard({ title, value, subtitle, className }: StatCardProps) {
+  const text = String(value);
+  const isAmount = /\d/.test(text) && /[.,]\d{2}$/.test(text);
   return (
-    <Card
-      className={cn(
-        "relative overflow-hidden border-border/80 shadow-card transition-shadow hover:shadow-card-hover",
-        className,
-      )}
-    >
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-[hsl(var(--chart-2))] to-primary/50"
-        aria-hidden
-      />
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 px-3 pb-1 pt-3">
-        <CardTitle className="text-xs font-medium leading-snug text-muted-foreground sm:text-sm">
-          {title}
-        </CardTitle>
-        {Icon ? (
-          <div className="rounded-md bg-primary/10 p-1.5 text-primary">
-            <Icon className="h-3.5 w-3.5" aria-hidden />
-          </div>
+    <div className={cn("min-w-0 px-4 py-3", className)}>
+      <p className="text-xs font-medium text-muted-foreground">{title}</p>
+      <p className="font-numeral mt-1.5 break-words text-[1.375rem] leading-none text-foreground">
+        {isAmount ? (
+          <span className="mr-0.5 font-sans text-[0.62em] font-medium opacity-80">₱</span>
         ) : null}
-      </CardHeader>
-      <CardContent className="px-3 pb-3 pt-0">
-        <div className="break-words font-display text-lg font-semibold tabular-nums leading-none text-foreground sm:text-xl">
-          {value}
-        </div>
-        {subtitle ? (
-          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-            {subtitle}
-          </p>
-        ) : null}
-      </CardContent>
-    </Card>
+        {text}
+      </p>
+      {subtitle ? (
+        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+          {subtitle}
+        </p>
+      ) : null}
+    </div>
   );
 }

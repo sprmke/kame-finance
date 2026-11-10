@@ -31,7 +31,7 @@ type BankIssuerSelectProps = {
 };
 
 const GROUP_HEADER_CLASS =
-  "sticky top-0 z-10 border-b border-border/50 bg-popover/95 px-3 py-2 pl-3 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground backdrop-blur-sm";
+  "sticky top-0 z-10 border-b border-border/50 bg-popover/95 px-3 py-2 pl-3 text-2xs font-bold uppercase tracking-[0.12em] text-muted-foreground backdrop-blur-sm";
 
 export function BankIssuerSelect({
   id,

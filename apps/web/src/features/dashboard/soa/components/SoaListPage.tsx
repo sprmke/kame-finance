@@ -2,31 +2,26 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  CalendarDays,
-  CreditCard,
-  FileText,
-  PhilippinePeso,
-  Play,
-  Sparkles,
-} from "lucide-react";
+import { MoreHorizontal, Play, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DashboardPageHeader } from "@/components/shared/DashboardPageHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { ListViewToolbar } from "@/components/shared/ListViewToolbar";
-import { ViewModeLayout } from "@/components/shared/ViewModeLayout";
+import { Amount } from "@/components/shared/Amount";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { FigureLine } from "@/components/shared/Ledger";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { SoaListContentSkeleton } from "@/components/shared/skeletons";
-import { PageActionBar } from "@/components/shared/PageActionBar";
-import { StatCard, statGridClassName } from "@/components/shared/StatCard";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { api } from "@/lib/api/client";
 import { startNavigationProgress } from "@/lib/navigation-progress";
-import { usePersistedViewMode } from "@/hooks/use-persisted-view-mode";
-import { useListPagination } from "@/lib/hooks/use-list-pagination";
-import { formatPhpAmount } from "@/lib/utils/format-money";
 import {
   dedupedStatementsMessage,
   deletedStatementsMessage,
@@ -34,8 +29,8 @@ import {
 
 import { EditSoaPeriodDialog } from "./EditSoaPeriodDialog";
 import { RunSoaDialog } from "./RunSoaDialog";
-import { SoaPeriodCard } from "./SoaPeriodCard";
-import { SoaPeriodTable, type SoaPeriodRow } from "./SoaPeriodTable";
+import { SoaPeriodList } from "./SoaPeriodList";
+import type { SoaPeriodRow } from "./SoaPeriodTable";
 import { useSoaRunDialog } from "../hooks/use-soa-run-dialog";
 import { periodToRunInitial } from "../lib/run-soa-progress";
 import { computeSoaListStats } from "../lib/soa-utils";
@@ -43,11 +38,8 @@ import { computeSoaListStats } from "../lib/soa-utils";
 export function SoaListPage() {
   const router = useRouter();
   const utils = api.useUtils();
-  const { data: periods, isLoading } = api.soa.listPeriods.useQuery();
-  const { viewMode, setViewMode } = usePersistedViewMode(
-    "kame-finance:soa-view-mode",
-  );
-  const pagination = useListPagination(periods ?? [], 7);
+  const periodsQuery = api.soa.listPeriods.useQuery();
+  const { data: periods, isLoading } = periodsQuery;
 
   const listStats = useMemo(
     () => (periods?.length ? computeSoaListStats(periods) : null),
@@ -70,7 +62,7 @@ export function SoaListPage() {
     onAfterRunComplete: (periodId) => {
       if (periodId) {
         startNavigationProgress();
-        router.push(ROUTES.dashboard.soaPeriod(periodId));
+        router.push(ROUTES.dashboard.statementPeriod(periodId));
       }
     },
   });
@@ -101,28 +93,58 @@ export function SoaListPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <DashboardPageHeader
-        title="Statement of account"
+        title="Statements"
         actions={
-          <PageActionBar
-            secondary={
-              <Button
-                variant="outline"
-                disabled={dedupe.isPending}
-                onClick={() => dedupe.mutate()}
-              >
-                <Sparkles className="mr-2 h-4 w-4" />
-                Clean up duplicates
-              </Button>
-            }
-            primary={
-              <Button className="shadow-glow" onClick={() => openRun()}>
-                <Play className="mr-2 h-4 w-4" />
-                Run SOA
-              </Button>
-            }
-          />
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="More statement actions">
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem disabled={dedupe.isPending} onSelect={() => dedupe.mutate()}>
+                  <Sparkles />
+                  Clean up duplicates
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button onClick={() => openRun()}>
+              <Play />
+              Run SOA
+            </Button>
+          </>
+        }
+        meta={
+          listStats ? (
+            <FigureLine
+              items={[
+                {
+                  key: "due",
+                  figure: <Amount value={listStats.totalDue} size="lg" />,
+                  label: "Latest total due",
+                },
+                {
+                  key: "statements",
+                  figure: <span className="font-numeral text-2xl leading-none">{listStats.statements}</span>,
+                  label: "Statements",
+                },
+                {
+                  key: "last-run",
+                  figure: (
+                    <span className="font-numeral text-2xl leading-none">
+                      {listStats.lastRunAt
+                        ? listStats.lastRunAt.toLocaleDateString("en-PH", { month: "short", day: "numeric" })
+                        : "—"}
+                    </span>
+                  ),
+                  label: "Last run",
+                },
+              ]}
+            />
+          ) : null
         }
       />
 
@@ -137,7 +159,7 @@ export function SoaListPage() {
       <ConfirmDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
-        title="Delete SOA period?"
+        title="Delete this statement month?"
         description="Statements in this date range will be removed."
         confirmLabel="Delete"
         variant="destructive"
@@ -146,85 +168,32 @@ export function SoaListPage() {
         }}
       />
 
-      {isLoading ? (
+      {periodsQuery.error && !periods ? (
+        <ErrorState
+          title="Couldn't load statements"
+          error={periodsQuery.error}
+          onRetry={() => void periodsQuery.refetch()}
+        />
+      ) : isLoading ? (
         <SoaListContentSkeleton />
       ) : !periods?.length ? (
         <EmptyState
-          icon={<FileText className="h-6 w-6 text-muted-foreground" />}
-          title="No SOA runs yet"
-          message="Run SOA to fetch and parse credit card statements."
+          title="No statements yet"
+          message="Run SOA to fetch this month's statements from Gmail."
+          action={
+            <Button onClick={() => openRun()}>
+              <Play />
+              Run SOA
+            </Button>
+          }
         />
       ) : (
-        <>
-          {listStats && (
-            <div className={statGridClassName}>
-              <StatCard
-                title="SOA runs"
-                value={listStats.runs}
-                icon={FileText}
-              />
-              <StatCard
-                title="Statements"
-                value={listStats.statements}
-                icon={CreditCard}
-              />
-              <StatCard
-                title="Latest total due"
-                value={formatPhpAmount(listStats.totalDue)}
-                icon={PhilippinePeso}
-              />
-              <StatCard
-                title="Last run"
-                value={
-                  listStats.lastRunAt
-                    ? listStats.lastRunAt.toLocaleDateString("en-PH", {
-                        month: "short",
-                        day: "numeric",
-                      })
-                    : "—"
-                }
-                icon={CalendarDays}
-              />
-            </div>
-          )}
-
-          <ListViewToolbar
-            total={pagination.total}
-            itemLabel="SOAs"
-            page={pagination.page}
-            pageCount={pagination.pageCount}
-            rangeStart={pagination.rangeStart}
-            rangeEnd={pagination.rangeEnd}
-            hasMultiplePages={pagination.hasMultiplePages}
-            onPageChange={pagination.setPage}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-          />
-          <ViewModeLayout
-            viewMode={viewMode}
-            table={
-              <SoaPeriodTable
-                periods={pagination.items}
-                onRerun={openRerun}
-                onEdit={setEditId}
-                onDelete={setDeleteId}
-              />
-            }
-            grid={
-              <div className="grid auto-rows-fr gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {pagination.items.map((period) => (
-                  <SoaPeriodCard
-                    key={period.id}
-                    period={period}
-                    onRerun={openRerun}
-                    onEdit={setEditId}
-                    onDelete={setDeleteId}
-                  />
-                ))}
-              </div>
-            }
-          />
-        </>
+        <SoaPeriodList
+          periods={periods}
+          onRerun={openRerun}
+          onEdit={setEditId}
+          onDelete={setDeleteId}
+        />
       )}
     </div>
   );

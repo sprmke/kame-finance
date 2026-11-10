@@ -253,7 +253,7 @@ export function SoaPeriodAnalyticsTab({
                   Back
                 </Button>
               ) : null}
-              <CardTitle className="font-display text-base">
+              <CardTitle className="text-base">
                 Category breakdown
               </CardTitle>
             </div>
@@ -304,7 +304,7 @@ export function SoaPeriodAnalyticsTab({
 
         <Card className="border-border/80 xl:col-span-2">
           <CardHeader>
-            <CardTitle className="font-display text-base">
+            <CardTitle className="text-base">
               Distribution
             </CardTitle>
           </CardHeader>
@@ -332,7 +332,7 @@ export function SoaPeriodAnalyticsTab({
       {tips.length > 0 && (
         <Card className="border-border/80">
           <CardHeader className="pb-3">
-            <CardTitle className="font-display text-base">Tips</CardTitle>
+            <CardTitle className="text-base">Tips</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <ul className="divide-y divide-border/60">

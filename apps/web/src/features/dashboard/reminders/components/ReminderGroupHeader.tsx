@@ -16,17 +16,17 @@ const PAID_STATUS_CONFIG: Record<
 > = {
   all_paid: {
     Icon: CheckCircle2,
-    className: "text-[hsl(var(--success))]",
+    className: "text-success",
     label: "All paid",
   },
   partial: {
     Icon: Clock3,
-    className: "text-[hsl(var(--warning))]",
+    className: "text-muted-foreground",
     label: "Partially paid",
   },
   unpaid: {
     Icon: AlertCircle,
-    className: "text-[hsl(var(--warning))]",
+    className: "text-due",
     label: "Unpaid",
   },
 };
@@ -44,9 +44,7 @@ export function ReminderGroupHeader({
 }: ReminderGroupHeaderProps) {
   if (!showPaidSummary || !paidSummary || paidSummary.totalCount === 0) {
     return (
-      <h3 className="border-b border-border/60 pb-2 font-display text-base font-semibold">
-        {label}
-      </h3>
+      <h3 className="px-1 text-sm font-bold">{label}</h3>
     );
   }
 
@@ -55,8 +53,8 @@ export function ReminderGroupHeader({
   const { Icon, className, label: statusLabel } = PAID_STATUS_CONFIG[status];
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border/60 pb-2">
-      <h3 className="font-display text-base font-semibold">{label}</h3>
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-1">
+      <h3 className="text-sm font-bold">{label}</h3>
       <div
         className={cn(
           "flex items-center gap-1.5 text-sm font-medium",

@@ -4,7 +4,7 @@ services:
     container_name: kame-finance-postgres
     restart: unless-stopped
     ports:
-      # 5432 is often taken by other local projects (DoctorDesk). 5433 is kame-lends.
+      # Host port 5434 keeps 5432/5433 free for other local Postgres instances.
       - "5434:5432"
     environment:
       POSTGRES_USER: postgres

@@ -1,6 +1,6 @@
 ---
 name: tanstack-table
-description: TanStack Table v8 skill for data tables: column definitions, sorting, filtering, pagination, and actions column. Use when building bookings table, payments table, or any list that needs columns and row actions.
+description: "TanStack Table v8 skill for data tables: column definitions, sorting, filtering, pagination, and actions column. Use when building bookings table, payments table, or any list that needs columns and row actions."
 ---
 
 # TanStack Table v8 Skill

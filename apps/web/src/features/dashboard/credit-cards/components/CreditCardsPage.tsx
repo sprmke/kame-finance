@@ -1,41 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  CreditCard,
-  HelpCircle,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { HelpCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DashboardPageHeader } from "@/components/shared/DashboardPageHeader";
-import { PageActionBar } from "@/components/shared/PageActionBar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { GoogleAccountSelect } from "@/components/shared/GoogleAccountSelect";
-import { ListViewToolbar } from "@/components/shared/ListViewToolbar";
-import { ViewModeLayout } from "@/components/shared/ViewModeLayout";
 import { CardFormSkeleton } from "@/components/shared/skeletons";
-import { MissingSoaBadge } from "@/components/shared/MissingSoaBadge";
-import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -55,7 +35,6 @@ import {
 } from "@/components/ui/tooltip";
 import { api } from "@/lib/api/client";
 import { normalizeCardLast4 } from "@/lib/due/normalize";
-import { useListPagination } from "@/lib/hooks/use-list-pagination";
 import {
   CARD_NETWORK_LABELS,
   CARD_NETWORKS,
@@ -80,13 +59,11 @@ import {
   formatReminderSummary,
 } from "@/lib/reminders/reminder-labels";
 import { BankIssuerSelect } from "./BankIssuerSelect";
-import { CreditCardsTable } from "./CreditCardsTable";
+import { CardList } from "./CardList";
 import { CardColorPicker } from "./CardColorPicker";
 import { CreditCardsLoadingView } from "./CreditCardsLoadingView";
 import { useHasHydrated } from "@/hooks/use-has-hydrated";
 import { useGoogleLinkCallback } from "@/hooks/use-google-link-callback";
-import { usePersistedViewMode } from "@/hooks/use-persisted-view-mode";
-import { resolveCardAccent } from "@/lib/credit-cards/card-accent";
 import {
   clearAddCardDraft,
   loadAddCardDraft,
@@ -100,10 +77,6 @@ export function CreditCardsPage() {
   const hasHydrated = useHasHydrated();
   const utils = api.useUtils();
   const { data: cards, isLoading } = api.creditCards.list.useQuery();
-  const { viewMode, setViewMode } = usePersistedViewMode(
-    "kame-finance:credit-cards-view-mode",
-  );
-  const pagination = useListPagination(cards ?? [], 7);
 
   const create = api.creditCards.create.useMutation({
     onSuccess: () => {
@@ -424,30 +397,30 @@ export function CreditCardsPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <DashboardPageHeader
-        title="Credit cards"
+        title="Cards"
         actions={
-          <PageActionBar
-            primary={
-          <Dialog
-            open={addOpen}
-            onOpenChange={(open) => {
-              setAddOpen(open);
-              if (open) {
-                resetForm();
-                setFormSessionKey((key) => key + 1);
-              }
+          <Button
+            onClick={() => {
+              resetForm();
+              setFormSessionKey((key) => key + 1);
+              setAddOpen(true);
             }}
           >
-            <DialogTrigger asChild>
-              <Button>Add card</Button>
-            </DialogTrigger>
-            <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Add credit card</DialogTitle>
-              </DialogHeader>
-              <CardForm
+            <Plus />
+            Add card
+          </Button>
+        }
+      />
+
+      <Sheet open={addOpen} onOpenChange={setAddOpen}>
+        <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-lg">
+          <SheetHeader className="border-b px-5 py-4">
+            <SheetTitle>Add card</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-5 py-5">
+            <CardForm
                 key={`add-${formSessionKey}`}
                 issuer={issuer}
                 setIssuer={setIssuer}
@@ -485,169 +458,32 @@ export function CreditCardsPage() {
                 pending={create.isPending}
                 submitLabel="Add card"
               />
-            </DialogContent>
-          </Dialog>
-            }
-          />
-        }
-      />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {!cards?.length ? (
         <EmptyState
-          icon={<CreditCard className="w-6 h-6 text-muted-foreground" />}
-          title="No cards configured"
-          message="Add your first credit card to start running SOA and due reminders."
+          title="No cards yet"
+          message="Add a card with its statement and due days to start tracking bills."
+          action={
+            <Button
+              onClick={() => {
+                resetForm();
+                setFormSessionKey((key) => key + 1);
+                setAddOpen(true);
+              }}
+            >
+              <Plus />
+              Add card
+            </Button>
+          }
         />
       ) : (
-        <>
-          <ListViewToolbar
-            total={pagination.total}
-            itemLabel="cards"
-            page={pagination.page}
-            pageCount={pagination.pageCount}
-            rangeStart={pagination.rangeStart}
-            rangeEnd={pagination.rangeEnd}
-            hasMultiplePages={pagination.hasMultiplePages}
-            onPageChange={pagination.setPage}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-          />
-          <ViewModeLayout
-            viewMode={viewMode}
-            table={
-              <CreditCardsTable
-                cards={pagination.items}
-                onEdit={(card) => openEdit(card.id)}
-                onDelete={setDeleteId}
-              />
-            }
-            grid={
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {pagination.items.map((card) => {
-                  const accent = resolveCardAccent(card.issuer, card.color);
-                  return (
-                    <Card
-                      key={card.id}
-                      className="overflow-hidden transition-all group border-border/80 shadow-card hover:shadow-card-hover"
-                    >
-                      <div
-                        className="h-1"
-                        style={{ backgroundColor: accent.color }}
-                      />
-                      <CardHeader className="pb-3">
-                        <div className="flex gap-2 justify-between items-start">
-                          <div className="space-y-1 min-w-0">
-                            <CardTitle className="text-lg leading-tight font-display">
-                              {card.label ?? formatBankIssuer(card.issuer)}
-                            </CardTitle>
-                            <p className="text-sm tabular-nums text-muted-foreground">
-                              •••• {card.last4}
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              <StatusBadge
-                                label={card.isActive ? "Active" : "Inactive"}
-                                variant={card.isActive ? "success" : "muted"}
-                              />
-                              {card.soaMissing ? <MissingSoaBadge /> : null}
-                            </div>
-                          </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-10 w-10 shrink-0"
-                                aria-label="Card actions"
-                              >
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => openEdit(card.id)}
-                              >
-                                <Pencil className="mr-2 w-4 h-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => setDeleteId(card.id)}
-                              >
-                                <Trash2 className="mr-2 w-4 h-4" />
-                                Remove
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                              Reminders
-                            </p>
-                            <p className="font-medium leading-snug">
-                              {formatReminderSummary(
-                                card.reminderWindowDays,
-                                card.reminderIntervalMinutes,
-                              )}
-                            </p>
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                              Due date
-                            </p>
-                            <p className="font-medium leading-snug">
-                              {card.statementDay || card.dueDay ? (
-                                <>
-                                  {card.statementDay
-                                    ? `Stmt ${card.statementDay}`
-                                    : null}
-                                  {card.statementDay && card.dueDay ? " · " : null}
-                                  {card.dueDay ? `Due ${card.dueDay}` : "Due not set"}
-                                </>
-                              ) : (
-                                "Not set"
-                              )}
-                            </p>
-                          </div>
-                          {card.googleAccountLabel ? (
-                            <div className="col-span-2 hidden sm:block">
-                              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                                Gmail
-                              </p>
-                              <p className="truncate font-medium">
-                                {card.googleAccountLabel}
-                              </p>
-                            </div>
-                          ) : null}
-                        </div>
-                        {(card.gmailMonthOffset ?? 0) !== 0 && (
-                          <StatusBadge
-                            label={`Statement month +${card.gmailMonthOffset}`}
-                            variant="muted"
-                          />
-                        )}
-                        <Button
-                          className="hidden w-full sm:inline-flex"
-                          variant="outline"
-                          onClick={() => openEdit(card.id)}
-                        >
-                          <Pencil className="mr-2 w-4 h-4" />
-                          Edit card
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            }
-          />
-        </>
+        <CardList cards={cards} onEdit={openEdit} onDelete={setDeleteId} />
       )}
 
-      <Dialog
+      <Sheet
         open={editOpen}
         onOpenChange={(open) => {
           setEditOpen(open);
@@ -658,10 +494,11 @@ export function CreditCardsPage() {
           }
         }}
       >
-        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit card</DialogTitle>
-          </DialogHeader>
+        <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-lg">
+          <SheetHeader className="border-b px-5 py-4">
+            <SheetTitle>Edit card</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-5 py-5">
           {editFormReady ? (
             editingId && (
               <CardForm
@@ -704,12 +541,11 @@ export function CreditCardsPage() {
               />
             )
           ) : (
-            <div className="py-2">
-              <CardFormSkeleton />
-            </div>
+            <CardFormSkeleton />
           )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <ConfirmDialog
         open={!!deleteId}
@@ -842,219 +678,228 @@ function CardForm({
   pending: boolean;
   submitLabel: string;
 }) {
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const fieldId = (name: string) => `${name}-${creditCardId ?? "add"}`;
 
   return (
     <form
-      className="space-y-4"
+      className="flex min-h-full flex-col"
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit();
       }}
     >
-      <GoogleAccountSelect
-        value={googleAccountId}
-        onChange={setGoogleAccountId}
-        creditCardId={creditCardId}
-        onBeforeConnect={onBeforeConnectOtherGmail}
-        id={`google-account-${creditCardId ?? "add"}`}
-      />
-      <div className="space-y-2">
-        <Label htmlFor={`bank-${creditCardId ?? "add"}`}>Bank</Label>
-        <BankIssuerSelect
-          id={`bank-${creditCardId ?? "add"}`}
-          value={issuer}
-          onValueChange={(next) => {
-            setIssuer(next);
-            setSoaSubject(defaultSoaSubject(next));
-            setColor(DEFAULT_CARD_COLORS[next]);
-          }}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label>Label</Label>
-        <Input value={label} onChange={(e) => setLabel(e.target.value)} />
-      </div>
-      <div className="space-y-2">
-        <Label>Full card number</Label>
-        <Input
-          value={fullPan}
-          onChange={(e) => setFullPan(e.target.value)}
-          placeholder="4532 XXXX XXXX 9012"
-          required={fullPanRequired}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor={`statement-day-${creditCardId ?? "add"}`}>
-          Statement date
-        </Label>
-        <Input
-          id={`statement-day-${creditCardId ?? "add"}`}
-          type="number"
-          inputMode="numeric"
-          min={1}
-          max={31}
-          value={statementDay}
-          onChange={(e) => setStatementDay(e.target.value)}
-          placeholder="Day of month"
-          required
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor={`due-day-${creditCardId ?? "add"}`}>Due date</Label>
-        <Input
-          id={`due-day-${creditCardId ?? "add"}`}
-          type="number"
-          inputMode="numeric"
-          min={1}
-          max={31}
-          value={dueDay}
-          onChange={(e) => setDueDay(e.target.value)}
-          placeholder="Day of month"
-          required
-        />
-      </div>
+      <div className="flex-1 space-y-7">
+        <FormSection title="Card">
+          <div className="space-y-2">
+            <Label htmlFor={fieldId("bank")}>Bank</Label>
+            <BankIssuerSelect
+              id={fieldId("bank")}
+              value={issuer}
+              onValueChange={(next) => {
+                setIssuer(next);
+                setSoaSubject(defaultSoaSubject(next));
+                setColor(DEFAULT_CARD_COLORS[next]);
+              }}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={fieldId("label")}>Name</Label>
+            <Input
+              id={fieldId("label")}
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="e.g. BPI Gold"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={fieldId("pan")}>Full card number</Label>
+            <Input
+              id={fieldId("pan")}
+              value={fullPan}
+              onChange={(e) => setFullPan(e.target.value)}
+              placeholder="4532 XXXX XXXX 9012"
+              inputMode="numeric"
+              autoComplete="off"
+              required={fullPanRequired}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={fieldId("card-type")}>Card type</Label>
+            <Select
+              value={cardNetwork ?? "unset"}
+              onValueChange={(value) =>
+                setCardNetwork(value === "unset" ? null : (value as CardNetwork))
+              }
+            >
+              <SelectTrigger id={fieldId("card-type")}>
+                <SelectValue placeholder="Not set" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">Not set</SelectItem>
+                {CARD_NETWORKS.map((network) => (
+                  <SelectItem key={network} value={network}>
+                    {CARD_NETWORK_LABELS[network]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </FormSection>
 
-      <div className="space-y-2">
-        <Label>SOA subject</Label>
-        <Input
-          value={soaSubject}
-          onChange={(e) => setSoaSubject(e.target.value)}
-          placeholder={DEFAULT_SOA_SUBJECTS[issuer]}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label>PDF password</Label>
-        <PasswordInput
-          value={pdfPassword}
-          onChange={(e) => setPdfPassword(e.target.value)}
-          required={!passwordOptional}
-        />
-      </div>
-
-      <div className="space-y-3">
-        <Button
-          type="button"
-          variant="link"
-          className="px-0 h-auto text-sm font-normal"
-          onClick={() => setAdvancedOpen((open) => !open)}
-          aria-expanded={advancedOpen}
-        >
-          {advancedOpen ? "Hide advanced settings" : "Show advanced settings"}
-        </Button>
-
-        {advancedOpen ? (
-          <div className="p-4 space-y-4 rounded-lg border border-border/80 bg-muted/20">
+        <FormSection title="Billing cycle">
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor={`card-type-${creditCardId ?? "add"}`}>
-                Card type
-              </Label>
+              <Label htmlFor={fieldId("statement-day")}>Statement day</Label>
+              <Input
+                id={fieldId("statement-day")}
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={31}
+                value={statementDay}
+                onChange={(e) => setStatementDay(e.target.value)}
+                placeholder="1–31"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={fieldId("due-day")}>Due day</Label>
+              <Input
+                id={fieldId("due-day")}
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={31}
+                value={dueDay}
+                onChange={(e) => setDueDay(e.target.value)}
+                placeholder="1–31"
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <FieldLabelWithHint
+              htmlFor={fieldId("gmail-month-offset")}
+              label="Statement month shift"
+              hint={GMAIL_MONTH_OFFSET_HINT}
+            />
+            <Input
+              id={fieldId("gmail-month-offset")}
+              type="number"
+              value={gmailMonthOffset}
+              onChange={(e) => setGmailMonthOffset(e.target.value)}
+              className="max-w-[8rem]"
+            />
+          </div>
+        </FormSection>
+
+        <FormSection title="Statement email">
+          <GoogleAccountSelect
+            value={googleAccountId}
+            onChange={setGoogleAccountId}
+            creditCardId={creditCardId}
+            onBeforeConnect={onBeforeConnectOtherGmail}
+            id={fieldId("google-account")}
+          />
+          <div className="space-y-2">
+            <Label htmlFor={fieldId("soa-subject")}>SOA email subject</Label>
+            <Input
+              id={fieldId("soa-subject")}
+              value={soaSubject}
+              onChange={(e) => setSoaSubject(e.target.value)}
+              placeholder={DEFAULT_SOA_SUBJECTS[issuer]}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={fieldId("pdf-password")}>PDF password</Label>
+            <PasswordInput
+              id={fieldId("pdf-password")}
+              value={pdfPassword}
+              onChange={(e) => setPdfPassword(e.target.value)}
+              required={!passwordOptional}
+              autoComplete="off"
+            />
+          </div>
+        </FormSection>
+
+        <FormSection title="Reminders">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor={fieldId("reminder-window-days")}>Days before due</Label>
+              <Input
+                id={fieldId("reminder-window-days")}
+                type="number"
+                min={0}
+                max={60}
+                value={reminderWindowDays}
+                onChange={(e) => setReminderWindowDays(e.target.value)}
+                placeholder={`Default (${DEFAULT_WINDOW})`}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor={fieldId("reminder-interval")}>How often</Label>
               <Select
-                value={cardNetwork ?? "unset"}
-                onValueChange={(value) =>
-                  setCardNetwork(
-                    value === "unset" ? null : (value as CardNetwork),
-                  )
+                value={String(reminderIntervalMinutes)}
+                onValueChange={(v) =>
+                  setReminderIntervalMinutes(Number(v) as ReminderIntervalMinutes)
                 }
               >
-                <SelectTrigger
-                  id={`card-type-${creditCardId ?? "add"}`}
-                  className="min-h-11"
-                >
-                  <SelectValue placeholder="Not set" />
+                <SelectTrigger id={fieldId("reminder-interval")}>
+                  <SelectValue placeholder="Once per day" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="unset">Not set</SelectItem>
-                  {CARD_NETWORKS.map((network) => (
-                    <SelectItem key={network} value={network}>
-                      {CARD_NETWORK_LABELS[network]}
+                  {REMINDER_INTERVALS.map((i) => (
+                    <SelectItem key={i.value} value={String(i.value)}>
+                      {i.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Contact line</Label>
-              <Textarea
-                value={contactLine}
-                onChange={(e) => setContactLine(e.target.value)}
-                rows={2}
-                placeholder="1-800-XXX-XXXX (Press 1, 2)"
-              />
-            </div>
-            <fieldset className="space-y-3">
-              <legend className="text-sm font-medium leading-none">
-                Reminders
-              </legend>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="reminder-window-days">Days before due</Label>
-                  <Input
-                    id="reminder-window-days"
-                    type="number"
-                    min={0}
-                    max={60}
-                    value={reminderWindowDays}
-                    onChange={(e) => setReminderWindowDays(e.target.value)}
-                    placeholder={`Default (${DEFAULT_WINDOW})`}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reminder-interval">How often</Label>
-                  <Select
-                    value={String(reminderIntervalMinutes)}
-                    onValueChange={(v) =>
-                      setReminderIntervalMinutes(
-                        Number(v) as ReminderIntervalMinutes,
-                      )
-                    }
-                  >
-                    <SelectTrigger id="reminder-interval">
-                      <SelectValue placeholder="Once per day" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {REMINDER_INTERVALS.map((i) => (
-                        <SelectItem key={i.value} value={String(i.value)}>
-                          {i.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </fieldset>
-            <div className="space-y-2">
-              <Label>Color</Label>
-              <CardColorPicker value={color} onChange={setColor} />
-            </div>
-            <div className="space-y-2">
-              <FieldLabelWithHint
-                htmlFor="gmail-month-offset"
-                label="Statement month shift"
-                hint={GMAIL_MONTH_OFFSET_HINT}
-              />
-              <Input
-                id="gmail-month-offset"
-                type="number"
-                value={gmailMonthOffset}
-                onChange={(e) => setGmailMonthOffset(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Notes</Label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-              />
-            </div>
           </div>
-        ) : null}
+        </FormSection>
+
+        <FormSection title="Look and notes">
+          <div className="space-y-2">
+            <Label>Color</Label>
+            <CardColorPicker value={color} onChange={setColor} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={fieldId("contact-line")}>Bank contact line</Label>
+            <Textarea
+              id={fieldId("contact-line")}
+              value={contactLine}
+              onChange={(e) => setContactLine(e.target.value)}
+              rows={2}
+              placeholder="1-800-XXX-XXXX (Press 1, 2)"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={fieldId("notes")}>Notes</Label>
+            <Textarea
+              id={fieldId("notes")}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+            />
+          </div>
+        </FormSection>
       </div>
 
-      <Button type="submit" disabled={pending} className="w-full">
-        {submitLabel}
-      </Button>
+      <div className="sticky -bottom-5 z-10 -mx-5 -mb-5 mt-6 border-t bg-card px-5 py-4 pb-safe">
+        <Button type="submit" loading={pending} className="w-full">
+          {submitLabel}
+        </Button>
+      </div>
     </form>
+  );
+}
+
+function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <fieldset className="space-y-4">
+      <legend className="mb-3 text-sm font-bold">{title}</legend>
+      {children}
+    </fieldset>
   );
 }

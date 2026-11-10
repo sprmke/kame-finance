@@ -4,32 +4,42 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { inferRouterOutputs } from '@trpc/server';
 import {
-  ArrowLeft,
-  Calendar,
+  ChevronRight,
+  CreditCard,
   FileText,
-  PhilippinePeso,
+  MoreHorizontal,
   Receipt,
+  ReceiptText,
   Sparkles,
-  TrendingDown,
-  TrendingUp,
 } from 'lucide-react';
+import type { Route } from 'next';
+
+import { DateNumeral } from '@/components/calendar/DateNumeral';
+import { Amount } from '@/components/shared/Amount';
+import { CardSwatch } from '@/components/shared/CardChip';
+import { FigureLine } from '@/components/shared/Ledger';
+import { BillStatusTag } from '@/components/shared/StatusBadge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { markForState } from '@/lib/calendar/month-grid';
+import { resolveBillState } from '@/lib/due/bill-state';
+import { cn } from '@/lib/utils/cn';
 
 import { DashboardPageHeader } from '@/components/shared/DashboardPageHeader';
-import { PageActionBar } from '@/components/shared/PageActionBar';
 import { MissingSoaNotice } from '@/components/shared/MissingSoaBadge';
 import { SoaStatementDetailContentSkeleton } from '@/components/shared/skeletons';
-import { StatCard, statGridClassName } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
-import { ViewPaymentReceiptButton } from '@/components/shared/ViewPaymentReceiptButton';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader } from '@/components/ui/card';
 import { ROUTES } from '@/config/routes';
 import { api } from '@/lib/api/client';
 import type { AppRouter } from '@/server/routers/_app';
 import { isMissingSoaForStatementPeriod } from '@/lib/credit-cards/billing-cycle';
 import { normalizeCardLast4 } from '@/lib/due/normalize';
 import { todayYmdLocal } from '@/lib/reminders/reminder-status';
-import { formatPhpAmount } from '@/lib/utils/format-money';
 import { isStatementMarkedPaid } from '@/lib/soa/paid-status';
 import { receiptsForStatement } from '@/lib/soa/statement-receipts';
 import type { ReceiptListItem } from '@/features/dashboard/receipts/lib/receipt-utils';
@@ -40,7 +50,6 @@ import {
 } from './CategorizeWithAiProvider';
 import { SoaPdfPreview } from './SoaPdfPreview';
 import { PaymentReceiptPreview } from '@/features/dashboard/receipts/components/PaymentReceiptPreview';
-import { StatementPaidBadge } from './StatementSettlement';
 import { SoaTransactionList } from './SoaTransactionList';
 import { CardBankLabel } from '@/lib/credit-cards/CardBankLabel';
 import { resolveCardAccent } from '@/lib/credit-cards/card-accent';
@@ -137,11 +146,7 @@ export function SoaStatementDetailPage({
       : null);
 
   if (isLoading && !statement) {
-    return (
-      <div className="space-y-4">
-        <SoaStatementDetailContentSkeleton />
-      </div>
-    );
+    return <SoaStatementDetailContentSkeleton />;
   }
 
   if (!period || !statement) {
@@ -151,10 +156,7 @@ export function SoaStatementDetailPage({
           {isFetching ? 'Loading statement…' : 'Statement not found.'}
         </p>
         <Button variant="outline" asChild>
-          <Link href={ROUTES.dashboard.soaPeriod(periodId)}>
-            <ArrowLeft className="mr-2 w-4 h-4" />
-            Back
-          </Link>
+          <Link href={ROUTES.dashboard.statementPeriod(periodId)}>Back to the month</Link>
         </Button>
       </div>
     );
@@ -270,181 +272,152 @@ function SoaStatementDetailBody({
     statement.statementYear,
   );
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-y-1 gap-x-2 items-center text-sm text-muted-foreground">
-        <Link
-          href={ROUTES.dashboard.soa}
-          className="transition-colors shrink-0 hover:text-foreground"
-        >
-          SOA
-        </Link>
-        <span className="shrink-0">/</span>
-        <Link
-          href={ROUTES.dashboard.soaPeriod(periodId)}
-          className="min-w-0 max-w-[12rem] truncate transition-colors hover:text-foreground sm:max-w-none"
-        >
-          {period.label}
-        </Link>
-        <span className="shrink-0">/</span>
-        <span className="min-w-0 truncate text-foreground">
-          {statementTitle(statement)}
-        </span>
-      </div>
+  const billState = resolveBillState({ paid, daysAway: days });
 
+  return (
+    <div className="space-y-6">
       <DashboardPageHeader
-        title={statementTitle(statement)}
+        breadcrumb={
+          <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-13 text-muted-foreground">
+            <Link href={ROUTES.dashboard.statements} className="shrink-0 hover:text-foreground hover:underline">
+              Statements
+            </Link>
+            <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <Link
+              href={ROUTES.dashboard.statementPeriod(periodId)}
+              className="min-w-0 truncate hover:text-foreground hover:underline"
+            >
+              {period.label}
+            </Link>
+            <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span className="min-w-0 truncate text-foreground" aria-current="page">
+              {statementTitle(statement)}
+            </span>
+          </nav>
+        }
+        title={
+          <span className="flex min-w-0 items-center gap-3">
+            <CardSwatch color={accent.color} />
+            <span className="truncate">{statementTitle(statement)}</span>
+          </span>
+        }
         actions={
-          hasPdf || txStats.count > 0 || linkedReceipts.length > 0 ? (
-            <PageActionBar
-              secondary={
-                (hasPdf && (txStats.count > 0 || linkedReceipts.length > 0)) ||
-                (!hasPdf && linkedReceipts.length > 0 && txStats.count > 0) ? (
-                <>
-                  {hasPdf && txStats.count > 0 ? (
-                    <Button
-                      variant="outline"
-                      onClick={() => categorize.openChoiceDialog()}
-                      disabled={categorize.isPending}
-                    >
-                      <Sparkles className="mr-2 w-4 h-4" />
-                      Categorize with AI
-                    </Button>
-                  ) : null}
-                  {hasPdf && linkedReceipts.length > 0 ? (
-                    <ViewPaymentReceiptButton
-                      count={linkedReceipts.length}
-                      label="Payment"
-                      className="w-auto"
-                      onClick={() => setPaymentOpen(true)}
-                    />
-                  ) : null}
-                  {!hasPdf &&
-                  linkedReceipts.length > 0 &&
-                  txStats.count > 0 ? (
-                    <Button
-                      variant="outline"
-                      onClick={() => categorize.openChoiceDialog()}
-                      disabled={categorize.isPending}
-                    >
-                      <Sparkles className="mr-2 w-4 h-4" />
-                      Categorize with AI
-                    </Button>
-                  ) : null}
-                </>
-                ) : undefined
-              }
-              primary={
-                hasPdf ? (
-                  <Button variant="outline" onClick={() => setPdfOpen(true)}>
-                    <FileText className="mr-2 w-4 h-4" />
-                    SOA
-                  </Button>
-                ) : linkedReceipts.length > 0 ? (
-                  <ViewPaymentReceiptButton
-                    count={linkedReceipts.length}
-                    label="Payment"
-                    className="w-auto"
-                    onClick={() => setPaymentOpen(true)}
-                  />
-                ) : (
-                  <Button
-                    variant="outline"
-                    onClick={() => categorize.openChoiceDialog()}
+          <>
+            {linkedReceipts.length > 0 ? (
+              <Button variant="outline" onClick={() => setPaymentOpen(true)}>
+                <Receipt />
+                {linkedReceipts.length > 1 ? `${linkedReceipts.length} payments` : "Payment"}
+              </Button>
+            ) : null}
+            {hasPdf ? (
+              <Button variant="outline" onClick={() => setPdfOpen(true)}>
+                <FileText />
+                SOA
+              </Button>
+            ) : null}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="More statement actions">
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {txStats.count > 0 ? (
+                  <DropdownMenuItem
                     disabled={categorize.isPending}
+                    onSelect={() => categorize.openChoiceDialog()}
                   >
-                    <Sparkles className="mr-2 w-4 h-4" />
+                    <Sparkles />
                     Categorize with AI
-                  </Button>
-                )
-              }
-            />
-          ) : null
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem asChild>
+                  <Link href={ROUTES.dashboard.bills}>
+                    <ReceiptText />
+                    Open in Bills
+                  </Link>
+                </DropdownMenuItem>
+                {matchedCard ? (
+                  <DropdownMenuItem asChild>
+                    <Link href={`${ROUTES.dashboard.cards}?edit=${matchedCard.id}` as Route}>
+                      <CreditCard />
+                      Edit card
+                    </Link>
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
         }
       />
 
-      <Card
-        className="overflow-hidden border-border/80 shadow-card"
-        style={accent.stripeStyle}
-      >
-        <CardHeader className="space-y-3 pb-3">
-          <div className="flex flex-wrap gap-2 items-center">
-            <CardBankLabel
-              issuerId={statement.issuerId}
-              color={statement.cardColor}
-              label={statement.cardDisplayLabel}
+      <section aria-label="Statement summary" className="rounded-lg border bg-card">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-4 p-4 sm:grid-cols-[auto_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-center sm:p-5">
+          <DateNumeral ymd={statement.dueDateYmd} mark={markForState(billState)} size="lg" />
+          <div className="min-w-0 space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Total due</p>
+            <Amount
+              value={statement.totalDue}
+              size="xl"
+              tone={paid ? "muted" : billState === "overdue" ? "due" : "default"}
+              className={cn(paid && "line-through decoration-2")}
             />
-            <span className="text-xs text-muted-foreground">
-              {stmtMonthLabel}
-            </span>
-            {dues ? <StatementPaidBadge paid={paid} /> : null}
-            {countdown && !paid && (
-              <StatusBadge label={countdown} variant={urgencyVariant} />
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4">
-            <div>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Total due
-              </p>
-              <p className="font-display text-xl font-semibold tabular-nums sm:text-2xl">
-                {formatDisplayAmount(statement.totalDue)}
-              </p>
-            </div>
-            <div>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Minimum
-              </p>
-              <p className="font-display text-base font-semibold tabular-nums sm:text-lg">
-                {formatDisplayAmount(statement.minimumDue)}
-              </p>
-            </div>
-            <div>
-              <p className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                <Calendar className="w-3 h-3" />
-                Due
-              </p>
-              <p className="font-medium">{statement.dueDate ?? '—'}</p>
-            </div>
-            <div>
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Statement date
-              </p>
-              <p className="font-medium">{statement.statementDate ?? '—'}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              {dues ? <BillStatusTag state={billState} /> : null}
+              {countdown && !paid ? (
+                <StatusBadge label={countdown} variant={urgencyVariant === "default" ? "muted" : urgencyVariant} />
+              ) : null}
             </div>
           </div>
-        </CardHeader>
-      </Card>
+          <div className="col-span-2 grid grid-cols-2 gap-4 border-t pt-4 sm:col-span-2 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Minimum</p>
+              <Amount value={statement.minimumDue} size="md" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Statement</p>
+              <p className="text-sm font-semibold">{statement.statementDate ?? stmtMonthLabel}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Due date</p>
+              <p className="text-sm font-semibold">{statement.dueDate ?? "—"}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Card</p>
+              <CardBankLabel
+                issuerId={statement.issuerId}
+                color={statement.cardColor}
+                label={statement.cardDisplayLabel}
+              />
+            </div>
+          </div>
+        </div>
+        {txStats.count > 0 ? (
+          <div className="border-t px-4 py-3 sm:px-5">
+            <FigureLine
+              items={[
+                { key: "charges", figure: <Amount value={txStats.charges} size="md" />, label: "Charges" },
+                { key: "credits", figure: <Amount value={txStats.credits} size="md" tone="success" />, label: "Credits" },
+                ...(txStats.interest > 0 || txStats.fees > 0
+                  ? [
+                      {
+                        key: "interest",
+                        figure: <Amount value={txStats.interest + txStats.fees} size="md" tone="due" />,
+                        label: "Interest & fees",
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          </div>
+        ) : null}
+      </section>
 
       {missingSoa ? <MissingSoaNotice /> : null}
 
-      {txStats.count > 0 && (
-        <div className={statGridClassName}>
-          <StatCard title="Transactions" value={txStats.count} icon={Receipt} />
-          <StatCard
-            title="Charges"
-            value={formatPhpAmount(txStats.charges)}
-            icon={TrendingUp}
-          />
-          <StatCard
-            title="Credits"
-            value={formatPhpAmount(txStats.credits)}
-            icon={TrendingDown}
-          />
-          {(txStats.interest > 0 || txStats.fees > 0) && (
-            <StatCard
-              title="Interest & fees"
-              value={formatPhpAmount(txStats.interest + txStats.fees)}
-              icon={PhilippinePeso}
-            />
-          )}
-        </div>
-      )}
-
       <section className="space-y-4">
         <div className="flex gap-3 justify-between items-center">
-          <h2 className="font-display text-base font-semibold">Transactions</h2>
+          <h2>Transactions</h2>
           {txStats.count > 0 && (
             <p className="text-sm tabular-nums text-muted-foreground">
               {txStats.count} {txStats.count === 1 ? 'line' : 'lines'}

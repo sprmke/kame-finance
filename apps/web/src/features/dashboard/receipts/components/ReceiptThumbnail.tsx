@@ -85,10 +85,10 @@ export function ReceiptThumbnail({
       ) : isPdf ? (
         <div className="flex flex-col items-center gap-1 p-2 text-muted-foreground">
           <FileText className="h-6 w-6" />
-          <span className="text-[10px] font-medium">PDF</span>
+          <span className="text-2xs font-medium">PDF</span>
         </div>
       ) : failed || !src ? (
-        <span className="px-2 text-center text-[10px] text-muted-foreground">
+        <span className="px-2 text-center text-2xs text-muted-foreground">
           No preview
         </span>
       ) : (

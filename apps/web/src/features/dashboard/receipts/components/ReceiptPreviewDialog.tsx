@@ -133,7 +133,7 @@ export function ReceiptPreviewDialog({
         className="flex h-[min(92dvh,900px)] max-h-[92dvh] w-[calc(100%-1rem)] max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:w-full sm:p-0"
       >
         <div className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-4 sm:px-5">
-          <DialogTitle className="min-w-0 flex-1 truncate text-left font-display text-base font-semibold leading-none">
+          <DialogTitle className="min-w-0 flex-1 truncate text-left text-base font-semibold leading-none">
             {title}
           </DialogTitle>
           <div className="flex shrink-0 items-center gap-0.5">
@@ -231,7 +231,7 @@ export function ReceiptPreviewDialog({
                       <h3 className="text-sm font-semibold">Payment</h3>
                       <div className="space-y-2 rounded-lg border border-border/80 bg-muted/10 p-3">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-display text-lg font-semibold tabular-nums">
+                          <p className="font-numeral text-lg font-semibold tabular-nums">
                             <span>{coverage.paidLabel}</span>
                             {coverage.totalLabel !== "—" && (
                               <span className="text-sm font-medium text-muted-foreground">
@@ -251,7 +251,7 @@ export function ReceiptPreviewDialog({
                               className={cn(
                                 "h-full rounded-full transition-all",
                                 coverage.coverageLabel === "full"
-                                  ? "bg-[hsl(var(--success))]"
+                                  ? "bg-success"
                                   : coverage.coverageLabel === "minimum"
                                     ? "bg-primary"
                                     : "bg-destructive",

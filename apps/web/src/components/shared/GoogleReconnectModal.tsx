@@ -39,14 +39,14 @@ export function GoogleReconnectModal() {
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-primary" />
+            <Mail className="h-5 w-5" aria-hidden />
             <DialogTitle>Reconnect Gmail</DialogTitle>
           </div>
           <DialogDescription>{reason}</DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row-reverse">
           <Button
-            className="h-11 w-full"
+            className="w-full sm:w-auto"
             onClick={() => reconnectGoogle()}
             disabled={isReconnectPending}
           >
@@ -54,8 +54,8 @@ export function GoogleReconnectModal() {
           </Button>
           <Button
             type="button"
-            variant="outline"
-            className="h-11 w-full"
+            variant="ghost"
+            className="w-full sm:w-auto"
             onClick={dismissGoogleReconnectModal}
           >
             Not now

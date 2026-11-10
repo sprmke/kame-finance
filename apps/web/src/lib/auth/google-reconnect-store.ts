@@ -9,8 +9,32 @@ type Listener = () => void;
 
 const CLOSED_SNAPSHOT: GoogleReconnectSnapshot = { open: false, message: null };
 
+const DISMISS_KEY = "kame-finance:google-reconnect-dismissed";
+
+function readDismissed(): boolean {
+  try {
+    return (
+      typeof window !== "undefined" &&
+      window.sessionStorage.getItem(DISMISS_KEY) === "1"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function writeDismissed(value: boolean): void {
+  try {
+    if (typeof window === "undefined") return;
+    if (value) window.sessionStorage.setItem(DISMISS_KEY, "1");
+    else window.sessionStorage.removeItem(DISMISS_KEY);
+  } catch {
+    // Storage blocked (private mode): the in-memory flag still applies.
+  }
+}
+
 let snapshot: GoogleReconnectSnapshot = CLOSED_SNAPSHOT;
-let dismissed = false;
+/** "Not now" holds for the browser session; a failed Gmail action forces it open again. */
+let dismissed = readDismissed();
 const listeners = new Set<Listener>();
 
 function emit() {
@@ -35,8 +59,11 @@ export function openGoogleReconnectModal(
   message?: string | null,
   options?: { force?: boolean },
 ): void {
-  if (dismissed && !options?.force) return;
-  if (options?.force) dismissed = false;
+  if ((dismissed || readDismissed()) && !options?.force) return;
+  if (options?.force) {
+    dismissed = false;
+    writeDismissed(false);
+  }
   snapshot = {
     open: true,
     message: message?.trim() || null,
@@ -53,12 +80,14 @@ export function closeGoogleReconnectModal(): void {
 /** Hide the prompt until the next failed action or a healthy auth check. */
 export function dismissGoogleReconnectModal(): void {
   dismissed = true;
+  writeDismissed(true);
   closeGoogleReconnectModal();
 }
 
 /** Clear a dismissal once Gmail is healthy again. */
 export function acknowledgeGoogleReconnect(): void {
   dismissed = false;
+  writeDismissed(false);
   closeGoogleReconnectModal();
 }
 

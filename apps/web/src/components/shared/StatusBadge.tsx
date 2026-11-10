@@ -1,4 +1,6 @@
+import { DayMarkGlyph, type DayMarkKind } from "@/components/calendar/DayMark";
 import { Badge } from "@/components/ui/badge";
+import type { BillState } from "@/lib/due/bill-state";
 import { cn } from "@/lib/utils/cn";
 
 type StatusVariant =
@@ -8,33 +10,75 @@ type StatusVariant =
   | "muted"
   | "default";
 
-const VARIANT_CLASSES: Record<StatusVariant, string> = {
-  success:
-    "border-success/30 bg-success/10 text-success dark:text-[hsl(var(--success))]",
-  warning:
-    "border-warning/40 bg-warning/15 text-[hsl(var(--warning-foreground))] dark:text-warning",
-  destructive: "border-destructive/30 bg-destructive/10 text-destructive",
-  muted: "border-border bg-muted text-muted-foreground",
-  default: "",
-};
+const VARIANT_TO_BADGE = {
+  success: "success",
+  warning: "warning",
+  destructive: "due",
+  muted: "muted",
+  default: "secondary",
+} as const;
 
 interface StatusBadgeProps {
   label: string;
   variant?: StatusVariant;
+  /** Calendar mark glyph shown before the label. */
+  mark?: Exclude<DayMarkKind, "none">;
   className?: string;
 }
 
+/** Status tag (DESIGN.md › Tag): wash fill, full-color text, optional calendar mark. */
 export function StatusBadge({
   label,
   variant = "default",
+  mark,
   className,
 }: StatusBadgeProps) {
   return (
     <Badge
-      variant="outline"
-      className={cn(VARIANT_CLASSES[variant], className)}
+      variant={VARIANT_TO_BADGE[variant]}
+      className={cn(className)}
+      icon={mark ? <DayMarkGlyph kind={mark} /> : undefined}
     >
       {label}
     </Badge>
   );
 }
+
+const BILL_STATE: Record<
+  BillState,
+  { label: string; variant: StatusVariant; mark: Exclude<DayMarkKind, "none"> }
+> = {
+  paid: { label: "Paid", variant: "success", mark: "paid" },
+  overdue: { label: "Overdue", variant: "destructive", mark: "urgent" },
+  "due-soon": { label: "Due soon", variant: "destructive", mark: "urgent" },
+  unpaid: { label: "Unpaid", variant: "default", mark: "due" },
+  missing: { label: "SOA missing", variant: "warning", mark: "missing" },
+  expected: { label: "Awaiting SOA", variant: "muted", mark: "expected" },
+};
+
+/** One tag per bill state so the same status reads the same on every screen. */
+export function BillStatusTag({
+  state,
+  label,
+  className,
+}: {
+  state: BillState;
+  label?: string;
+  className?: string;
+}) {
+  const config = BILL_STATE[state];
+  return (
+    <StatusBadge
+      label={label ?? config.label}
+      variant={config.variant}
+      mark={config.mark}
+      className={className}
+    />
+  );
+}
+
+export function billStateMark(state: BillState): DayMarkKind {
+  return BILL_STATE[state].mark;
+}
+
+export { resolveBillState, type BillState } from "@/lib/due/bill-state";

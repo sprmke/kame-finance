@@ -51,7 +51,7 @@ export function CardInfoDialog({
     >
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display">Card info</DialogTitle>
+          <DialogTitle className="">Card info</DialogTitle>
         </DialogHeader>
         <ul className="divide-y divide-border/70">
           {fields.map((field) => {

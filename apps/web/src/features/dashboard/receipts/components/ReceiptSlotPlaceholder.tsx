@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CheckCircle2, CreditCard, FileText, MoreVertical, Upload } from "lucide-react";
+import { CreditCard, FileText, MoreVertical, Upload } from "lucide-react";
 
 import {
   MISSING_SOA_LABEL,
@@ -19,6 +19,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { resolveCardAccent } from "@/lib/credit-cards/card-accent";
 import { cn } from "@/lib/utils/cn";
+import { DayMarkGlyph } from "@/components/calendar/DayMark";
+import { Amount } from "@/components/shared/Amount";
+import { CardSwatch } from "@/components/shared/CardChip";
 
 import { formatReceiptDueDate } from "../lib/receipt-utils";
 import type { ReceiptSlot } from "../lib/receipt-slots";
@@ -51,7 +54,6 @@ export function ReceiptSlotPlaceholder({
       : hasSoa
         ? "Pending"
         : "SOA not yet available";
-  const compactRail = statusLabel.length < 16;
   const amount =
     slot.totalDue && slot.totalDue !== "—" ? slot.totalDue : null;
   const minimum =
@@ -59,15 +61,7 @@ export function ReceiptSlotPlaceholder({
 
   return (
     <Card
-      className={cn(
-        "relative overflow-hidden border-border/80 shadow-sm",
-        slot.paid
-          ? "border-success/35"
-          : slot.soaMissing
-            ? "border-warning/50"
-            : "border-dashed border-warning/50",
-      )}
-      style={accent.stripeStyle}
+      className="relative overflow-hidden"
     >
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -75,7 +69,7 @@ export function ReceiptSlotPlaceholder({
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute right-0.5 top-0.5 z-10 h-11 w-11"
+            className="absolute right-1 top-1 z-10 h-9 w-9"
             aria-label="Card actions"
           >
             <MoreVertical className="h-4 w-4" />
@@ -100,21 +94,20 @@ export function ReceiptSlotPlaceholder({
           className={cn(
             "flex w-[5.25rem] shrink-0 flex-col items-center justify-center gap-1.5 self-stretch border-r px-1 sm:w-24",
             slot.paid
-              ? "border-success/25 bg-success/10 text-[hsl(var(--success))]"
+              ? "bg-success-wash text-success"
               : slot.soaMissing
-                ? "border-warning/30 bg-warning/10 text-warning"
-                : "border-border/80 bg-muted/40 text-muted-foreground",
+                ? "bg-warning-wash text-warning"
+                : "bg-muted/60 text-muted-foreground",
           )}
         >
           {slot.paid ? (
-            <CheckCircle2 className="h-5 w-5" aria-hidden />
+            <DayMarkGlyph kind="paid" className="size-5" />
           ) : (
             <FileText className="h-5 w-5" aria-hidden />
           )}
           <span
             className={cn(
-              "text-center text-[10px] font-medium leading-tight",
-              compactRail && "uppercase tracking-wide",
+              "text-center text-2xs font-semibold leading-tight",
             )}
           >
             {statusLabel}
@@ -123,8 +116,9 @@ export function ReceiptSlotPlaceholder({
 
         <div className="flex min-w-0 flex-1 flex-col gap-2 p-3 pr-12">
           <div className="min-w-0 space-y-0.5">
-            <h3 className="truncate font-display text-sm font-semibold leading-snug">
-              {heading}
+            <h3 className="flex min-w-0 items-center gap-2 text-sm font-semibold leading-snug">
+              <CardSwatch color={accent.color} size="sm" />
+              <span className="truncate">{heading}</span>
             </h3>
             <p className="truncate text-xs text-muted-foreground">
               {emphasizePeriod
@@ -132,7 +126,7 @@ export function ReceiptSlotPlaceholder({
                 : `···· ${slot.cardLast4}`}
             </p>
             {dueDate ? (
-              <p className="text-[11px] text-muted-foreground">Due {dueDate}</p>
+              <p className="text-xs text-muted-foreground">Due {dueDate}</p>
             ) : null}
           </div>
 
@@ -141,19 +135,19 @@ export function ReceiptSlotPlaceholder({
           ) : (
             <StatusBadge
               label={statusLabel}
-              variant={slot.paid ? "success" : "warning"}
+              variant={slot.paid ? "success" : "muted"}
+              mark={slot.paid ? "paid" : "expected"}
+              className="self-start"
             />
           )}
 
           {amount || minimum ? (
             <div className="mt-auto space-y-1">
               {amount ? (
-                <p className="font-display text-base font-semibold tabular-nums leading-none">
-                  {amount}
-                </p>
+                <Amount value={amount} size="md" tone={slot.paid ? "muted" : "default"} />
               ) : null}
               {minimum ? (
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Min {minimum}
                 </p>
               ) : null}
@@ -163,17 +157,15 @@ export function ReceiptSlotPlaceholder({
       </SlotFace>
 
       {slot.soaMissing ? (
-        <div className="border-t border-warning/30 px-3 py-2">
-          <MissingSoaNotice className="border-0 bg-transparent p-0" />
-        </div>
+        <MissingSoaNotice className="rounded-none border-t" />
       ) : null}
 
-      <div className="flex gap-2 border-t border-border/80 p-2">
+      <div className="flex gap-2 border-t p-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="min-h-11 flex-1"
+          className="flex-1 max-lg:h-10"
           disabled={!hasSoa}
           aria-label={
             hasSoa
@@ -182,18 +174,18 @@ export function ReceiptSlotPlaceholder({
           }
           onClick={() => onViewSoa(slot)}
         >
-          <FileText className="mr-1.5 h-3.5 w-3.5" />
+          <FileText />
           SOA
         </Button>
         <Button
           type="button"
           variant={slot.paid ? "outline" : "default"}
           size="sm"
-          className="min-h-11 flex-1"
+          className="flex-1 max-lg:h-10"
           disabled={uploadDisabled}
           onClick={() => onUpload(slot)}
         >
-          <Upload className="mr-1.5 h-3.5 w-3.5" />
+          <Upload />
           Upload
         </Button>
       </div>

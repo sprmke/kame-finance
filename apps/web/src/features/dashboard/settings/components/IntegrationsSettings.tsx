@@ -15,7 +15,6 @@ import { api } from '@/lib/api/client';
 
 import { useGoogleLinkCallback } from '@/hooks/use-google-link-callback';
 
-import { AiApiKeysSettings } from './AiApiKeysSettings';
 import { GoogleAccountsSettings } from './GoogleAccountsSettings';
 
 export function IntegrationsSettings() {
@@ -76,7 +75,7 @@ export function IntegrationsSettings() {
         <CardHeader>
           <div className="flex flex-wrap gap-3 justify-between items-center">
             <div className="flex gap-2 items-center">
-              <Mail className="w-5 h-5 text-primary" />
+              <Mail className="w-5 h-5 text-muted-foreground" aria-hidden />
               <CardTitle className="text-base">
                 Gmail & Google Calendar
               </CardTitle>
@@ -92,7 +91,7 @@ export function IntegrationsSettings() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <div className="flex gap-2 items-center">
-              <MessageCircle className="w-5 h-5 text-primary" />
+              <MessageCircle className="w-5 h-5 text-muted-foreground" aria-hidden />
               <CardTitle className="text-base">Telegram</CardTitle>
             </div>
             {connected.has('telegram') && (
@@ -147,7 +146,7 @@ export function IntegrationsSettings() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <div className="flex gap-2 items-center">
-              <Slack className="w-5 h-5 text-primary" />
+              <Slack className="w-5 h-5 text-muted-foreground" aria-hidden />
               <CardTitle className="text-base">Slack</CardTitle>
             </div>
             {connected.has('slack') && (
@@ -178,7 +177,6 @@ export function IntegrationsSettings() {
         </CardContent>
       </Card>
 
-      <AiApiKeysSettings />
     </div>
   );
 }

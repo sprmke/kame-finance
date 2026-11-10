@@ -1,5 +1,5 @@
-import { CreditCardsLoadingView } from "@/features/dashboard/credit-cards/components/CreditCardsLoadingView";
+import { CardsPageSkeleton } from "@/components/shared/skeletons";
 
-export default function CreditCardsLoading() {
-  return <CreditCardsLoadingView />;
+export default function CardsLoading() {
+  return <CardsPageSkeleton />;
 }

@@ -47,6 +47,35 @@ describe("period-transactions-view", () => {
     expect(sorted.map((r) => r.id)).toEqual(["b", "a"]);
   });
 
+  it("sorts stored slash dates chronologically, not alphabetically", () => {
+    // RCBC stores MM/DD/YY: "11/03/26" is 3 November, later than "10/29/26".
+    // Alphabetical comparison would wrongly put "10/29/26" last.
+    const rows = [
+      tx({ id: "nov", date: "11/03/26 / 11/03/26", issuerId: "rcbc" }),
+      tx({ id: "oct", date: "10/29/26 / 10/30/26", issuerId: "rcbc" }),
+      tx({ id: "dec", date: "12/29/25 / 01/01/26", issuerId: "rcbc" }),
+    ];
+    expect(
+      sortPeriodTransactions(rows, "date_desc").map((r) => r.id),
+    ).toEqual(["nov", "oct", "dec"]);
+    expect(
+      sortPeriodTransactions(rows, "date_asc").map((r) => r.id),
+    ).toEqual(["dec", "oct", "nov"]);
+  });
+
+  it("keeps undated rows last in both directions", () => {
+    const rows = [
+      tx({ id: "dated", date: "11/03/26", issuerId: "rcbc" }),
+      tx({ id: "undated", date: null }),
+    ];
+    expect(
+      sortPeriodTransactions(rows, "date_desc").map((r) => r.id),
+    ).toEqual(["dated", "undated"]);
+    expect(
+      sortPeriodTransactions(rows, "date_asc").map((r) => r.id),
+    ).toEqual(["dated", "undated"]);
+  });
+
   it("filters interest and fees under one kind", () => {
     const rows = [
       tx({

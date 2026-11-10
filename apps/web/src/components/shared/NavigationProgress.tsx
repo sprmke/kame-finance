@@ -113,7 +113,7 @@ function NavigationProgressBar() {
     >
       <div
         className={cn(
-          "h-[3px] origin-left bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.45)] transition-[width,opacity] duration-200 ease-out",
+          "h-0.5 origin-left bg-primary transition-[width,opacity] duration-200 ease-out",
           progress >= 100 && "opacity-0 duration-300",
         )}
         style={{ width: `${progress}%` }}

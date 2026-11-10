@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Bell,
-  CreditCard,
-  FileText,
-  LayoutDashboard,
-  Loader2,
-  Receipt,
-  Settings,
-  type LucideIcon,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
@@ -18,58 +9,32 @@ import { DASHBOARD_NAV, ROUTES } from "@/config/routes";
 import { useNavDataPrefetch } from "@/hooks/use-nav-data-prefetch";
 import { cn } from "@/lib/utils/cn";
 
-const ICONS: Record<(typeof DASHBOARD_NAV)[number]["icon"], LucideIcon> = {
-  LayoutDashboard,
-  CreditCard,
-  FileText,
-  Bell,
-  Receipt,
-  Settings,
-};
+import { NAV_ICONS } from "./shell/nav-icons";
 
 export function isDashboardNavActive(pathname: string, href: string) {
-  return (
-    pathname === href ||
-    (href !== ROUTES.dashboard.root && pathname.startsWith(`${href}/`)) ||
-    (href === ROUTES.dashboard.root && pathname === ROUTES.dashboard.root)
-  );
-}
-
-interface DashboardNavLinksProps {
-  variant: "sidebar" | "mobile";
-  onNavigate?: () => void;
+  if (href === ROUTES.dashboard.root) return pathname === ROUTES.dashboard.root;
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 type NavItem = (typeof DASHBOARD_NAV)[number];
 
-function DashboardNavLinkContent({
-  item,
-  iconClassName,
-}: {
-  item: NavItem;
-  iconClassName: string;
-}) {
+function NavIcon({ item, className }: { item: NavItem; className: string }) {
   const { pending } = useLinkStatus();
-  const Icon = ICONS[item.icon];
-
-  return (
-    <>
-      {pending ? (
-        <Loader2 className={cn(iconClassName, "shrink-0 animate-spin")} aria-hidden />
-      ) : (
-        <Icon className={cn(iconClassName, "shrink-0")} aria-hidden />
-      )}
-      <span className={cn(pending && "opacity-80")}>{item.title}</span>
-    </>
+  const Icon = NAV_ICONS[item.icon];
+  return pending ? (
+    <Loader2 className={cn(className, "animate-spin")} aria-hidden />
+  ) : (
+    <Icon className={className} aria-hidden />
   );
 }
 
-export function DashboardNavLinks({
-  variant,
-  onNavigate,
-}: DashboardNavLinksProps) {
+interface DashboardNavLinksProps {
+  variant: "rail" | "tabbar";
+  onNavigate?: () => void;
+}
+
+export function DashboardNavLinks({ variant, onNavigate }: DashboardNavLinksProps) {
   const pathname = usePathname();
-  const isSidebar = variant === "sidebar";
   const prefetchNavData = useNavDataPrefetch();
 
   return (
@@ -84,24 +49,38 @@ export function DashboardNavLinks({
             onClick={onNavigate}
             onMouseEnter={() => prefetchNavData(item.href)}
             onFocus={() => prefetchNavData(item.href)}
+            onTouchStart={() => prefetchNavData(item.href)}
+            aria-current={active ? "page" : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-lg font-medium transition-colors touch-manipulation",
-              isSidebar
-                ? "px-3 py-2 text-sm"
-                : "min-h-12 px-3 text-base",
-              isSidebar
-                ? active
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-glow"
-                  : "text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                : active
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-foreground hover:bg-muted",
+              "touch-manipulation outline-none transition-colors duration-120 focus-visible:ring-2 focus-visible:ring-ring",
+              variant === "rail"
+                ? cn(
+                    "flex h-10 items-center gap-3 rounded-md border px-2.5 text-sm",
+                    active
+                      ? "border-sidebar-border bg-card font-bold text-foreground"
+                      : "border-transparent font-medium text-sidebar-muted hover:bg-sidebar-accent hover:text-foreground",
+                  )
+                : cn(
+                    "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-md pb-1 pt-2 text-2xs",
+                    active
+                      ? "font-bold text-foreground"
+                      : "font-medium text-muted-foreground",
+                  ),
             )}
           >
-            <DashboardNavLinkContent
-              item={item}
-              iconClassName={isSidebar ? "h-4 w-4" : "h-5 w-5"}
-            />
+            {variant === "rail" ? (
+              <NavIcon item={item} className="h-[18px] w-[18px] shrink-0" />
+            ) : (
+              <span
+                className={cn(
+                  "flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-120",
+                  active && "bg-foreground text-background",
+                )}
+              >
+                <NavIcon item={item} className="h-[18px] w-[18px]" />
+              </span>
+            )}
+            <span className="truncate">{item.title}</span>
           </Link>
         );
       })}

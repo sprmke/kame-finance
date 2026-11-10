@@ -30,7 +30,7 @@ describe("PH bank issuers", () => {
     }
   });
 
-  it("groups match Kame Homes e-wallet (card issuers), digital + traditional banks", () => {
+  it("groups e-wallet card issuers, digital banks, and traditional banks", () => {
     expect(issuersByGroup("ewallet").map((e) => e.label)).toEqual(["Maya"]);
     expect(issuersByGroup("digital_bank").map((e) => e.label)).toEqual([
       "MariBank",

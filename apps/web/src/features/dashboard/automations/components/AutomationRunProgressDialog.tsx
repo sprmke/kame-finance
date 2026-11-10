@@ -112,7 +112,7 @@ export function AutomationRunProgressDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle className="font-display">{title}</DialogTitle>
+          <DialogTitle className="">{title}</DialogTitle>
         </DialogHeader>
 
         <WorkflowProgressPanel

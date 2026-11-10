@@ -1,6 +1,6 @@
 # Kame Finance — Documentation
 
-Central hub for **Kame Finance** documentation. Topic-based paths mirror Kame Homes (`property-management-app/docs`).
+Central hub for **Kame Finance** documentation.
 
 ## Quick links
 
@@ -9,9 +9,10 @@ Central hub for **Kame Finance** documentation. Topic-based paths mirror Kame Ho
 | [Application Inventory](./reference/application-inventory.md) | **What exists today** — routes, features, API, DB (keep in sync) |
 | [Architecture](./architecture/README.md)                      | Structure, tech stack, mobile readiness                          |
 | [Database](./database/README.md)                              | Schema design                                                    |
-| [Product](./product/README.md)                                | Design system, user flows, dashboard UX                          |
+| [Product](./product/README.md)                                | Design system ([DESIGN.md](../apps/web/DESIGN.md)), user flows   |
 | [Implementation](./implementation/README.md)                  | Roadmap and phases                                               |
 | [Rebuild](./rebuild/README.md)                                | **Greenfield app** — plan/stack, feature inventory, design system for v2 |
+| [Workflow plans](./workflow/plans/)                           | Active implementation plans (e.g. [UI/UX redesign](./workflow/plans/2026-11-08-ui-ux-redesign.md)) |
 | [Temp](./temp/README.md)                                      | Migration notes, exploratory docs                                |
 
 ## By role

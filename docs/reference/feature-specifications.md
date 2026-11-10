@@ -49,6 +49,13 @@ See `docs/temp/pay-credit-cards-migration.md` and `.cursor/rules/18-credit-cards
 - **Card info** on a placeholder or uploaded receipt lists name, masked card number, card type, min due, total due, statement date, and due date. Copy writes the full card number (digits only), amounts without currency or commas, and dates as `YYYY-MM-DD`. A missing full number cannot be copied.
 - A placeholder with no statement file shows **SOA not yet available** in place of Pending. The SOA control stays disabled and does not open the preview. Upload remains available. After the statement date with still no SOA, the slot keeps the **SOA missing** badge.
 
+### SOA transaction dates
+
+- **One parser for every surface:** `lib/soa/transaction-dates.ts` (`parseTransactionDate`, `formatTransactionDateToken`, `transactionDateSortKey`) is the single source of truth for turning a stored `soa_transactions.date` into display text and sort order. The Transactions table, Analytics drill-down, and summary PDF all read from it.
+- **Every issuer prints month first.** RCBC and Unionbank store `MM/DD/YY` (`SALE DATE 11/03/26` = 3 November), Metrobank `MM/DD`, BPI month names, and Maya day-first month names (`11 Sep`). Never assume `DD/MM`; a day-first read shows 3 November as "Mar 11" and pushes days 13–31 into a raw fallback.
+- **Display:** a posted/transacted pair renders as `Oct 29, 2026 / Oct 30, 2026` (year included when the statement supplies one, `Sep 25` for Metrobank's yearless `MM/DD`).
+- **Sort:** `transactionDateSortKey` sorts chronologically by resolved year/month/day, not by comparing raw strings, and keep undated rows last in both directions.
+
 ### SOA period analytics
 
 - **Analytics tab:** category breakdown + distribution donut (analyzed spend only).

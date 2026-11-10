@@ -17,7 +17,7 @@ function ChecklistIcon({ state }: { state: ChecklistState }) {
   if (state === "pass") {
     return (
       <CheckCircle2
-        className={cn(className, "text-[hsl(var(--success))]")}
+        className={cn(className, "text-success")}
         aria-hidden
       />
     );
@@ -115,7 +115,7 @@ export function ReceiptValidationChecklist({
           ))}
         </ul>
         {receipt.aiSummary ? (
-          <p className="mt-3 border-t border-border/60 pt-2 text-[11px] leading-snug text-muted-foreground">
+          <p className="mt-3 border-t border-border/60 pt-2 text-2xs leading-snug text-muted-foreground">
             {receipt.aiSummary}
           </p>
         ) : null}
@@ -142,7 +142,7 @@ export function ReceiptValidationChecklist({
         <span
           className={cn(
             "font-medium text-muted-foreground",
-            compact ? "text-[10px]" : "text-xs",
+            compact ? "text-2xs" : "text-xs",
           )}
         >
           AI validation
@@ -170,7 +170,7 @@ export function ReceiptValidationChecklist({
             <p
               className={cn(
                 "text-muted-foreground",
-                compact ? "text-[10px]" : "text-xs",
+                compact ? "text-2xs" : "text-xs",
               )}
             >
               {failCount} check{failCount === 1 ? "" : "s"} failed
@@ -189,7 +189,7 @@ export function ReceiptValidationChecklist({
                 key={check.id}
                 className={cn(
                   "flex items-center gap-1.5 leading-snug",
-                  compact ? "text-[10px]" : "text-xs",
+                  compact ? "text-2xs" : "text-xs",
                 )}
               >
                 <ChecklistIcon state={check.state} />
@@ -211,7 +211,7 @@ export function ReceiptValidationChecklist({
             <p
               className={cn(
                 "border-t border-border/60 pt-1.5 leading-snug text-muted-foreground",
-                compact ? "text-[10px]" : "text-[11px]",
+                compact ? "text-2xs" : "text-2xs",
               )}
             >
               {receipt.aiSummary}

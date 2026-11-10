@@ -251,14 +251,14 @@ export function ManualSoaEntryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[min(90vh,840px)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="font-display">Add statement</DialogTitle>
+          <DialogTitle className="">Add statement</DialogTitle>
         </DialogHeader>
 
         {cards.length === 0 ? (
           <div className="space-y-3 py-2">
             <p className="text-sm text-muted-foreground">No credit cards yet.</p>
             <Button asChild variant="outline" size="sm">
-              <Link href={ROUTES.dashboard.creditCards}>Add card</Link>
+              <Link href={ROUTES.dashboard.cards}>Add card</Link>
             </Button>
           </div>
         ) : (

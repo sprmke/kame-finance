@@ -20,7 +20,7 @@ export function CardColorPicker({
     <div className={cn("flex items-center gap-3", className)}>
       <label className="relative shrink-0 cursor-pointer">
         <span
-          className="block h-10 w-10 rounded-lg border border-border shadow-sm"
+          className="block h-10 w-10 rounded-lg border border-border"
           style={{ backgroundColor: normalized }}
         />
         <input

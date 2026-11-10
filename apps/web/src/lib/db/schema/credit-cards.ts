@@ -16,8 +16,8 @@ import {
 import { accounts, users } from "./users";
 
 /**
- * Philippine credit-card issuers. Grouping follows Kame Homes
- * `PH_PAYMENT_PROVIDERS` (e-wallets that issue cards, digital banks, banks).
+ * Philippine credit-card issuers, grouped as e-wallets that issue cards,
+ * digital banks, and traditional banks.
  * Only e-wallet brands with a credit-card / billing-statement product are listed
  * under `ewallet` (e.g. Maya Black; not GrabPay/ShopeePay). MariBank credit
  * cards use the digital_bank row. IDs stay kebab-case so existing `bpi` /

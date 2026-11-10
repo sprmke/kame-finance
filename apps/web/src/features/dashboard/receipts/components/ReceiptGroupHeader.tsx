@@ -16,7 +16,7 @@ const PAID_STATUS_CONFIG: Record<
 > = {
   all_paid: {
     Icon: CheckCircle2,
-    className: "text-[hsl(var(--success))]",
+    className: "text-success",
     label: "All paid",
   },
   partial: {
@@ -43,7 +43,7 @@ export function ReceiptGroupHeader({
   paidSummary,
 }: ReceiptGroupHeaderProps) {
   if (!showPaidSummary || !paidSummary || paidSummary.totalCount === 0) {
-    return <h2 className="font-display text-lg font-semibold">{label}</h2>;
+    return <h2 className="text-lg font-semibold">{label}</h2>;
   }
 
   const { paidCount, totalCount } = paidSummary;
@@ -52,7 +52,7 @@ export function ReceiptGroupHeader({
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-      <h2 className="font-display text-lg font-semibold">{label}</h2>
+      <h2 className="text-lg font-semibold">{label}</h2>
       <div
         className={cn(
           "flex items-center gap-1.5 text-sm font-medium",

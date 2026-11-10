@@ -1,6 +1,6 @@
 ---
 name: accessibility
-description: Accessibility skill for WCAG 2.1 AA compliance. Use when building or reviewing UI: semantic HTML, ARIA, keyboard navigation, focus management, and screen reader support.
+description: "Accessibility skill for WCAG 2.1 AA compliance. Use when building or reviewing UI: semantic HTML, ARIA, keyboard navigation, focus management, and screen reader support."
 ---
 
 # Accessibility Skill (WCAG 2.1 AA)

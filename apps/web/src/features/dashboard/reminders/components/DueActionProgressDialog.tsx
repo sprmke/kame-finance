@@ -92,7 +92,7 @@ export function DueActionProgressDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle className="font-display">{title}</DialogTitle>
+          <DialogTitle className="">{title}</DialogTitle>
         </DialogHeader>
 
         <WorkflowProgressPanel

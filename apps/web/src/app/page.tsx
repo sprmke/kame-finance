@@ -1,152 +1,147 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  ArrowRight,
-  Bell,
-  CreditCard,
-  FileText,
-  Shield,
-  Sparkles,
-  Zap,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { CalendarSheetArt } from "@/components/brand/CalendarSheetArt";
+import { DayMarkGlyph } from "@/components/calendar/DayMark";
 import { Button } from "@/components/ui/button";
 import { ROUTES } from "@/config/routes";
 import { auth } from "@/lib/auth/auth-config";
 
-const FEATURES = [
+/** A card's month, as the product runs it. Facts from docs/product/user-flows.md. */
+const MONTH_STEPS = [
   {
-    icon: CreditCard,
-    title: "Credit card SOA",
-    description:
-      "Fetch statement PDFs from Gmail, unlock, parse dues, and generate summary reports for Metrobank, BPI, RCBC, and Unionbank.",
+    day: "03",
+    title: "The statement arrives",
+    body: "Kame Finance finds the SOA in Gmail, unlocks the PDF, and reads the dues. Or upload it yourself.",
+    mark: "due" as const,
   },
   {
-    icon: Bell,
-    title: "Smart reminders",
-    description:
-      "Daily due-date reminders via Telegram and Slack — starting days before your due date through payment day.",
+    day: "05",
+    title: "It goes on the calendar",
+    body: "Minimum and total due land on the due date. No statement by the statement date? It's flagged SOA missing.",
+    mark: "missing" as const,
   },
   {
-    icon: Zap,
-    title: "Automations",
-    description:
-      "Schedule SOA checks and payment reminders from the dashboard — runs automatically in the background.",
+    day: "18",
+    title: "Reminders start",
+    body: "Telegram and Slack nudges plus Google Calendar events, every day until the card is paid.",
+    mark: "urgent" as const,
   },
   {
-    icon: Shield,
-    title: "Encrypted secrets",
-    description:
-      "Card PDF passwords and integration tokens encrypted at rest. Multi-user ready when you need it.",
+    day: "21",
+    title: "Crossed off",
+    body: "Send the payment screenshot. AI checks it against the due and marks the card paid.",
+    mark: "paid" as const,
   },
-] as const;
+];
 
-const STATS = [
-  { label: "PH banks supported", value: "4" },
-  { label: "Reminder window", value: "4 days before due" },
-  { label: "Channels", value: "Telegram · Slack" },
-] as const;
+const BANKS = ["Metrobank", "RCBC", "BPI", "Unionbank"];
 
 export default async function HomePage() {
   const session = await auth();
   if (session?.user) redirect(ROUTES.dashboard.root);
 
   return (
-    <div className="brand-page-bg relative min-h-screen overflow-hidden">
-      <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-        <BrandLogo size="md" showTagline />
-        <div className="flex gap-2">
-          <Button variant="ghost" asChild>
-            <Link href={ROUTES.login}>Sign in</Link>
-          </Button>
-          <Button asChild className="shadow-glow">
-            <Link href={ROUTES.login}>Get started with Google</Link>
-          </Button>
-        </div>
+    <div className="min-h-dvh">
+      <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8">
+        <BrandLogo size="sm" />
+        <Button asChild variant="ghost">
+          <Link href={ROUTES.login}>Sign in</Link>
+        </Button>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-6xl px-6 pb-24 pt-4">
-        <section className="mx-auto max-w-3xl text-center">
-          <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            Finance automation for operators
-          </p>
-          <h1 className="text-balance font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Run your finances on autopilot —{" "}
-            <span className="text-gradient">not another spreadsheet</span>
-          </h1>
-          <p className="text-pretty mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-            Kame Finance is your command center for credit card SOA processing,
-            due-date notifications, receipt AI validation, and workflow
-            automations. Built for reliability when bills and deadlines cannot
-            slip.
-          </p>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Button size="lg" asChild className="shadow-glow">
-              <Link href={ROUTES.login}>
-                Start with Google
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href={ROUTES.login}>Sign in to dashboard</Link>
-            </Button>
+      <main>
+        <section className="mx-auto grid max-w-6xl items-center gap-12 px-5 pb-20 pt-8 sm:px-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:pt-16">
+          <div className="space-y-7">
+            <h1 className="font-headline max-w-xl text-4xl leading-[0.98] sm:text-5xl">
+              Every card&rsquo;s bill, circled and crossed off.
+            </h1>
+            <p className="max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Kame Finance reads your Philippine credit card statements from Gmail,
+              puts every due date on one monthly calendar, reminds you until it&rsquo;s
+              paid, and checks the card off when your payment receipt matches.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild size="lg">
+                <Link href={ROUTES.login}>
+                  Continue with Google
+                  <ArrowRight />
+                </Link>
+              </Button>
+            </div>
+          </div>
+          <div className="relative mx-auto w-full max-w-md lg:max-w-none">
+            <CalendarSheetArt className="rotate-[1.5deg]" />
+            <p className="mt-3 text-center text-xs text-muted-foreground">Sample month</p>
           </div>
         </section>
 
-        <section className="mx-auto mt-16 grid max-w-2xl grid-cols-3 gap-4 rounded-2xl border border-border/80 bg-card/60 p-6 shadow-card backdrop-blur-sm sm:max-w-none">
-          {STATS.map((stat) => (
-            <div key={stat.label} className="text-center">
-              <p className="font-display text-2xl font-bold tabular-nums text-primary">
-                {stat.value}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">{stat.label}</p>
-            </div>
-          ))}
+        <section aria-labelledby="month-title" className="border-y bg-card">
+          <div className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
+            <h2 id="month-title" className="font-headline text-3xl">
+              How a month goes
+            </h2>
+            <ol className="mt-10 grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-2 lg:grid-cols-4">
+              {MONTH_STEPS.map((step) => (
+                <li key={step.title} className="space-y-3 bg-card p-5">
+                  <div className="flex items-center gap-3">
+                    <span className="font-numeral text-4xl leading-none">{step.day}</span>
+                    <DayMarkGlyph
+                      kind={step.mark}
+                      className={
+                        step.mark === "paid"
+                          ? "size-6 text-success"
+                          : step.mark === "urgent"
+                            ? "size-6 text-due"
+                            : step.mark === "missing"
+                              ? "size-6 text-warning"
+                              : "size-6"
+                      }
+                    />
+                  </div>
+                  <h3 className="text-base font-bold">{step.title}</h3>
+                  <p className="text-13 leading-relaxed text-muted-foreground">{step.body}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
         </section>
 
-        <section className="mt-20 grid gap-6 sm:grid-cols-2">
-          {FEATURES.map((f, index) => (
-            <div
-              key={f.title}
-              className="interactive-glow group rounded-2xl border border-border bg-card/80 p-6 shadow-card backdrop-blur-sm"
-              style={{ animationDelay: `${index * 75}ms` }}
-            >
-              <div className="mb-4 inline-flex rounded-xl bg-gradient-to-br from-primary/15 to-[hsl(var(--chart-2)/0.12)] p-3 ring-1 ring-primary/20">
-                <f.icon className="h-5 w-5 text-primary" aria-hidden />
-              </div>
-              <h2 className="font-display text-lg font-semibold text-foreground">
-                {f.title}
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                {f.description}
+        <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8">
+          <div className="grid gap-10 lg:grid-cols-2">
+            <div className="space-y-3">
+              <h2 className="font-headline text-3xl">Reads your bank&rsquo;s own statement</h2>
+              <p className="max-w-md text-13 leading-relaxed text-muted-foreground">
+                Dedicated parsers for four banks; OCR and AI read the rest, including scanned
+                PDFs and photos. Statement PDF passwords and integration tokens are encrypted.
               </p>
             </div>
-          ))}
-        </section>
-
-        <section className="mt-24 rounded-2xl border border-primary/20 bg-gradient-primary-subtle p-8 text-center shadow-soft-md sm:p-12">
-          <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">
-            Ready to automate your next billing cycle?
-          </h2>
-          <p className="mx-auto mt-3 max-w-lg text-muted-foreground">
-            Connect Gmail, add your cards, and run your first SOA in minutes.
-          </p>
-          <Button size="lg" className="mt-8 shadow-glow" asChild>
-            <Link href={ROUTES.login}>
-              Create free account
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+            <ul className="flex flex-wrap content-start gap-2">
+              {BANKS.map((bank) => (
+                <li
+                  key={bank}
+                  className="rounded-md border bg-card px-4 py-2.5 text-sm font-bold"
+                >
+                  {bank}
+                </li>
+              ))}
+              <li className="rounded-md border border-dashed px-4 py-2.5 text-sm text-muted-foreground">
+                + other PH issuers via OCR / AI
+              </li>
+            </ul>
+          </div>
         </section>
       </main>
 
-      <footer className="relative z-10 border-t border-border py-10 text-center">
-        <BrandLogo className="mx-auto justify-center" size="sm" />
-        <p className="mt-3 text-sm text-muted-foreground">
-          Credit cards · Reminders · Automations · More modules coming
-        </p>
+      <footer className="border-t">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-5 py-8 text-13 text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-8">
+          <BrandLogo size="sm" />
+          <Link href={ROUTES.login} className="hover:text-foreground">
+            Sign in
+          </Link>
+        </div>
       </footer>
     </div>
   );

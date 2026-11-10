@@ -100,7 +100,7 @@ export function SoaStatementTable({
               !!statement.pdfFileName &&
               statement.pdfFileName !== "—" &&
               !statement.soaUnavailable;
-            const detailHref = ROUTES.dashboard.soaStatement(
+            const detailHref = ROUTES.dashboard.statement(
               periodId,
               statement.id,
             );

@@ -26,7 +26,7 @@ const TONE_CONFIG: Record<
 > = {
   success: {
     container: "border-success/30 bg-success/10",
-    icon: "text-[hsl(var(--success))]",
+    icon: "text-success",
     primary: "text-foreground",
     secondary: "text-muted-foreground",
     Icon: CheckCircle2,

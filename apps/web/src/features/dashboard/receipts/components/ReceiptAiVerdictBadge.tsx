@@ -25,23 +25,23 @@ export function formatReceiptAiVerdictLabel(
 function compactBadgeClass(verdict: ReceiptAiVerdict | string): string {
   const v = String(verdict).toLowerCase();
   if (v === "valid" || v === "likely_valid") {
-    return "bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/30";
+    return "bg-success-wash text-success ring-success/25";
   }
   if (v === "invalid") {
-    return "bg-red-50 text-red-800 ring-red-200 dark:bg-red-500/15 dark:text-red-300 dark:ring-red-500/30";
+    return "bg-due-wash text-due ring-due/25";
   }
-  return "bg-amber-50 text-amber-900 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/30";
+  return "bg-warning-wash text-warning ring-warning/25";
 }
 
 function cardClass(verdict: ReceiptAiVerdict | string): string {
   const v = String(verdict).toLowerCase();
   if (v === "valid" || v === "likely_valid") {
-    return "border-emerald-200/80 bg-emerald-50/80 dark:border-emerald-500/25 dark:bg-emerald-500/10";
+    return "border-success/25 bg-success-wash";
   }
   if (v === "invalid") {
-    return "border-red-200/80 bg-red-50/60 dark:border-red-500/25 dark:bg-red-500/10";
+    return "border-due/25 bg-due-wash";
   }
-  return "border-amber-200/80 bg-amber-50/60 dark:border-amber-500/25 dark:bg-amber-500/10";
+  return "border-warning/25 bg-warning-wash";
 }
 
 function NoticeIcon({ verdict }: { verdict: ReceiptAiVerdict | string }) {
@@ -50,7 +50,7 @@ function NoticeIcon({ verdict }: { verdict: ReceiptAiVerdict | string }) {
   if (v === "valid" || v === "likely_valid") {
     return (
       <CheckCircle2
-        className={cn(className, "text-emerald-600 dark:text-emerald-400")}
+        className={cn(className, "text-success")}
         aria-hidden
       />
     );
@@ -58,7 +58,7 @@ function NoticeIcon({ verdict }: { verdict: ReceiptAiVerdict | string }) {
   if (v === "invalid") {
     return (
       <XCircle
-        className={cn(className, "text-red-600 dark:text-red-400")}
+        className={cn(className, "text-due")}
         aria-hidden
       />
     );
@@ -66,14 +66,14 @@ function NoticeIcon({ verdict }: { verdict: ReceiptAiVerdict | string }) {
   if (v === "unclear") {
     return (
       <HelpCircle
-        className={cn(className, "text-amber-600 dark:text-amber-400")}
+        className={cn(className, "text-warning")}
         aria-hidden
       />
     );
   }
   return (
     <AlertTriangle
-      className={cn(className, "text-amber-600 dark:text-amber-400")}
+      className={cn(className, "text-warning")}
       aria-hidden
     />
   );
@@ -98,7 +98,7 @@ export function ReceiptAiVerdictBadge({
     return (
       <span
         className={cn(
-          "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1",
+          "inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold ring-1",
           compactBadgeClass(verdict),
           className,
         )}
@@ -123,7 +123,7 @@ export function ReceiptAiVerdictBadge({
           {formatReceiptAiVerdictLabel(verdict)}
         </p>
         {summary ? (
-          <p className="text-[11px] leading-snug text-muted-foreground">
+          <p className="text-2xs leading-snug text-muted-foreground">
             {summary}
           </p>
         ) : null}

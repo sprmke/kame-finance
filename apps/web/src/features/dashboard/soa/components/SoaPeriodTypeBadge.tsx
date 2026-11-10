@@ -18,21 +18,10 @@ export function SoaPeriodTypeBadge({
   if (withinRangeLabel) {
     return (
       <Fragment>
-        <StatusBadge
-          label="Single"
-          variant="default"
-          className="border-primary/30 bg-primary/10 text-primary"
-        />
         <StatusBadge label="In range" variant="muted" />
       </Fragment>
     );
   }
 
-  return (
-    <StatusBadge
-      label="Single"
-      variant="default"
-      className="border-primary/30 bg-primary/10 text-primary"
-    />
-  );
+  return null;
 }

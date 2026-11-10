@@ -1,0 +1,151 @@
+{
+  "skills": [
+    "accessibility",
+    "automation-platform",
+    "aws-s3",
+    "component-generator",
+    "credit-cards",
+    "docs-first",
+    "drizzle-orm",
+    "emails",
+    "fallow",
+    "form-builder",
+    "fornt",
+    "frontend-design",
+    "integrations",
+    "mobile-readiness",
+    "performance",
+    "supabase-auth",
+    "supabase-stack",
+    "tanstack-query",
+    "tanstack-table",
+    "testing",
+    "trpc-api",
+    "ui-design"
+  ],
+  "commands": {},
+  "agents": [
+    "verifier.toml",
+    "security-auditor.toml",
+    "debugger.toml",
+    "test-runner.toml"
+  ],
+  "rules": [
+    {
+      "path": ".cursor/rules/00-project-context.mdc",
+      "always": true,
+      "scope": "**/*"
+    },
+    {
+      "path": ".cursor/rules/01-tech-stack.mdc",
+      "always": true,
+      "scope": "- '**/*.ts"
+    },
+    {
+      "path": ".cursor/rules/02-architecture.mdc",
+      "always": false,
+      "scope": "**/*"
+    },
+    {
+      "path": ".cursor/rules/03-database.mdc",
+      "always": false,
+      "scope": "- \"**/schema/**/*.ts"
+    },
+    {
+      "path": ".cursor/rules/04-api.mdc",
+      "always": false,
+      "scope": "- \"**/routers/**/*.ts"
+    },
+    {
+      "path": ".cursor/rules/05-components.mdc",
+      "always": false,
+      "scope": "- \"**/*.tsx"
+    },
+    {
+      "path": ".cursor/rules/06-state-management.mdc",
+      "always": false,
+      "scope": "- '**/store/**/*.ts"
+    },
+    {
+      "path": ".cursor/rules/07-forms.mdc",
+      "always": false,
+      "scope": "- '**/*Form*.tsx"
+    },
+    {
+      "path": ".cursor/rules/08-security.mdc",
+      "always": false,
+      "scope": "- \"**/services/**/*.ts"
+    },
+    {
+      "path": ".cursor/rules/09-testing.mdc",
+      "always": false,
+      "scope": "- \"**/*.test.ts"
+    },
+    {
+      "path": ".cursor/rules/10-performance.mdc",
+      "always": false,
+      "scope": "- \"**/*.tsx"
+    },
+    {
+      "path": ".cursor/rules/11-workflow.mdc",
+      "always": false,
+      "scope": "**/*"
+    },
+    {
+      "path": ".cursor/rules/12-thinking-framework.mdc",
+      "always": true,
+      "scope": "**/*"
+    },
+    {
+      "path": ".cursor/rules/13-ui-ux-design.mdc",
+      "always": false,
+      "scope": "- \"**/*.tsx"
+    },
+    {
+      "path": ".cursor/rules/14-dashboard-ui.mdc",
+      "always": false,
+      "scope": "- '**/features/dashboard/**"
+    },
+    {
+      "path": ".cursor/rules/15-accessibility.mdc",
+      "always": false,
+      "scope": "**/*.tsx\" \"**/components/**/*\" \"**/app/**/*.tsx"
+    },
+    {
+      "path": ".cursor/rules/16-docs-sync.mdc",
+      "always": true,
+      "scope": "Task-specific; read when relevant"
+    },
+    {
+      "path": ".cursor/rules/17-mobile-readiness.mdc",
+      "always": false,
+      "scope": "**/*"
+    },
+    {
+      "path": ".cursor/rules/17-supabase-platform.mdc",
+      "always": false,
+      "scope": "- '**/env*.ts"
+    },
+    {
+      "path": ".cursor/rules/18-credit-cards-module.mdc",
+      "always": false,
+      "scope": "- '**/credit-cards/**"
+    },
+    {
+      "path": ".cursor/rules/19-automations-integrations.mdc",
+      "always": false,
+      "scope": "- '**/automations/**"
+    },
+    {
+      "path": ".cursor/rules/20-legacy-cli-reference.mdc",
+      "always": false,
+      "scope": "- '**/automated-tasks/pay-credit-cards/**"
+    },
+    {
+      "path": ".cursor/rules/21-minimal-ui-copy.mdc",
+      "always": true,
+      "scope": "Task-specific; read when relevant"
+    }
+  ],
+  "adapted_hooks": 3
+}

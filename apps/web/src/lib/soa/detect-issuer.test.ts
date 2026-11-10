@@ -67,7 +67,7 @@ describe("detectIssuerFromSoaText", () => {
 });
 
 describe("parseIssuerId", () => {
-  it("accepts slugs and Kame Homes labels", () => {
+  it("accepts slugs and issuer display labels", () => {
     expect(parseIssuerId("bdo")).toBe("bdo");
     expect(parseIssuerId("BDO")).toBe("bdo");
     expect(parseIssuerId("Security Bank")).toBe("security-bank");

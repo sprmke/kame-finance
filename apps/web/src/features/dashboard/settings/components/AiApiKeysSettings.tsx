@@ -172,10 +172,10 @@ export function AiApiKeysSettings() {
   const groqSavedCount = formConfig?.groq.keyCount ?? 0;
 
   return (
-    <Card className="lg:col-span-2">
+    <Card>
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
+          <Sparkles className="h-5 w-5 text-muted-foreground" aria-hidden />
           <CardTitle className="text-base">Receipt AI</CardTitle>
         </div>
       </CardHeader>

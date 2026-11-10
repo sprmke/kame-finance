@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import { AutomationCardSkeleton } from "@/components/shared/skeletons";
-import { DashboardSection } from "@/components/shared/DashboardSection";
 import type { AutomationJobType } from "@/lib/automations/job-types";
 import { api } from "@/lib/api/client";
 import { formatUserFacingErrorMessage } from "@/lib/errors/user-facing-message";
@@ -101,7 +100,7 @@ export function AutomationsPanel() {
   const runPending = run.isPending && runSettled === null;
 
   return (
-    <DashboardSection title="Schedule">
+    <div className="space-y-3">
       <AutomationFormDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
@@ -141,6 +140,6 @@ export function AutomationsPanel() {
           ))}
         </div>
       )}
-    </DashboardSection>
+    </div>
   );
 }

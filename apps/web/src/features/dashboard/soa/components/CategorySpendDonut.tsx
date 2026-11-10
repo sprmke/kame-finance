@@ -75,7 +75,7 @@ function DonutSliceTooltip({
         transform: "translate(-50%, calc(-100% - 10px))",
       }}
     >
-      <div className="rounded-lg border border-border/80 bg-card px-3 py-2 shadow-elevated">
+      <div className="rounded-lg border border-border/80 bg-card px-3 py-2">
         <p className="text-sm font-medium">{hover.slice.name}</p>
         <p className="text-sm tabular-nums text-foreground">
           {formatPhpAmount(hover.slice.value)}
@@ -196,12 +196,12 @@ export function CategorySpendDonut({
         </PieChart>
       </ResponsiveContainer>
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
-        <span className="max-w-[9rem] truncate text-[11px] uppercase tracking-wide text-muted-foreground">
+        <span className="max-w-[9rem] truncate text-2xs uppercase tracking-wide text-muted-foreground">
           {selectedSlice?.name ?? "Total"}
         </span>
         <span
           key={`${animationKey}:${selectedSlug ?? "all"}`}
-          className="font-display text-xl font-bold tabular-nums tracking-tight motion-safe:animate-fade-in sm:text-2xl"
+          className="font-numeral text-xl font-bold tabular-nums tracking-tight motion-safe:animate-fade-in sm:text-2xl"
         >
           {formatPhpAmount(centerValue)}
         </span>

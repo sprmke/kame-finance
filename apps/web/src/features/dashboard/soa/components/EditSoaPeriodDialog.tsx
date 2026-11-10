@@ -58,7 +58,7 @@ export function EditSoaPeriodDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display">Edit SOA run</DialogTitle>
+          <DialogTitle className="">Edit SOA run</DialogTitle>
         </DialogHeader>
         {period && (
           <p className="text-sm text-muted-foreground">{period.label}</p>

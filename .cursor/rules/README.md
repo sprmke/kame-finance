@@ -1,6 +1,6 @@
 # Cursor Rules for Kame Finance
 
-Modular rules for **Kame Finance** — business automation platform (credit cards as first module). Mirrors patterns from Kame Homes (`property-management-app`).
+Modular rules for **Kame Finance** — business automation platform (credit cards as first module).
 
 ## Rules Overview
 
@@ -75,5 +75,4 @@ Configure in Cursor Settings: Supabase MCP, Context7, Browser/Playwright for E2E
 | Repo                               | Role                         |
 | ---------------------------------- | ---------------------------- |
 | `kame-finance`                         | This app (build here)        |
-| `property-management-app`          | Stack reference (Kame Homes) |
 | `automated-tasks/pay-credit-cards` | Legacy CLI source            |

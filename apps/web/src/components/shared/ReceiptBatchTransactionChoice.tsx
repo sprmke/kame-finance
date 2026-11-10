@@ -71,7 +71,7 @@ export function ReceiptBatchTransactionChoice({
     >
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display tabular-nums">
+          <DialogTitle className="font-numeral tabular-nums">
             {countLabel}
           </DialogTitle>
           <DialogDescription className="sr-only">

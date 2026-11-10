@@ -61,9 +61,10 @@ Track statement-of-account PDFs from Gmail, parse dues across multiple PH banks,
 
 ### Dashboard
 
-- **Overview** — statement paid %, minimum met per card, attention list, spend summary
-- **Settings** — integrations, AI API keys, transaction category rules
-- **Light / dark mode** via `next-themes`
+- **Home** — month calendar with due/paid marks, Needs you list, month summary, spend by category
+- **Bills** — one row per card per month with mark paid and receipts
+- **Settings** — connections, automations, statement workflow, categories, AI keys
+- **Light / dark mode** via `next-themes`; design system in [`apps/web/DESIGN.md`](./apps/web/DESIGN.md)
 - Public `/` landing — dashboard routes require Google sign-in
 
 ---
@@ -93,13 +94,14 @@ Track statement-of-account PDFs from Gmail, parse dues across multiple PH banks,
 apps/web/
   src/app/                    # Routes only (pages, layouts, API handlers)
   src/features/dashboard/     # Feature modules
-    credit-cards/             # Card CRUD
-    soa/                      # SOA periods, statements, analytics
-    reminders/                # Due entries, mark paid, automations
-    receipts/                 # Upload + AI validation
-    integrations/             # Gmail, Telegram, Slack settings
-    settings/                 # Profile, AI keys, category rules
-    overview/                 # Dashboard home
+    overview/                 # Home (month calendar, Needs you)
+    bills/                    # Bills workspace (due + receipts)
+    credit-cards/             # Cards
+    soa/                      # Statements, analytics
+    reminders/                # Due entries, mark paid
+    receipts/                 # Receipt board + AI validation
+    automations/              # Scheduled jobs (Settings › Automations)
+    settings/                 # Settings sections
   src/server/
     routers/                  # tRPC routers
     services/                 # Business logic (SOA, reminders, receipts, …)
@@ -113,8 +115,20 @@ scripts/                      # Local setup, Supabase bootstrap, CLI migration
 
 ## Routes
 
-| Route                       | Access | Description                                         |
-| --------------------------- | ------ | --------------------------------------------------- |
+| Route | Access | Description |
+| ----- | ------ | ----------- |
+| `/` | Public | Landing |
+| `/login` | Public | Google OAuth sign-in |
+| `/dashboard` | Auth | **Home** — month calendar, Needs you, month summary |
+| `/dashboard/bills` | Auth | **Bills** — due per card, mark paid, receipts (`?view=receipts`) |
+| `/dashboard/statements` | Auth | **Statements** — statement months |
+| `/dashboard/statements/[periodId]` | Auth | Month detail (Summary / Cards / Transactions / Analytics) |
+| `/dashboard/cards` | Auth | **Cards** — add/edit cards |
+| `/dashboard/settings` | Auth | **Settings** — connections, automations, statements, categories, AI |
+
+Old paths (`/dashboard/soa`, `/credit-cards`, `/reminders`, `/receipts`, `/automations`) redirect.
+
+--------------------------- | ------ | --------------------------------------------------- |
 | `/`                         | Public | Marketing landing                                   |
 | `/login`                    | Public | Google OAuth sign-in                                |
 | `/dashboard`                | Auth   | Overview and mission panel                          |

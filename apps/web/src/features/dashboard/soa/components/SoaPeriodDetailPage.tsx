@@ -6,13 +6,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
-  ArrowLeft,
-  CalendarDays,
-  CircleCheck,
-  CreditCard,
+  ChevronRight,
   FileText,
   Loader2,
-  PhilippinePeso,
+  MoreHorizontal,
   Play,
   Plus,
   Sparkles,
@@ -20,10 +17,18 @@ import {
 } from "lucide-react";
 
 import { DashboardPageHeader } from "@/components/shared/DashboardPageHeader";
-import { PageActionBar } from "@/components/shared/PageActionBar";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { formatShortDate } from "@/components/calendar/DateNumeral";
+import { Amount } from "@/components/shared/Amount";
+import { FigureLine } from "@/components/shared/Ledger";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ReceiptUploadDialogs } from "@/components/shared/ReceiptUploadDialogs";
 import { SoaPeriodDetailContentSkeleton } from "@/components/shared/skeletons";
-import { StatCard, statGridClassName } from "@/components/shared/StatCard";
 import { ViewToggle } from "@/components/shared/ViewToggle";
 import { ViewModeLayout } from "@/components/shared/ViewModeLayout";
 import { Button } from "@/components/ui/button";
@@ -92,24 +97,20 @@ export function SoaPeriodDetailPage({ periodId }: { periodId: string }) {
   const { data: period, isLoading } = api.soa.getPeriod.useQuery({ periodId });
 
   if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <SoaPeriodDetailContentSkeleton />
-      </div>
-    );
+    return <SoaPeriodDetailContentSkeleton />;
   }
 
   if (!period) {
     return (
-      <div className="py-10 space-y-3 text-center">
-        <p className="text-muted-foreground">SOA period not found.</p>
-        <Button asChild variant="outline">
-          <Link href={ROUTES.dashboard.soa}>
-            <ArrowLeft className="mr-2 w-4 h-4" />
-            Back
-          </Link>
-        </Button>
-      </div>
+      <EmptyState
+        title="Statement month not found"
+        message="It may have been deleted or merged into another month."
+        action={
+          <Button asChild variant="outline">
+            <Link href={ROUTES.dashboard.statements}>All statements</Link>
+          </Button>
+        }
+      />
     );
   }
 
@@ -204,7 +205,7 @@ function SoaPeriodDetailBody({
     receiptUpload.handleProgressComplete();
     if (redirectToReceiptsAfterUploadRef.current) {
       redirectToReceiptsAfterUploadRef.current = false;
-      router.push(ROUTES.dashboard.receipts);
+      router.push(ROUTES.dashboard.billsReceipts);
     }
   }
 
@@ -303,57 +304,64 @@ function SoaPeriodDetailBody({
         : null;
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2 items-center">
-        <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={ROUTES.dashboard.soa}>
-            <ArrowLeft className="mr-1.5 h-4 w-4" />
-            SOA
-          </Link>
-        </Button>
-      </div>
-
+    <div className="space-y-6">
       <DashboardPageHeader
+        breadcrumb={
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-13 text-muted-foreground">
+            <Link href={ROUTES.dashboard.statements} className="hover:text-foreground hover:underline">
+              Statements
+            </Link>
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+            <span className="truncate text-foreground" aria-current="page">
+              {period.label}
+            </span>
+          </nav>
+        }
         title={period.label}
         actions={
-          <PageActionBar
-            secondary={
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setManualEntryOpen(true)}
-                  disabled={manualUpload.isPending || runPipeline.isPending}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add
+          <>
+            <Button
+              variant="outline"
+              className="hidden sm:inline-flex"
+              disabled={manualUpload.isPending || runPipeline.isPending}
+              onClick={() => manualUpload.fileRef.current?.click()}
+            >
+              {manualUpload.isPending ? <Loader2 className="animate-spin" /> : <Upload />}
+              {manualUpload.progressLabel ? `Uploading ${manualUpload.progressLabel}` : "Upload SOA"}
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" aria-label="More statement actions">
+                  <MoreHorizontal />
                 </Button>
-                <Button
-                  variant="outline"
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem
+                  className="sm:hidden"
                   disabled={manualUpload.isPending || runPipeline.isPending}
-                  onClick={() => manualUpload.fileRef.current?.click()}
+                  onSelect={() => manualUpload.fileRef.current?.click()}
                 >
-                  {manualUpload.isPending ? (
-                    <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                  ) : (
-                    <Upload className="mr-2 w-4 h-4" />
-                  )}
-                  {manualUpload.progressLabel
-                    ? `Uploading ${manualUpload.progressLabel}`
-                    : "Upload"}
-                </Button>
+                  <Upload />
+                  Upload SOA
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={manualUpload.isPending || runPipeline.isPending}
+                  onSelect={() => setManualEntryOpen(true)}
+                >
+                  <Plus />
+                  Add manually
+                </DropdownMenuItem>
                 {periodTransactions.length > 0 ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => categorize.openChoiceDialog()}
+                  <DropdownMenuItem
                     disabled={categorize.isPending}
+                    onSelect={() => categorize.openChoiceDialog()}
                   >
-                    <Sparkles className="mr-2 w-4 h-4" />
+                    <Sparkles />
                     Categorize with AI
-                  </Button>
+                  </DropdownMenuItem>
                 ) : null}
-                <Button
-                  variant="outline"
-                  onClick={() =>
+                <DropdownMenuItem
+                  onSelect={() =>
                     setPdfPreview({
                       kind: "summary",
                       periodId,
@@ -361,20 +369,46 @@ function SoaPeriodDetailBody({
                     })
                   }
                 >
-                  <FileText className="mr-2 w-4 h-4" />
+                  <FileText />
                   Summary PDF
-                </Button>
-              </>
-            }
-            primary={
-              <Button
-                onClick={() => openRun(undefined, { rerun: true })}
-                disabled={runPipeline.isPending}
-              >
-                <Play className="mr-2 w-4 h-4" />
-                Re-run
-              </Button>
-            }
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              onClick={() => openRun(undefined, { rerun: true })}
+              loading={runPipeline.isPending}
+            >
+              <Play />
+              Re-run
+            </Button>
+          </>
+        }
+        meta={
+          <FigureLine
+            items={[
+              {
+                key: "outstanding",
+                figure: (
+                  <Amount
+                    value={period.totalDue}
+                    size="lg"
+                    tone={period.totalDue > 0 ? "default" : "success"}
+                  />
+                ),
+                label: "Outstanding",
+              },
+              { key: "minimum", figure: <Amount value={period.grossMinimumDue} size="lg" />, label: "Minimum due" },
+              { key: "paid", figure: <Amount value={period.totalPaid} size="lg" tone="success" />, label: "Paid" },
+              {
+                key: "next",
+                figure: (
+                  <span className="font-numeral text-2xl leading-none">
+                    {period.nextDueYmd ? formatShortDate(period.nextDueYmd) : "—"}
+                  </span>
+                ),
+                label: "Next due",
+              },
+            ]}
           />
         }
       />
@@ -444,36 +478,6 @@ function SoaPeriodDetailBody({
         onComplete={handleReceiptUploadDialogComplete}
       />
 
-      <div className={statGridClassName}>
-        <StatCard
-          title="Outstanding"
-          value={formatPhpAmount(period.totalDue)}
-          icon={PhilippinePeso}
-        />
-        <StatCard
-          title="Minimum due"
-          value={formatPhpAmount(period.grossMinimumDue)}
-          icon={CreditCard}
-        />
-        <StatCard
-          title="Total paid"
-          value={formatPhpAmount(period.totalPaid)}
-          icon={CircleCheck}
-        />
-        <StatCard
-          title="Next due"
-          value={
-            period.nextDueYmd
-              ? new Date(`${period.nextDueYmd}T00:00:00`).toLocaleDateString(
-                  "en-PH",
-                  { month: "short", day: "numeric" },
-                )
-              : "—"
-          }
-          icon={CalendarDays}
-        />
-      </div>
-
       <Tabs
         value={tab}
         onValueChange={(value) => {
@@ -488,8 +492,8 @@ function SoaPeriodDetailBody({
         }}
         className="space-y-3"
       >
-        <TabsList className="h-11 w-full justify-start overflow-x-auto sm:h-9">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsList>
+          <TabsTrigger value="overview">Summary</TabsTrigger>
           <TabsTrigger value="cards">Cards</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -571,7 +575,7 @@ function SoaPeriodDetailBody({
                     <section key={group.key} className="space-y-4">
                       {statementGroups.length > 1 && (
                         <div className="pb-3 border-b border-border/60">
-                          <h2 className="text-lg font-semibold font-display">
+                          <h2 className="text-lg font-semibold">
                             {periodLabel(group.month, group.year)}
                           </h2>
                           <p className="text-sm text-muted-foreground">
