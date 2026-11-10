@@ -103,6 +103,8 @@
 
 SOA pipeline lives in **`src/lib/soa/`** (Gmail fetch, bank parsers, summary PDF, `calendar-sync-rows.ts` + `google-calendar.ts`). Each active card resolves a `googleAccountId` (explicit or default); `runSoaSingleMonth` switches Gmail clients per issuer search config. Mark-paid, reminders, and due sync are native in `server/services/`. Workdir: `/tmp/kame-finance-{userId}/`. See `docs/temp/pay-credit-cards-migration.md`.
 
+`lib/soa/transaction-dates.ts` is the shared transaction-date parser (per-issuer column order, display text, chronological sort key) used by the Transactions tab, Analytics drill-down, and summary PDF. Feature code re-exports it from `features/dashboard/soa/lib/transaction-utils.ts`.
+
 ## Data loading and caching
 
 | Piece                                  | Purpose                                                                                                                              |

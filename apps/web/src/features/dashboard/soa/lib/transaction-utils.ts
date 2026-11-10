@@ -9,6 +9,7 @@ import {
   CANNOT_ANALYZE_SLUG,
   type TransactionCategorySlug,
 } from "@/lib/transactions/categories";
+import { DATE_PAIR_SPLIT } from "@/lib/soa/transaction-dates";
 
 export type SoaTransaction = {
   id: string;
@@ -133,152 +134,16 @@ export function groupTransactionsByDate(
   return [...map.entries()].map(([date, items]) => ({ date, items }));
 }
 
-export type ParsedTransactionDate = {
-  posted: string | null;
-  transacted: string | null;
-};
+export type ParsedTransactionDate =
+  import("@/lib/soa/transaction-dates").ParsedTransactionDate;
 
-const MONTH_SHORT = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
+export { DATE_PAIR_SPLIT } from "@/lib/soa/transaction-dates";
 
-/** Split pair delimiter: `04/24/26 / 05/22/26` — not every `/`. */
-const DATE_PAIR_SPLIT = /\s+\/\s+/;
-
-function monthIndexFromName(word: string): number | null {
-  const t = word.toLowerCase().replace(/[^a-z]/g, "");
-  if (t.length < 3) return null;
-  const p3 = t.slice(0, 3);
-  const idx = [
-    "jan",
-    "feb",
-    "mar",
-    "apr",
-    "may",
-    "jun",
-    "jul",
-    "aug",
-    "sep",
-    "oct",
-    "nov",
-    "dec",
-  ].indexOf(p3);
-  return idx >= 0 ? idx + 1 : null;
-}
-
-function formatMonthDay(month: number, day: number, year?: number): string {
-  const label = MONTH_SHORT[month - 1];
-  if (!label) return `${month}/${day}`;
-  if (year === undefined) return `${label} ${day}`;
-  const yy = year < 100 ? `'${String(year).padStart(2, "0")}` : `, ${year}`;
-  return `${label} ${day}${yy}`;
-}
-
-type SlashDateOrder = "mdy" | "dmy" | "md";
-
-function slashOrderForIssuer(issuerId?: string | null): SlashDateOrder | null {
-  if (issuerId === "metrobank") return "md";
-  if (issuerId === "rcbc" || issuerId === "unionbank") return "dmy";
-  return null;
-}
-
-function inferSlashOrder(a: number, b: number, parts: number): SlashDateOrder {
-  if (parts === 3) {
-    if (a > 12) return "dmy";
-    if (b > 12) return "mdy";
-    return "dmy";
-  }
-  if (a > 12) return "dmy";
-  if (b > 12) return "mdy";
-  return "md";
-}
-
-function formatSlashDate(segments: number[], issuerId?: string | null): string {
-  const order =
-    slashOrderForIssuer(issuerId) ??
-    inferSlashOrder(segments[0] ?? 0, segments[1] ?? 0, segments.length);
-
-  if (segments.length === 3) {
-    if (order === "dmy") {
-      const [day, month, year] = segments;
-      return formatMonthDay(month!, day!, year);
-    }
-    const [month, day, year] = segments;
-    return formatMonthDay(month!, day!, year);
-  }
-
-  if (segments.length === 2) {
-    if (order === "dmy") {
-      const [day, month] = segments;
-      return formatMonthDay(month!, day!);
-    }
-    const [month, day] = segments;
-    return formatMonthDay(month!, day!);
-  }
-
-  return segments.join("/");
-}
-
-/** Format one date token from legacy parsers (Metrobank, RCBC, Unionbank, BPI). */
-export function formatTransactionDatePart(
-  part: string,
-  issuerId?: string | null,
-): string {
-  const trimmed = part.trim();
-  if (!trimmed) return "—";
-
-  const monthName = trimmed.match(/^([A-Za-z]{3,12})\s+(\d{1,2})$/);
-  if (monthName) {
-    const month = monthIndexFromName(monthName[1]!);
-    const day = Number.parseInt(monthName[2]!, 10);
-    if (month && Number.isFinite(day)) return formatMonthDay(month, day);
-  }
-
-  if (trimmed.includes("/")) {
-    const segments = trimmed
-      .split("/")
-      .map((s) => Number.parseInt(s.trim(), 10))
-      .filter((n) => Number.isFinite(n));
-    if (segments.length >= 2) return formatSlashDate(segments, issuerId);
-  }
-
-  return trimmed;
-}
-
-/** Split `post / trans` date pairs and format for display. */
-export function parseTransactionDate(
-  raw: string | null | undefined,
-  issuerId?: string | null,
-): ParsedTransactionDate {
-  if (!raw?.trim()) return { posted: null, transacted: null };
-
-  const parts = raw
-    .split(DATE_PAIR_SPLIT)
-    .map((p) => p.trim())
-    .filter(Boolean);
-  if (parts.length >= 2) {
-    return {
-      posted: formatTransactionDatePart(parts[0]!, issuerId),
-      transacted: formatTransactionDatePart(parts[1]!, issuerId),
-    };
-  }
-
-  return {
-    posted: formatTransactionDatePart(parts[0]!, issuerId),
-    transacted: null,
-  };
-}
+export {
+  formatTransactionDateToken as formatTransactionDatePart,
+  parseTransactionDate,
+  transactionDateSortKey,
+} from "@/lib/soa/transaction-dates";
 
 export function transactionHasDualDates(
   transactions: SoaTransaction[],
