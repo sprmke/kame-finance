@@ -55,6 +55,6 @@ export function soaPeriodHref(
   options?: { tab?: SoaPeriodTab; category?: string | null },
 ): Route {
   const query = soaPeriodSearch(options ?? {});
-  const path = ROUTES.dashboard.soaPeriod(periodId);
+  const path = ROUTES.dashboard.statementPeriod(periodId);
   return (query ? `${path}?${query}` : path) as Route;
 }

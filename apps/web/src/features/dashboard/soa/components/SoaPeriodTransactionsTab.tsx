@@ -242,7 +242,7 @@ export function SoaPeriodTransactionsTab({
             <section key={section.key} className="space-y-4">
               {group !== "flat" && (
                 <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border/60 pb-3">
-                  <h2 className="text-lg font-semibold font-display">
+                  <h2 className="text-lg font-semibold">
                     {section.label}
                   </h2>
                   <p className="text-sm tabular-nums text-muted-foreground">

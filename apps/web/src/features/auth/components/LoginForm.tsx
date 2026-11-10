@@ -4,6 +4,7 @@ import { signIn } from "next-auth/react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { GoogleIcon } from "@/components/ui/icons";
 import { ROUTES } from "@/config/routes";
 import { DEV_LOCAL_AUTH_PROVIDER_ID } from "@/lib/auth/dev-local-auth";
 
@@ -30,16 +31,20 @@ export function LoginForm({ devLocalAuth = false }: LoginFormProps) {
     <div className="flex w-full flex-col gap-2">
       <Button
         type="button"
+        size="lg"
         className="w-full"
+        loading={loading === "google"}
         disabled={loading !== null}
         onClick={handleGoogleSignIn}
       >
+        <GoogleIcon className="rounded-full bg-white p-0.5" />
         {loading === "google" ? "Redirecting…" : "Continue with Google"}
       </Button>
       {devLocalAuth ? (
         <Button
           type="button"
           variant="outline"
+          size="lg"
           className="w-full"
           disabled={loading !== null}
           onClick={handleDevSignIn}

@@ -75,6 +75,6 @@ bun run db:push && bun run db:seed
 cd ../.. && bun run dev
 ```
 
-Open http://localhost:3005 (dedicated port — not 3000, so it can run beside kame-homes / kame-desk / kame-lends).
+Open http://localhost:3005 (dedicated port, not 3000, so it can run beside other local apps).
 
 Cursor / VS Code: **Terminal → Run Task → Start dev server**.

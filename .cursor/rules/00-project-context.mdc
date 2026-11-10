@@ -29,7 +29,7 @@ alwaysApply: true
 - **SOA pipeline**: Gmail fetch → PDF unlock/parse → summary PDF → state upsert
 - **Due tracking**: Minimum/total due, paid status, interest charges
 - **Mark paid**: UI, Telegram webhook, receipt AI validation (ported from CLI)
-- **Banks (PH)**: Register issuers from `PH_BANK_ISSUERS` (Maya e-wallet + Kame Homes digital + traditional banks). Dedicated SOA parsers: Metrobank, RCBC, BPI, Unionbank
+- **Banks (PH)**: Register issuers from `PH_BANK_ISSUERS` (Maya e-wallet + PH digital banks + traditional banks). Dedicated SOA parsers: Metrobank, RCBC, BPI, Unionbank
 
 ### Legacy reference
 
@@ -101,7 +101,7 @@ User-friendly errors, loading/empty states, WCAG 2.1 AA, light/dark theme via CS
 ## AI Assistant Guidelines
 
 1. **Read Before Coding**: Check docs and legacy CLI when porting SOA/reminder behavior
-2. **Follow Patterns**: Match Kame Homes monorepo conventions (this repo mirrors that stack)
+2. **Follow Patterns**: Match the conventions already in this repo (`.cursor/rules/`, `apps/web/DESIGN.md`)
 3. **Ask When Unclear**: Especially for bank parsers and migration parity
 4. **Atomic Changes**: One logical change at a time
 5. **Update Docs**: Sync `application-inventory.md` when adding routes, routers, or schema

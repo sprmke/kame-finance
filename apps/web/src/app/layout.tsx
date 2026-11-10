@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 
 import { Providers } from "@/components/providers";
 import { LOCAL_DEV_APP_URL } from "@/lib/constants/dev-url";
-import { fontDisplay, fontSans } from "@/lib/fonts";
+import { fontSans } from "@/lib/fonts";
 
 import "@/env";
 import "./globals.css";
@@ -10,7 +10,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: { default: "Kame Finance", template: "%s | Kame Finance" },
   description:
-    "Business automation platform for credit cards, reminders, and workflows.",
+    "Every credit card's statement, due date, reminder, and receipt in one monthly calendar.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL?.trim() || LOCAL_DEV_APP_URL,
   ),
@@ -18,8 +18,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf6f0" },
-    { media: "(prefers-color-scheme: dark)", color: "#141210" },
+    { media: "(prefers-color-scheme: light)", color: "#FAFAF8" },
+    { media: "(prefers-color-scheme: dark)", color: "#121211" },
   ],
 };
 
@@ -32,7 +32,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${fontSans.variable} ${fontDisplay.variable}`}
+      className={fontSans.variable}
     >
       <body className="font-sans antialiased">
         <Providers>{children}</Providers>

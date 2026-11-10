@@ -91,7 +91,7 @@ export function AutomationJobCard({
     : getAutomationRunResultPresentation(job.jobType, lastRunResult);
 
   return (
-    <Card className="border-border/80 shadow-card">
+    <Card className="border-border/80">
       <CardHeader className="flex flex-row items-start justify-between gap-4 pb-2">
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">

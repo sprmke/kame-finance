@@ -63,10 +63,9 @@ export function isInterestOrFeeKind(kind: TransactionKind): boolean {
 }
 
 const INTEREST_FEES_KIND_META = {
-  row: "bg-[hsl(var(--destructive)/0.07)]",
-  amount: "text-[hsl(var(--destructive))] font-semibold",
-  badge:
-    "bg-[hsl(var(--destructive)/0.12)] text-[hsl(var(--destructive))] border-[hsl(var(--destructive)/0.25)]",
+  row: "",
+  amount: "text-due font-semibold",
+  badge: "bg-due-wash text-due",
   label: "Interest & fees",
 } as const;
 
@@ -75,17 +74,15 @@ export const TRANSACTION_KIND_META: Record<
   { row: string; amount: string; badge: string; label: string | null }
 > = {
   credit: {
-    row: "bg-[hsl(var(--success)/0.07)]",
-    amount: "text-[hsl(var(--success))]",
-    badge:
-      "bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.25)]",
+    row: "",
+    amount: "text-success font-semibold",
+    badge: "bg-success-wash text-success",
     label: "Credit",
   },
   payment: {
-    row: "bg-[hsl(var(--warning)/0.14)]",
-    amount: "text-[hsl(var(--warning))] font-medium",
-    badge:
-      "bg-[hsl(var(--warning)/0.2)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.35)]",
+    row: "",
+    amount: "text-success font-semibold",
+    badge: "bg-accent text-accent-foreground",
     label: "Payment",
   },
   interest: { ...INTEREST_FEES_KIND_META },

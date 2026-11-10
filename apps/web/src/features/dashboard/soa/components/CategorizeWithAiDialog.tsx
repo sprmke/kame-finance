@@ -36,7 +36,7 @@ export function CategorizeWithAiDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="font-display">Categorize with AI</DialogTitle>
+          <DialogTitle className="">Categorize with AI</DialogTitle>
         </DialogHeader>
         <DialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
           <Button

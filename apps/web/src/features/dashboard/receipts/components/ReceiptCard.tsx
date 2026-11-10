@@ -76,7 +76,7 @@ export function ReceiptCard({
   const totalLabel = coverage?.totalLabel ?? receipt.totalDue ?? null;
 
   return (
-    <Card className="relative overflow-hidden border-border/80 shadow-sm">
+    <Card className="relative overflow-hidden border-border/80">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -146,7 +146,7 @@ export function ReceiptCard({
             onClick={() => onView(receipt)}
           />
           {imageCount > 1 ? (
-            <span className="pointer-events-none absolute bottom-1.5 left-1.5 z-10 rounded-full bg-foreground/85 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-background">
+            <span className="pointer-events-none absolute bottom-1.5 left-1.5 z-10 rounded-full bg-foreground/85 px-1.5 py-0.5 text-2xs font-medium tabular-nums text-background">
               {imageCount}
             </span>
           ) : null}
@@ -155,7 +155,7 @@ export function ReceiptCard({
         <div className="flex min-w-0 flex-1 flex-col gap-2 p-3 pr-12">
           <div className="min-w-0 space-y-0.5">
             <h3
-              className="truncate font-display text-sm font-semibold leading-snug"
+              className="truncate text-sm font-semibold leading-snug"
               title={title}
             >
               {title}
@@ -165,7 +165,7 @@ export function ReceiptCard({
                 {cardLabel}
               </p>
             ) : null}
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-2xs text-muted-foreground">
               {dueDate
                 ? `Due ${dueDate}`
                 : formatReceiptDate(new Date(receipt.createdAt))}
@@ -194,7 +194,7 @@ export function ReceiptCard({
           </div>
 
           <div className="mt-auto space-y-1">
-            <p className="font-display text-base font-semibold tabular-nums leading-none">
+            <p className="font-numeral text-base font-semibold tabular-nums leading-none">
               <span>{paidLabel}</span>
               {totalLabel && totalLabel !== "—" ? (
                 <span className="text-sm font-medium text-muted-foreground">
@@ -204,7 +204,7 @@ export function ReceiptCard({
               ) : null}
             </p>
             {receipt.minimumDue && receipt.minimumDue !== "—" ? (
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-2xs text-muted-foreground">
                 Min {receipt.minimumDue}
               </p>
             ) : null}

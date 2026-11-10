@@ -69,7 +69,7 @@ export function CategorySpendTransactions({
                   {meta.label ? (
                     <span
                       className={cn(
-                        "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                        "inline-flex rounded-full border px-2 py-0.5 text-2xs font-medium uppercase tracking-wide",
                         meta.badge,
                       )}
                     >

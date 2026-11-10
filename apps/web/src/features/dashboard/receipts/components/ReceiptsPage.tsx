@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { DashboardPageHeader } from "@/components/shared/DashboardPageHeader";
-import { PageActionBar } from "@/components/shared/PageActionBar";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ReceiptUploadDialogs } from "@/components/shared/ReceiptUploadDialogs";
 import { ReceiptsContentSkeleton } from "@/components/shared/skeletons";
@@ -40,7 +39,7 @@ import { ReceiptSlotPlaceholder } from "./ReceiptSlotPlaceholder";
 
 const GROUP_MODE_KEY = "kame-finance:receipts-group-mode";
 
-export function ReceiptsPage() {
+export function ReceiptsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [groupMode, setGroupMode] = useState<ReceiptGroupMode>("month");
   const [previewStack, setPreviewStack] = useState<ReceiptListItem[] | null>(
     null,
@@ -313,32 +312,30 @@ export function ReceiptsPage() {
 
   return (
     <div className="space-y-4">
-      <DashboardPageHeader
-        title="Receipts"
-        actions={
-          <PageActionBar
-            primary={
-              <>
-                <input
-                  ref={receiptUpload.fileRef}
-                  type="file"
-                  accept="image/*,application/pdf"
-                  multiple
-                  className="hidden"
-                  onChange={receiptUpload.handleFileInputChange}
-                />
-                <Button
-                  onClick={() => receiptUpload.triggerFilePicker()}
-                  disabled={receiptUpload.isPending}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload receipt
-                </Button>
-              </>
-            }
-          />
-        }
+      <input
+        ref={receiptUpload.fileRef}
+        type="file"
+        accept="image/*,application/pdf"
+        multiple
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden
+        onChange={receiptUpload.handleFileInputChange}
       />
+      {embedded ? null : (
+        <DashboardPageHeader
+          title="Receipts"
+          actions={
+            <Button
+              onClick={() => receiptUpload.triggerFilePicker()}
+              disabled={receiptUpload.isPending}
+            >
+              <Upload />
+              Upload receipt
+            </Button>
+          }
+        />
+      )}
 
       <ReceiptUploadDialogs flow={receiptUpload} />
 

@@ -98,12 +98,12 @@ export function SoaPeriodTable({
             return (
               <ClickableTableRow
                 key={period.id}
-                href={ROUTES.dashboard.soaPeriod(period.id)}
+                href={ROUTES.dashboard.statementPeriod(period.id)}
               >
                 <TableCell className="font-medium">
                   <div className="min-w-0">
                     <span
-                      className="line-clamp-2 font-display text-sm font-semibold leading-snug"
+                      className="line-clamp-2 text-sm font-semibold leading-snug"
                       title={title}
                     >
                       {title}

@@ -92,7 +92,7 @@ export function StatementPaymentButton({
 }
 
 const eyebrowClass =
-  "text-[10px] font-medium uppercase tracking-wider text-muted-foreground";
+  "text-2xs font-medium uppercase tracking-wider text-muted-foreground";
 
 export function StatementSettlementRow({
   paid,

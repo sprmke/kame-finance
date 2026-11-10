@@ -32,3 +32,6 @@ playwright-report/
 test-results/
 .vercel
 .env*
+
+# Local tool state
+.impeccable/

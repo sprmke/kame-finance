@@ -13,24 +13,24 @@ export const ISSUER_ACCENTS: Partial<
     dot: "bg-[hsl(var(--chart-1))]",
     badge:
       "bg-[hsl(var(--chart-1)/0.12)] text-[hsl(var(--chart-1))] border-[hsl(var(--chart-1)/0.25)]",
-    border: "border-l-4 border-l-[hsl(var(--chart-1))]",
+    border: "",
   },
   rcbc: {
     dot: "bg-[hsl(var(--chart-4))]",
     badge:
       "bg-[hsl(var(--chart-4)/0.12)] text-[hsl(var(--chart-4))] border-[hsl(var(--chart-4)/0.25)]",
-    border: "border-l-4 border-l-[hsl(var(--chart-4))]",
+    border: "",
   },
   bpi: {
     dot: "bg-primary",
     badge: "bg-primary/10 text-primary border-primary/25",
-    border: "border-l-4 border-l-primary",
+    border: "",
   },
   unionbank: {
     dot: "bg-[hsl(var(--destructive))]",
     badge:
       "bg-[hsl(var(--destructive)/0.12)] text-[hsl(var(--destructive))] border-[hsl(var(--destructive)/0.25)]",
-    border: "border-l-4 border-l-[hsl(var(--destructive))]",
+    border: "",
   },
 };
 
@@ -54,7 +54,7 @@ export function issuerAccent(issuerId: string) {
     ISSUER_ACCENTS.bpi ?? {
       dot: "bg-primary",
       badge: "bg-primary/10 text-primary border-primary/25",
-      border: "border-l-4 border-l-primary",
+      border: "",
     }
   );
 }
@@ -85,7 +85,7 @@ export function resolveCardAccent(
 
   return {
     color: brandColor,
-    stripeStyle: { boxShadow: `inset 4px 0 0 0 ${brandColor}` },
+    stripeStyle: {},
     swatchStyle: cardColorSwatchStyle(brandColor),
   };
 }

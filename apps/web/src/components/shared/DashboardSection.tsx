@@ -3,23 +3,31 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils/cn";
 
 type DashboardSectionProps = {
-  title: string;
+  title: ReactNode;
+  /** Small figure or count after the title. */
+  count?: ReactNode;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  id?: string;
 };
 
 export function DashboardSection({
   title,
+  count,
   action,
   children,
   className,
+  id,
 }: DashboardSectionProps) {
   return (
-    <section className={cn("space-y-4", className)}>
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="border-l border-primary pl-2.5 font-display text-sm font-semibold tracking-tight text-foreground sm:text-base">
+    <section id={id} className={cn("space-y-3", className)}>
+      <div className="flex min-h-9 items-center justify-between gap-4">
+        <h2 className="flex items-baseline gap-2">
           {title}
+          {count !== undefined && count !== null ? (
+            <span className="font-numeral text-sm text-muted-foreground">{count}</span>
+          ) : null}
         </h2>
         {action}
       </div>

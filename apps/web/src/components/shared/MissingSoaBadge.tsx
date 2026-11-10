@@ -1,5 +1,6 @@
-import { AlertTriangle } from "lucide-react";
+import type { ReactNode } from "react";
 
+import { DayMarkGlyph } from "@/components/calendar/DayMark";
 import { cn } from "@/lib/utils/cn";
 
 import { StatusBadge } from "./StatusBadge";
@@ -13,21 +14,32 @@ export function MissingSoaBadge({ className }: { className?: string }) {
     <StatusBadge
       label={MISSING_SOA_LABEL}
       variant="warning"
+      mark="missing"
       className={className}
     />
   );
 }
 
-export function MissingSoaNotice({ className }: { className?: string }) {
+export function MissingSoaNotice({
+  className,
+  actions,
+}: {
+  className?: string;
+  actions?: ReactNode;
+}) {
   return (
     <div
+      role="status"
       className={cn(
-        "flex gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm",
+        "flex flex-col gap-3 rounded-md bg-warning-wash px-3 py-2.5 text-13 text-warning sm:flex-row sm:items-center sm:justify-between",
         className,
       )}
     >
-      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-      <p>{MISSING_SOA_DETAIL}</p>
+      <p className="flex items-center gap-2 font-semibold">
+        <DayMarkGlyph kind="missing" className="size-4" />
+        {MISSING_SOA_DETAIL}
+      </p>
+      {actions ? <div className="flex shrink-0 gap-2">{actions}</div> : null}
     </div>
   );
 }

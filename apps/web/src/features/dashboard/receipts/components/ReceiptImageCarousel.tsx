@@ -186,7 +186,7 @@ export function ReceiptImageCarousel({
             type="button"
             variant="secondary"
             size="icon"
-            className="absolute left-2 top-1/2 z-10 h-11 w-11 -translate-y-1/2 bg-background/90 shadow-sm"
+            className="absolute left-2 top-1/2 z-10 h-11 w-11 -translate-y-1/2 bg-background/90"
             aria-label="Previous receipt"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={() => goTo(safeIndex - 1)}
@@ -197,7 +197,7 @@ export function ReceiptImageCarousel({
             type="button"
             variant="secondary"
             size="icon"
-            className="absolute right-2 top-1/2 z-10 h-11 w-11 -translate-y-1/2 bg-background/90 shadow-sm"
+            className="absolute right-2 top-1/2 z-10 h-11 w-11 -translate-y-1/2 bg-background/90"
             aria-label="Next receipt"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={() => goTo(safeIndex + 1)}
@@ -205,7 +205,7 @@ export function ReceiptImageCarousel({
             <ChevronRight className="h-4 w-4" />
           </Button>
           <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
-            <span className="rounded-full bg-background/90 px-2.5 py-1 text-[11px] font-medium tabular-nums text-foreground shadow-sm">
+            <span className="rounded-full bg-background/90 px-2.5 py-1 text-2xs font-medium tabular-nums text-foreground">
               {safeIndex + 1} / {count}
             </span>
           </div>

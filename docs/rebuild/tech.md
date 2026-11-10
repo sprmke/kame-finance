@@ -33,7 +33,7 @@ This document is the **how to rebuild** companion to those two files. It records
 | Jobs            | Nitro tasks                              | SOA pipeline + due reminders. Trigger.dev only if retries/queues outgrow this       |
 | Tests           | Vitest + `@nuxt/test-utils` + Playwright | Unit/component + real browser flows                                                 |
 | Package manager | pnpm (Bun optional)                      | Nuxt-native default; Bun is speed, not capability                                   |
-| Design          | AtomIQ “playful depth”                   | [design-system.md](./design-system.md) from day one — not the current amber SaaS UI |
+| Design          | Kalendaryo (shared with `apps/web`)      | [`apps/web/DESIGN.md`](../../apps/web/DESIGN.md) |
 
 ---
 
@@ -211,7 +211,7 @@ These are product rules, not stack rules. They still apply.
 3. **Google sign-in only** — no email/password signup (A2, A3).
 4. **Minimal UI copy** — labels, badges, data; no unsolicited helper paragraphs.
 5. **Light and dark** — required (S6 + design system).
-6. **Design system from day one** — Nunito + Baloo 2, hard offset shadows, pressable slabs. Do not recreate DM Sans / soft-shadow amber SaaS.
+6. **Design system from day one** — reuse the Kalendaryo system in [`apps/web/DESIGN.md`](../../apps/web/DESIGN.md).
 7. **Currency / locale** — PHP, Asia/Manila.
 8. **Not in MVP** — organizations, bills module, generic non-CC reminders, activity log UI. Do not build them “while we are here.”
 

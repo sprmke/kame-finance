@@ -59,8 +59,8 @@ export function GoogleAccountSelect({
     setConnectPending(true);
     try {
       const callbackUrl = creditCardId
-        ? `${window.location.origin}${ROUTES.dashboard.creditCards}?edit=${creditCardId}`
-        : `${window.location.origin}${ROUTES.dashboard.creditCards}?add=1`;
+        ? `${window.location.origin}${ROUTES.dashboard.cards}?edit=${creditCardId}`
+        : `${window.location.origin}${ROUTES.dashboard.cards}?add=1`;
       const result = await getLinkUrl.mutateAsync({
         callbackUrl,
         creditCardIds: creditCardId ? [creditCardId] : undefined,

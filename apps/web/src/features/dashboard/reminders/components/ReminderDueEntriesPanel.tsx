@@ -1,25 +1,24 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bell } from "lucide-react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
-import { DashboardSection } from "@/components/shared/DashboardSection";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { SegmentedControl } from "@/components/shared/SegmentedControl";
 import { ReceiptUploadDialogs } from "@/components/shared/ReceiptUploadDialogs";
 import { RemindersContentSkeleton } from "@/components/shared/skeletons";
-import { StatusBadge } from "@/components/shared/StatusBadge";
-import { Card, CardContent } from "@/components/ui/card";
 import { PaymentReceiptPreview } from "@/features/dashboard/receipts/components/PaymentReceiptPreview";
 import type { ReceiptListItem } from "@/features/dashboard/receipts/lib/receipt-utils";
 import { api } from "@/lib/api/client";
 import type { DueActionType } from "@/lib/due-action-progress";
 import { useReceiptUploadFlow } from "@/hooks/use-receipt-upload-flow";
-import {
-  formatDaysBeforeDue,
-  inWindowCountLabel,
-} from "@/lib/reminders/reminder-labels";
+import { resolveBillState, type BillState } from "@/lib/due/bill-state";
+import { daysUntilYmd, todayYmdLocal } from "@/lib/reminders/reminder-status";
+import { normalizeCardLast4 } from "@/lib/due/normalize";
+import { BillRow, type BillRowData } from "@/features/dashboard/bills/components/BillRow";
+import { useQuickActions } from "@/features/dashboard/components/shell/QuickActionsProvider";
 import { dueMonthPaidSummary } from "@/lib/soa/due-month";
 import { receiptsForStatement } from "@/lib/soa/statement-receipts";
 
@@ -27,8 +26,9 @@ import {
   DueActionProgressDialog,
   type DueActionSettled,
 } from "./DueActionProgressDialog";
-import { DueEntryCard } from "./DueEntryCard";
 import { MarkPaidChoiceDialog } from "./MarkPaidChoiceDialog";
+import { Button } from "@/components/ui/button";
+
 import { ReminderGroupHeader } from "./ReminderGroupHeader";
 import { ReminderGroupToggle } from "./ReminderGroupToggle";
 import {
@@ -40,8 +40,21 @@ import {
 
 const GROUP_MODE_KEY = "kame-finance:reminders-group-mode";
 
+export type BillFilter = "all" | "unpaid" | "paid" | "missing";
+
+function matchesFilter(state: BillState, filter: BillFilter): boolean {
+  if (filter === "all") return true;
+  if (filter === "paid") return state === "paid";
+  if (filter === "missing") return state === "missing" || state === "expected";
+  return state === "overdue" || state === "due-soon" || state === "unpaid";
+}
+
 export function ReminderDueEntriesPanel() {
   const utils = api.useUtils();
+  const quickActions = useQuickActions();
+  const [filter, setFilter] = useState<BillFilter>("all");
+  const [justPaidId, setJustPaidId] = useState<string | null>(null);
+  const [arrivedId, setArrivedId] = useState<string | null>(null);
   const [groupMode, setGroupMode] = useState<ReminderGroupMode>("month");
   const [progressOpen, setProgressOpen] = useState(false);
   const [activeProcessId, setActiveProcessId] = useState<string | null>(null);
@@ -71,9 +84,11 @@ export function ReminderDueEntriesPanel() {
     localStorage.setItem(GROUP_MODE_KEY, mode);
   }
 
-  const { data: dues, isLoading } = api.reminders.listDue.useQuery({
+  const duesQuery = api.reminders.listDue.useQuery({
     unpaidOnly: false,
   });
+  const { data: dues, isLoading } = duesQuery;
+  const { data: cards } = api.creditCards.list.useQuery();
   const { data: receipts } = api.receipts.list.useQuery();
   const { data: status } = api.reminders.status.useQuery();
   const { data: integrations } = api.integrations.list.useQuery();
@@ -151,7 +166,8 @@ export function ReminderDueEntriesPanel() {
   const missingSoaCount = dueItems.filter((d) => d.soaMissing).length;
 
   const markPaid = api.reminders.markPaid.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      setJustPaidId(variables.dueEntryId);
       setActionSettled("success");
       toast.success("Marked as paid");
       void utils.reminders.listDue.invalidate();
@@ -238,14 +254,92 @@ export function ReminderDueEntriesPanel() {
     markUnpaid.isPending ||
     receiptUpload.isPending;
 
+  const asOf = todayYmdLocal();
+  const colorByCard = useMemo(
+    () =>
+      new Map(
+        (cards ?? []).map((card) => [
+          `${card.issuer.toLowerCase()}:${normalizeCardLast4(card.last4)}`,
+          card.color,
+        ]),
+      ),
+    [cards],
+  );
+
+  const billFor = (entry: DueEntryListItem): BillRowData => {
+    const reminder = statusByDueId.get(entry.id);
+    const daysAway = entry.dueDateYmd ? daysUntilYmd(entry.dueDateYmd, asOf) : null;
+    return {
+      id: entry.id,
+      issuerId: entry.issuerId,
+      cardLast4: entry.cardLast4,
+      cardDisplayLabel: entry.cardDisplayLabel,
+      cardColor:
+        colorByCard.get(`${entry.issuerId.toLowerCase()}:${normalizeCardLast4(entry.cardLast4)}`) ??
+        null,
+      dueDateYmd: entry.dueDateYmd,
+      minimumDue: entry.minimumDue,
+      totalDue: entry.totalDue,
+      state: resolveBillState({
+        paid: Boolean(entry.paidAt),
+        soaMissing: entry.soaMissing,
+        expected: entry.source === "expected",
+        daysAway,
+      }),
+      daysAway,
+      scheduleLabel: reminder?.statusLabel ?? null,
+      scheduleTone:
+        reminder?.status === "in_window_ready"
+          ? "ready"
+          : reminder?.status === "in_window_already_sent"
+            ? "sent"
+            : "muted",
+      receiptCount: receiptsByDueId.get(entry.id)?.length ?? 0,
+    };
+  };
+
+  const filterCounts = useMemo(() => {
+    const counts: Record<BillFilter, number> = { all: 0, unpaid: 0, paid: 0, missing: 0 };
+    for (const entry of dueItems) {
+      const daysAway = entry.dueDateYmd ? daysUntilYmd(entry.dueDateYmd, asOf) : null;
+      const state = resolveBillState({
+        paid: Boolean(entry.paidAt),
+        soaMissing: entry.soaMissing,
+        expected: entry.source === "expected",
+        daysAway,
+      });
+      counts.all += 1;
+      for (const key of ["unpaid", "paid", "missing"] as const) {
+        if (matchesFilter(state, key)) counts[key] += 1;
+      }
+    }
+    return counts;
+  }, [dueItems, asOf]);
+
+  // Deep link: /dashboard/bills#bill-<id> scrolls to and highlights that row.
+  useEffect(() => {
+    if (isLoading || typeof window === "undefined") return;
+    const match = /^#bill-([0-9a-f-]+)$/i.exec(window.location.hash);
+    if (!match) return;
+    const id = match[1]!;
+    setFilter("all");
+    requestAnimationFrame(() => {
+      document.getElementById(`bill-${id}`)?.scrollIntoView({ block: "center" });
+      setArrivedId(id);
+      window.setTimeout(() => setArrivedId(null), 1500);
+    });
+  }, [isLoading]);
+
   return (
-    <DashboardSection title="Due dates">
+    <div className="space-y-4">
       <input
         ref={receiptUpload.fileRef}
         type="file"
         accept="image/*,application/pdf"
         multiple
-        className="hidden"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden
         onChange={receiptUpload.handleFileInputChange}
       />
 
@@ -300,111 +394,113 @@ export function ReminderDueEntriesPanel() {
 
       <ReceiptUploadDialogs flow={receiptUpload} />
 
-      {status && !isLoading && dueItems.length > 0 && (
-        <Card className="border-border/80 shadow-card">
-          <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0 space-y-2">
-              <p className="font-display text-lg font-semibold leading-none">
-                <span className="tabular-nums">{dueItems.length}</span>{" "}
-                {dueItems.length === 1 ? "entry" : "entries"}
-                {unpaidCount > 0 && (
-                  <span className="text-base font-medium text-muted-foreground">
-                    {" "}
-                    ·{" "}
-                    <span className="tabular-nums text-foreground">
-                      {unpaidCount}
-                    </span>{" "}
-                    unpaid
-                  </span>
-                )}
-                {missingSoaCount > 0 && (
-                  <span className="text-base font-medium text-warning">
-                    {" "}
-                    · {missingSoaCount} SOA missing
-                  </span>
-                )}
-              </p>
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="hidden text-muted-foreground sm:inline">
-                  Today {status.asOf}
-                </span>
-                <StatusBadge
-                  label={`${status.readyCount} ready`}
-                  variant={status.readyCount > 0 ? "warning" : "muted"}
-                />
-                <StatusBadge
-                  label={inWindowCountLabel(status.inWindowCount)}
-                  variant="muted"
-                />
-                <StatusBadge
-                  className="hidden sm:inline-flex"
-                  label={formatDaysBeforeDue(status.defaultWindowDays)}
-                  variant="muted"
-                />
-              </div>
-            </div>
-            <ReminderGroupToggle
-              value={groupMode}
-              onChange={handleGroupModeChange}
-              className="w-full shrink-0 sm:w-auto"
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {isLoading ? (
+      {duesQuery.error && !dues ? (
+        <ErrorState
+          title="Couldn't load bills"
+          error={duesQuery.error}
+          onRetry={() => void duesQuery.refetch()}
+        />
+      ) : isLoading ? (
         <RemindersContentSkeleton />
       ) : !dueItems.length ? (
         <EmptyState
-          icon={<Bell className="h-6 w-6 text-muted-foreground" />}
-          title="No due entries"
-          message="Upcoming card due dates will appear here."
+          title="No bills yet"
+          message="Add a card and its due dates show up here every month."
+          action={
+            <Button onClick={quickActions.addCard}>Add card</Button>
+          }
         />
       ) : (
-        <Card className="border-border/80 shadow-card">
-          <CardContent className="space-y-5 p-3 sm:p-4">
-            {groups.map((group) => (
-              <div key={group.key} className="space-y-4">
-                <ReminderGroupHeader
-                  label={group.label}
-                  showPaidSummary={groupMode === "month"}
-                  paidSummary={
-                    groupMode === "month"
-                      ? dueMonthPaidSummary(dueForPaidSummary, group.key)
-                      : undefined
-                  }
-                />
-                <div className="grid items-stretch gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {group.items.map((entry) => (
-                    <DueEntryCard
-                      key={entry.id}
-                      entry={entry}
-                      reminderStatus={statusByDueId.get(entry.id)}
-                      reserveScheduleRow={group.items.some(
-                        (item) =>
-                          !item.paidAt &&
-                          Boolean(statusByDueId.get(item.id)?.statusLabel),
-                      )}
-                      disabled={actionPending}
-                      onMarkPaid={() => setMarkPaidChoiceEntry(entry)}
-                      onMarkUnpaid={() => setConfirmUnpaidEntry(entry)}
-                      paymentCount={receiptsByDueId.get(entry.id)?.length ?? 0}
-                      onViewPayment={
-                        receiptsByDueId.has(entry.id)
-                          ? () =>
-                              setPaymentReceipts(
-                                receiptsByDueId.get(entry.id) ?? null,
-                              )
-                          : undefined
-                      }
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        <>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <SegmentedControl
+              ariaLabel="Show bills"
+              value={filter}
+              onChange={setFilter}
+              options={[
+                { value: "all", label: "All", count: filterCounts.all },
+                { value: "unpaid", label: "Unpaid", count: filterCounts.unpaid },
+                { value: "paid", label: "Paid", count: filterCounts.paid },
+                { value: "missing", label: "No SOA", count: filterCounts.missing },
+              ]}
+              className="w-full sm:w-auto"
+            />
+            <div className="flex items-center justify-between gap-3 sm:justify-end">
+              {status ? (
+                <p className="text-xs text-muted-foreground">
+                  {status.readyCount > 0 ? (
+                    <span className="font-semibold text-warning">
+                      {status.readyCount} reminder{status.readyCount === 1 ? "" : "s"} ready
+                    </span>
+                  ) : (
+                    <span>{status.inWindowCount} in reminder window</span>
+                  )}
+                </p>
+              ) : null}
+              <ReminderGroupToggle value={groupMode} onChange={handleGroupModeChange} />
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {groups.map((group) => {
+              const visible = group.items.filter((entry) =>
+                matchesFilter(billFor(entry).state, filter),
+              );
+              if (visible.length === 0) return null;
+              return (
+                <section key={group.key} className="space-y-2">
+                  <ReminderGroupHeader
+                    label={group.label}
+                    showPaidSummary={groupMode === "month"}
+                    paidSummary={
+                      groupMode === "month"
+                        ? dueMonthPaidSummary(dueForPaidSummary, group.key)
+                        : undefined
+                    }
+                  />
+                  <ul className="divide-y rounded-lg border bg-card">
+                    {visible.map((entry) => {
+                      const bill = billFor(entry);
+                      const linked = receiptsByDueId.get(entry.id);
+                      return (
+                        <BillRow
+                            key={entry.id}
+                            bill={bill}
+                            highlight={arrivedId === entry.id}
+                            disabled={actionPending}
+                            uploadDisabled={receiptUpload.isPending}
+                            justPaid={justPaidId === entry.id && Boolean(entry.paidAt)}
+                            onMarkPaid={() => setMarkPaidChoiceEntry(entry)}
+                            onMarkUnpaid={() => setConfirmUnpaidEntry(entry)}
+                            onUploadReceipt={() => receiptUpload.triggerFilePicker(entry.id)}
+                            onViewPayment={
+                              linked ? () => setPaymentReceipts(linked) : undefined
+                            }
+                            onRunSoa={quickActions.runSoa}
+                          />
+                      );
+                    })}
+                  </ul>
+                </section>
+              );
+            })}
+            {groups.every((group) =>
+              group.items.every((entry) => !matchesFilter(billFor(entry).state, filter)),
+            ) ? (
+              <EmptyState
+                compact
+                title="Nothing here"
+                message="No bills match this filter."
+                action={
+                  <Button variant="outline" size="sm" onClick={() => setFilter("all")}>
+                    Show all
+                  </Button>
+                }
+              />
+            ) : null}
+          </div>
+        </>
       )}
-    </DashboardSection>
+    </div>
   );
 }

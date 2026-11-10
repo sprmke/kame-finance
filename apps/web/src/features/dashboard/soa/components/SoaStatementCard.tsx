@@ -61,7 +61,7 @@ export function SoaStatementCard({
     statement.pdfFileName !== "—" &&
     !statement.soaUnavailable;
   const txCount = statement.transactions?.length ?? 0;
-  const detailHref = ROUTES.dashboard.soaStatement(periodId, statement.id);
+  const detailHref = ROUTES.dashboard.statement(periodId, statement.id);
   const isPaid = paidReady && Boolean(paid);
   const payNow = shouldOfferStatementPayNow(
     statement,
@@ -80,7 +80,7 @@ export function SoaStatementCard({
 
   return (
     <Card
-      className="group overflow-hidden border-border/80 shadow-card transition-all hover:shadow-card-hover"
+      className="group overflow-hidden border-border/80 transition-all"
       style={accent.stripeStyle}
     >
       <CardHeader className="space-y-4 pb-3">
@@ -99,7 +99,7 @@ export function SoaStatementCard({
             <div>
               <Link
                 href={detailHref}
-                className="font-display text-xl font-bold tracking-tight transition-colors hover:text-primary"
+                className="text-xl font-bold tracking-tight transition-colors hover:text-primary"
               >
                 ···· {statement.cardLast4}
               </Link>
@@ -111,10 +111,10 @@ export function SoaStatementCard({
             </div>
           </div>
           <div className="text-right">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
               Total due
             </p>
-            <p className="font-display text-lg font-bold tabular-nums text-foreground">
+            <p className="font-numeral text-lg font-bold tabular-nums text-foreground">
               {formatDisplayAmount(statement.totalDue)}
             </p>
           </div>
@@ -122,7 +122,7 @@ export function SoaStatementCard({
 
         <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3 text-sm">
           <div>
-            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
               Minimum
             </p>
             <p className="font-medium tabular-nums">
@@ -130,7 +130,7 @@ export function SoaStatementCard({
             </p>
           </div>
           <div>
-            <p className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            <p className="flex items-center gap-1 text-2xs font-medium uppercase tracking-wider text-muted-foreground">
               <Calendar className="h-3 w-3" />
               Due
             </p>

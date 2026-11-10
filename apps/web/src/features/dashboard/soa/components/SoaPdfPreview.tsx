@@ -118,7 +118,7 @@ export function SoaPdfPreview({
         className="flex h-[min(92dvh,900px)] max-h-[92dvh] w-[calc(100%-1rem)] max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:w-full sm:p-0"
       >
         <div className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-4 py-2.5 sm:flex-nowrap sm:px-5">
-          <DialogTitle className="min-w-0 flex-1 truncate text-left font-display text-base font-semibold leading-none">
+          <DialogTitle className="min-w-0 flex-1 truncate text-left text-base font-semibold leading-none">
             {title}
           </DialogTitle>
           <div className="flex shrink-0 flex-wrap items-center gap-2">

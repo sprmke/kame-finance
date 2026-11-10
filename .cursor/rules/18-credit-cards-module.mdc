@@ -19,7 +19,7 @@ Philippine bank credit card SOA automation. This module must preserve behavior f
 
 ## Supported Banks
 
-Card create/edit lists **e-wallets that issue credit cards** (Maya), plus the same Philippine **digital banks** and **traditional banks** as Kame Homes payment providers. Existing issuer IDs (`metrobank`, `rcbc`, `bpi`, `unionbank`) are unchanged.
+Card create/edit lists **e-wallets that issue credit cards** (Maya), plus Philippine **digital banks** and **traditional banks**. Existing issuer IDs (`metrobank`, `rcbc`, `bpi`, `unionbank`) are unchanged.
 
 | Issuer ID | Label | Gmail SOA notes |
 | --------- | ----- | ---------------- |

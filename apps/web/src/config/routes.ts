@@ -1,36 +1,54 @@
+export type SettingsSection =
+  | "connections"
+  | "automations"
+  | "statements"
+  | "categories"
+  | "ai";
+
+export type BillsView = "due" | "receipts";
+
+/** Quick-action intents consumed once by the destination page (see use-page-intent). */
+export type PageIntent = "run-soa" | "upload-soa" | "upload-receipt" | "add-card";
+
 export const ROUTES = {
-  home: '/',
-  login: '/login',
-  register: '/register',
+  home: "/",
+  login: "/login",
+  register: "/register",
   dashboard: {
-    root: '/dashboard',
-    overview: '/dashboard',
-    creditCards: '/dashboard/credit-cards',
-    creditCardDetail: (id: string) => `/dashboard/credit-cards/${id}` as const,
-    soa: '/dashboard/soa',
-    soaPeriod: (id: string) => `/dashboard/soa/${id}` as const,
-    soaStatement: (periodId: string, statementId: string) =>
-      `/dashboard/soa/${periodId}/${statementId}` as const,
-    reminders: '/dashboard/reminders',
-    automations: '/dashboard/automations',
-    receipts: '/dashboard/receipts',
-    settings: '/dashboard/settings',
+    root: "/dashboard",
+    home: "/dashboard",
+    bills: "/dashboard/bills",
+    billsReceipts: "/dashboard/bills?view=receipts",
+    /** Deep link to one bill row; the row scrolls into view and highlights. */
+    bill: (dueEntryId: string) => `/dashboard/bills#bill-${dueEntryId}` as const,
+    statements: "/dashboard/statements",
+    statementPeriod: (id: string) => `/dashboard/statements/${id}` as const,
+    statement: (periodId: string, statementId: string) =>
+      `/dashboard/statements/${periodId}/${statementId}` as const,
+    cards: "/dashboard/cards",
+    settings: "/dashboard/settings",
+    settingsSection: (section: SettingsSection) =>
+      `/dashboard/settings?section=${section}` as const,
   },
 } as const;
 
 export const DASHBOARD_NAV = [
+  { title: "Home", href: ROUTES.dashboard.home, icon: "Home" },
+  { title: "Bills", href: ROUTES.dashboard.bills, icon: "Bills" },
+  { title: "Statements", href: ROUTES.dashboard.statements, icon: "Statements" },
+  { title: "Cards", href: ROUTES.dashboard.cards, icon: "Cards" },
+  { title: "Settings", href: ROUTES.dashboard.settings, icon: "Settings" },
+] as const;
+
+/** Paths that moved in the 2026-11 redesign; served as redirects in next.config. */
+export const LEGACY_DASHBOARD_REDIRECTS = [
+  { source: "/dashboard/soa", destination: "/dashboard/statements" },
+  { source: "/dashboard/soa/:path*", destination: "/dashboard/statements/:path*" },
+  { source: "/dashboard/credit-cards", destination: "/dashboard/cards" },
+  { source: "/dashboard/reminders", destination: "/dashboard/bills" },
+  { source: "/dashboard/receipts", destination: "/dashboard/bills?view=receipts" },
   {
-    title: 'Overview',
-    href: ROUTES.dashboard.overview,
-    icon: 'LayoutDashboard',
+    source: "/dashboard/automations",
+    destination: "/dashboard/settings?section=automations",
   },
-  {
-    title: 'Credit Cards',
-    href: ROUTES.dashboard.creditCards,
-    icon: 'CreditCard',
-  },
-  { title: 'SOA', href: ROUTES.dashboard.soa, icon: 'FileText' },
-  { title: 'Reminders', href: ROUTES.dashboard.reminders, icon: 'Bell' },
-  { title: 'Receipts', href: ROUTES.dashboard.receipts, icon: 'Receipt' },
-  { title: 'Settings', href: ROUTES.dashboard.settings, icon: 'Settings' },
 ] as const;

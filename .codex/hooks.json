@@ -1,0 +1,33 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|apply_patch",
+        "hooks": [
+          {
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/compat_hook.py\" .cursor/hooks/format-edited-file.sh",
+            "timeout": 15,
+            "type": "command"
+          },
+          {
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/compat_hook.py\" .cursor/hooks/check-stack-terminology.sh",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "command": "python3 \"$(git rev-parse --show-toplevel)/.codex/hooks/compat_hook.py\" .cursor/hooks/guard-shell.sh",
+            "timeout": 5,
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  }
+}

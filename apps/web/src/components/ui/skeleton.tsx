@@ -2,10 +2,12 @@ import { type HTMLAttributes } from "react";
 
 import { cn } from "@/lib/utils/cn";
 
+/** Shade block in the exact shape of the content it stands in for. */
 function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-muted", className)}
+      aria-hidden
+      className={cn("kame-skeleton rounded-sm bg-muted", className)}
       {...props}
     />
   );

@@ -1,47 +1,54 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { Route } from "next";
 import { keepPreviousData } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight } from "lucide-react";
 
-import { DashboardPageHeader } from "@/components/shared/DashboardPageHeader";
+import { MonthCalendar, MonthCalendarLegend } from "@/components/calendar/MonthCalendar";
+import { ErrorState } from "@/components/shared/ErrorState";
 import { OverviewContentSkeleton } from "@/components/shared/skeletons";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ROUTES } from "@/config/routes";
-import {
-  SoaPeriodSpendByCategoryCard,
-  SoaPeriodSummaryCard,
-} from "@/features/dashboard/soa/components/SoaPeriodOverviewCards";
+import { useQuickActions } from "@/features/dashboard/components/shell/QuickActionsProvider";
+import { SoaPeriodSpendByCategoryCard } from "@/features/dashboard/soa/components/SoaPeriodOverviewCards";
 import { soaPeriodHref } from "@/features/dashboard/soa/lib/soa-period-query";
 import { api } from "@/lib/api/client";
+import { formatPhpAmount } from "@/lib/utils/format-money";
+
+import { buildMonthEvents } from "../lib/home-calendar";
 import {
   formatOverviewPeriodLabel,
   overviewStatsInput,
   parseOverviewPeriod,
   type OverviewPeriod,
 } from "../lib/overview-period";
-import { OverviewPeriodMission } from "./OverviewPeriodMission";
-import { OverviewPeriodSwitcher } from "./OverviewPeriodSwitcher";
+import { FirstRunChecklist } from "./FirstRunChecklist";
+import { MonthHeader } from "./MonthHeader";
+import { MonthLedger } from "./MonthLedger";
+import { NeedsYouList, type NeedsYouExtra } from "./NeedsYouList";
+
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 type OverviewPageProps = OverviewPeriod;
 
 export function OverviewPage({ grain, year, month }: OverviewPageProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const actions = useQuickActions();
   const [period, setPeriod] = useState<OverviewPeriod>({ grain, year, month });
+  const [selectedYmd, setSelectedYmd] = useState<string | null>(null);
 
   useEffect(() => {
     setPeriod({ grain, year, month });
   }, [grain, year, month]);
 
-  const { data: stats, isLoading, isFetching, isPlaceholderData, error } =
-    api.overview.stats.useQuery(overviewStatsInput(period), {
-      placeholderData: keepPreviousData,
-    });
+  const statsQuery = api.overview.stats.useQuery(overviewStatsInput(period), {
+    placeholderData: keepPreviousData,
+  });
+  const { data: stats, isLoading, isFetching, isPlaceholderData, error } = statsQuery;
+  const { data: googleAccounts } = api.integrations.listGoogleAccounts.useQuery(undefined, {
+    enabled: stats !== undefined && stats.cards === 0,
+  });
 
   function commit(next: OverviewPeriod) {
     const safe = parseOverviewPeriod({
@@ -50,6 +57,7 @@ export function OverviewPage({ grain, year, month }: OverviewPageProps) {
       month: String(next.month),
     });
     setPeriod(safe);
+    setSelectedYmd(null);
     const input = overviewStatsInput(safe);
     const params = new URLSearchParams();
     if (input) {
@@ -58,142 +66,192 @@ export function OverviewPage({ grain, year, month }: OverviewPageProps) {
       params.set("month", String(input.month));
     }
     const query = params.toString();
-    const href = (query ? `${pathname}?${query}` : pathname) as Route;
-    router.replace(href, { scroll: false });
+    router.replace((query ? `${pathname}?${query}` : pathname) as Route, {
+      scroll: false,
+    });
   }
 
   const label = formatOverviewPeriodLabel(period);
-  const showingPeriod = stats?.period ?? null;
-  const contentPending = isLoading || isPlaceholderData;
+  const showing = stats?.period ?? null;
+  const pending = (isLoading || isPlaceholderData) && !stats;
+
+  const events = useMemo(
+    () =>
+      stats && period.grain === "month"
+        ? buildMonthEvents({
+            year: period.year,
+            month: period.month,
+            dues: stats.calendarDues,
+            cards: stats.calendarCards,
+          })
+        : [],
+    [stats, period],
+  );
+
+  const extras = useMemo((): NeedsYouExtra[] => {
+    if (!stats) return [];
+    const items: NeedsYouExtra[] = [];
+    const reminderCount = stats.reminders.readyCount;
+    if (reminderCount > 0) {
+      items.push({
+        key: "reminders",
+        icon: "reminders",
+        label: `${reminderCount} reminder${reminderCount === 1 ? "" : "s"} ready to send`,
+        detail: "Payment reminders run daily",
+        href: ROUTES.dashboard.settingsSection("automations"),
+      });
+    }
+    const belowMinimum = (showing?.periodCards ?? []).filter(
+      (card) => card.markedPaid && !card.minimumMet && card.grossMinimumDue > 0,
+    );
+    for (const card of belowMinimum) {
+      items.push({
+        key: `min-${card.issuerId}-${card.cardLast4}-${card.statementPeriodKey}`,
+        icon: "minimum",
+        label: `${card.label} is below minimum`,
+        detail: `Paid ${formatPhpAmount(card.paidAmount)} of ${formatPhpAmount(card.grossMinimumDue)}`,
+        href: ROUTES.dashboard.bills,
+      });
+    }
+    if (showing && showing.unanalyzed > 0 && showing.id) {
+      items.push({
+        key: "uncategorized",
+        icon: "uncategorized",
+        label: `${showing.unanalyzed} uncategorized transaction${showing.unanalyzed === 1 ? "" : "s"}`,
+        detail: "Categorize them for accurate spend",
+        href: soaPeriodHref(showing.id, { tab: "transactions" }),
+      });
+    }
+    return items;
+  }, [stats, showing]);
+
+  if (error && !stats) {
+    return (
+      <div className="space-y-6">
+        <MonthHeader period={period} onChange={commit} onRunSoa={actions.runSoa} />
+        <ErrorState title="Couldn't load this month" error={error} onRetry={() => void statsQuery.refetch()} />
+      </div>
+    );
+  }
+
+  const statementsHref = (
+    showing?.id ? ROUTES.dashboard.statementPeriod(showing.id) : ROUTES.dashboard.statements
+  ) as Route;
+  const firstRun = stats !== undefined && (stats.cards === 0 || stats.statements === 0);
 
   return (
-    <div className="space-y-4">
-      <DashboardPageHeader
-        title="Overview"
-        actions={
-          <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
-            <OverviewPeriodSwitcher
-              period={period}
-              onChange={commit}
-              className="min-w-0 flex-1 sm:flex-none"
-            />
-            <Button className="h-11 shrink-0 px-3 sm:h-9" asChild>
-              <Link href={ROUTES.dashboard.soa}>Run SOA</Link>
-            </Button>
-          </div>
-        }
+    <div className="space-y-6" aria-busy={isFetching}>
+      <MonthHeader
+        period={period}
+        onChange={commit}
+        onRunSoa={actions.runSoa}
+        runSoaPending={actions.runSoaPending}
       />
-
-      {!contentPending && (stats?.missingSoaCount ?? 0) > 0 ? (
-        <Card className="border-warning/50 bg-warning/10 shadow-card">
-          <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 gap-3">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-              <div>
-                <p className="font-display font-semibold">SOA missing</p>
-                <p className="text-sm text-muted-foreground">
-                  {stats?.missingSoaCount} card
-                  {stats?.missingSoaCount === 1 ? "" : "s"} past the statement
-                  date without an SOA. Check email or upload manually.
-                </p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={ROUTES.dashboard.reminders}>
-                View due dates
-                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+      {isFetching ? (
+        <span className="sr-only" aria-live="polite">
+          Loading {label}
+        </span>
       ) : null}
 
-      {error && !stats ? (
-        <p className="text-destructive">
-          Failed to load dashboard. Please refresh.
-        </p>
-      ) : contentPending && !showingPeriod ? (
+      {pending || !stats ? (
         <OverviewContentSkeleton />
-      ) : showingPeriod ? (
-        <div className="space-y-4" aria-busy={isFetching}>
-          {isFetching ? (
-            <span className="sr-only" aria-live="polite">
-              Loading {label}
-            </span>
-          ) : null}
-          <OverviewPeriodMission
-            periodLabel={showingPeriod.label}
-            soaHref={
-              (showingPeriod.id
-                ? ROUTES.dashboard.soaPeriod(showingPeriod.id)
-                : ROUTES.dashboard.soa) as Route
-            }
-            paidCardCount={showingPeriod.paidCardCount}
-            cardCount={showingPeriod.cardCount}
-            totalPaid={showingPeriod.totalPaid}
-            outstandingDue={showingPeriod.totalDue}
-            grossStatementDue={showingPeriod.grossStatementDue}
-            grossMinimumDue={showingPeriod.grossMinimumDue}
-            minimumRemaining={showingPeriod.totalMinimum}
-            minimumMetCardCount={showingPeriod.minimumMetCardCount}
-            nextDueYmd={showingPeriod.nextDueYmd}
-            periodCards={showingPeriod.periodCards}
-            upcomingDues={stats?.upcomingDues ?? []}
-            remindersReady={stats?.reminders.readyCount ?? 0}
-            remindersInWindow={stats?.reminders.inWindowCount ?? 0}
-            unanalyzedCount={showingPeriod.unanalyzed}
-          />
-
-          <div className="grid gap-3 lg:grid-cols-2">
-            <SoaPeriodSpendByCategoryCard
-              rows={showingPeriod.analyzedCategoryRows}
-              spendTotal={showingPeriod.spendTotal}
-              onSelectCategory={
-                showingPeriod.id
-                  ? (slug) => {
-                      const periodId = showingPeriod.id;
-                      if (!periodId) return;
-                      router.push(
-                        soaPeriodHref(periodId, {
-                          tab: "analytics",
-                          category: slug,
-                        }),
-                      );
-                    }
-                  : undefined
-              }
-            />
-            <SoaPeriodSummaryCard
-              className="hidden border-border/80 shadow-card lg:block"
-              totalPaid={showingPeriod.totalPaid}
-              outstandingDue={showingPeriod.totalDue}
-              grossStatementDue={showingPeriod.grossStatementDue}
-              grossMinimumDue={showingPeriod.grossMinimumDue}
-              minimumRemaining={showingPeriod.totalMinimum}
-              minimumMetCardCount={showingPeriod.minimumMetCardCount}
-              cardCount={showingPeriod.cardCount}
-              paidCardCount={showingPeriod.paidCardCount}
-              nextDueYmd={showingPeriod.nextDueYmd}
-              spendTotal={showingPeriod.spendTotal}
-              topCategory={showingPeriod.topCategory ?? undefined}
-              interestFeesTotal={showingPeriod.interestFeesTotal}
-              unanalyzedCount={showingPeriod.unanalyzed}
-            />
-          </div>
-        </div>
       ) : (
-        <div className="rounded-xl border border-dashed border-border bg-card/50 px-4 py-10 text-center shadow-card">
-          <p className="font-display text-lg font-semibold">
-            No SOA for {label}
-          </p>
-          {period.grain === "month" &&
-          overviewStatsInput(period) === undefined ? (
-            <p className="mt-2 text-sm text-muted-foreground">
-              Run SOA to fetch statements and track payments.
+        <div key={`${period.grain}-${period.year}-${period.month}`} className="kame-sheet-in space-y-6">
+          {firstRun ? (
+            <FirstRunChecklist
+              googleConnected={(googleAccounts?.length ?? 0) > 0 || stats.cards > 0}
+              hasCards={stats.cards > 0}
+              hasStatements={stats.statements > 0}
+              onAddCard={actions.addCard}
+              onRunSoa={actions.runSoa}
+            />
+          ) : null}
+
+          {period.grain === "month" ? (
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+              <section aria-label={`${label} calendar`} className="min-w-0 space-y-3">
+                <div className="rounded-lg border bg-card px-2 pb-1 pt-3 sm:px-3">
+                  <MonthCalendar
+                    year={period.year}
+                    month={period.month}
+                    todayYmd={stats.asOf}
+                    events={events}
+                    selectedYmd={selectedYmd}
+                    onSelectDay={setSelectedYmd}
+                  />
+                </div>
+                <MonthCalendarLegend className="px-1" />
+              </section>
+              <NeedsYouList
+                dues={stats.calendarDues}
+                extras={extras}
+                selectedYmd={selectedYmd}
+                onClearDay={() => setSelectedYmd(null)}
+                onUploadReceipt={(id) => actions.uploadReceipt(id)}
+                onRunSoa={actions.runSoa}
+                uploadPending={actions.receiptUploadPending}
+              />
+            </div>
+          ) : (
+            <YearMonths year={period.year} onPick={(m) => commit({ grain: "month", year: period.year, month: m })} />
+          )}
+
+          {showing ? (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <MonthLedger
+                title={period.grain === "year" ? `${period.year} summary` : "Month summary"}
+                statementsHref={statementsHref}
+                grossStatementDue={showing.grossStatementDue}
+                totalPaid={showing.totalPaid}
+                outstandingDue={showing.totalDue}
+                grossMinimumDue={showing.grossMinimumDue}
+                minimumMetCardCount={showing.minimumMetCardCount}
+                cardCount={showing.cardCount}
+                paidCardCount={showing.paidCardCount}
+                nextDueYmd={showing.nextDueYmd}
+                interestFeesTotal={showing.interestFeesTotal}
+                spendTotal={showing.spendTotal}
+                topCategory={showing.topCategory}
+                unanalyzedCount={showing.unanalyzed}
+              />
+              <SoaPeriodSpendByCategoryCard
+                rows={showing.analyzedCategoryRows}
+                spendTotal={showing.spendTotal}
+                onSelectCategory={
+                  showing.id
+                    ? (slug) => {
+                        if (!showing.id) return;
+                        router.push(soaPeriodHref(showing.id, { tab: "analytics", category: slug }));
+                      }
+                    : undefined
+                }
+              />
+            </div>
+          ) : !firstRun ? (
+            <p className="rounded-lg border border-dashed px-4 py-6 text-center text-13 text-muted-foreground">
+              No statements for {label} yet.
             </p>
           ) : null}
         </div>
       )}
+    </div>
+  );
+}
+
+function YearMonths({ year, onPick }: { year: number; onPick: (month: number) => void }) {
+  return (
+    <div className="grid grid-cols-3 overflow-hidden rounded-lg border bg-card sm:grid-cols-4 lg:grid-cols-6">
+      {MONTH_SHORT.map((name, index) => (
+        <button
+          key={name}
+          type="button"
+          onClick={() => onPick(index + 1)}
+          className="flex min-h-16 flex-col items-start justify-between border-b border-r px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        >
+          <span className="font-headline text-sm uppercase">{name}</span>
+          <span className="font-numeral text-xs text-muted-foreground">{year}</span>
+        </button>
+      ))}
     </div>
   );
 }

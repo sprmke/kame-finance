@@ -41,10 +41,10 @@ export function SoaPeriodSpendByCategoryCard({
   className,
 }: SoaPeriodSpendByCategoryCardProps) {
   return (
-    <Card className={className ?? "border-border/80 shadow-card"}>
+    <Card className={className}>
       <CardHeader>
-        <CardTitle className="font-display text-base">
-          Spend by category
+        <CardTitle>
+          <h2>Spend by category</h2>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -100,9 +100,9 @@ export function SoaPeriodSummaryCard({
   className,
 }: SoaPeriodSummaryCardProps) {
   return (
-    <Card className={className ?? "border-border/80 shadow-card"}>
+    <Card className={className}>
       <CardHeader>
-        <CardTitle className="font-display text-base">Period summary</CardTitle>
+        <CardTitle className="text-base">Period summary</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
         <SummaryRow label="Total due" value={formatPhpAmount(grossStatementDue)} />

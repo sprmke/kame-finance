@@ -85,7 +85,7 @@ function TransactionTypeBadge({ meta }: { meta: TransactionRowModel["meta"] }) {
   return (
     <span
       className={cn(
-        "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+        "inline-flex h-[22px] items-center whitespace-nowrap rounded-sm px-1.5 text-xs font-semibold",
         meta.badge,
       )}
     >
@@ -122,7 +122,7 @@ function SoaTransactionCards({
         <article
           key={tx.id}
           className={cn(
-            "rounded-lg border border-border/80 bg-card p-4 shadow-card",
+            "rounded-lg border border-border/80 bg-card p-4",
             meta.row,
           )}
         >

@@ -7,51 +7,39 @@ import { cn } from "@/lib/utils/cn";
 interface BrandLogoProps {
   href?: Route;
   className?: string;
+  /** Kept for API compatibility; the wordmark carries no tagline. */
   showTagline?: boolean;
   size?: "sm" | "md" | "lg";
 }
 
 const TITLE_SIZE = {
-  sm: "text-base",
-  md: "text-lg",
-  lg: "text-xl",
+  sm: "text-lg",
+  md: "text-xl",
+  lg: "text-2xl",
 } as const;
 
-/**
- * Full Kame Finance wordmark with optional tagline.
- */
-export function BrandLogo({
-  href,
-  className,
-  showTagline = false,
-  size = "md",
-}: BrandLogoProps) {
+/** Mark + "Kame Finance" set in the condensed headline cut. */
+export function BrandLogo({ href, className, size = "md" }: BrandLogoProps) {
   const content = (
-    <div className={cn("flex items-center gap-2.5", className)}>
+    <span className={cn("inline-flex items-center gap-2", className)}>
       <BrandMark size={size} />
-      <div className="min-w-0 leading-tight">
-        <span
-          className={cn(
-            "font-display font-semibold tracking-tight text-foreground",
-            TITLE_SIZE[size],
-          )}
-        >
-          Kame <span className="text-primary">Finance</span>
-        </span>
-        {showTagline && (
-          <p className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
-            Finance automation
-          </p>
+      <span
+        className={cn(
+          "font-headline whitespace-nowrap leading-none text-foreground",
+          TITLE_SIZE[size],
         )}
-      </div>
-    </div>
+      >
+        Kame Finance
+      </span>
+    </span>
   );
 
   if (href) {
     return (
       <Link
         href={href}
-        className="inline-flex rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        aria-label="Kame Finance home"
+        className="inline-flex rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
         {content}
       </Link>

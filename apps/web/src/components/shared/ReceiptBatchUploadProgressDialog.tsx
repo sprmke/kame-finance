@@ -105,7 +105,7 @@ function CardUploadProgressSection({
   return (
     <div className="space-y-3 rounded-lg border border-border/80 bg-card/40 p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="font-display text-sm font-semibold text-foreground">
+        <p className="text-sm font-semibold text-foreground">
           {job.cardLabel}
         </p>
         <p className="text-xs text-muted-foreground tabular-nums">
@@ -190,7 +190,7 @@ export function ReceiptBatchUploadProgressDialog({
         }}
       >
         <DialogHeader>
-          <DialogTitle className="font-display">
+          <DialogTitle className="">
             {dialogTitle(batchProgress, jobs.length)}
           </DialogTitle>
         </DialogHeader>

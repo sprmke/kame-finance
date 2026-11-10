@@ -1,4 +1,4 @@
-/** Dedicated local port — avoids kame-homes (:5173), kame-desk (:3100), kame-lends (:3200). */
+/** Dedicated local port (3005) so other local apps keep their usual ports. */
 export const LOCAL_DEV_PORT = 3005;
 
 /** Default local dev URL (matches `bun run dev` on port 3005). */

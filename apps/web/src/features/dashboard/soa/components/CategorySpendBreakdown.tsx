@@ -136,7 +136,7 @@ export function CategorySpendBreakdown({
                   }}
                 />
               </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">
+              <p className="mt-1 text-2xs text-muted-foreground">
                 {countLabel}
               </p>
             </button>

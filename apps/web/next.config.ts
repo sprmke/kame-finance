@@ -1,6 +1,8 @@
 import path from "path";
 import type { NextConfig } from "next";
 
+import { LEGACY_DASHBOARD_REDIRECTS } from "./src/config/routes";
+
 const repoRoot = path.join(__dirname, "../..");
 
 /** Vendored native files only — do not trace node_modules (Bun .bun symlinks break Vercel). */
@@ -15,6 +17,21 @@ const traceExcludeGlobs = ["**/node_modules/.bun/**"];
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // 307s (not permanent) so moved routes stay reversible; queries pass through.
+  async redirects() {
+    return [
+      {
+        source: "/dashboard/integrations",
+        destination: "/dashboard/settings?section=connections",
+        permanent: true,
+      },
+      ...LEGACY_DASHBOARD_REDIRECTS.map((rule) => ({
+        source: rule.source,
+        destination: rule.destination,
+        permanent: false,
+      })),
+    ];
+  },
   typedRoutes: true,
   outputFileTracingRoot: repoRoot,
   serverExternalPackages: [
@@ -59,15 +76,6 @@ const nextConfig: NextConfig = {
       ];
     }
     return config;
-  },
-  async redirects() {
-    return [
-      {
-        source: "/dashboard/integrations",
-        destination: "/dashboard/settings",
-        permanent: true,
-      },
-    ];
   },
   async headers() {
     return [
