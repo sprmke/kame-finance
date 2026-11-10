@@ -6,6 +6,7 @@ import {
   cleanTransactionDescription,
   isInterestOrFeeKind,
   parseTransactionAmount,
+  transactionDateSortKey,
   type TransactionKind,
 } from "./transaction-utils";
 
@@ -89,13 +90,22 @@ export function filterPeriodTransactions(
   });
 }
 
-function compareDateStrings(a: string | null, b: string | null): number {
-  const left = (a ?? "").trim();
-  const right = (b ?? "").trim();
-  if (!left && !right) return 0;
-  if (!left) return 1;
-  if (!right) return -1;
-  return left.localeCompare(right);
+/**
+ * Sort chronologically using the parsed date, not the raw string — stored dates
+ * mix `MM/DD/YY`, `MM/DD`, `Sep 11` and `11 Sep`, so alphabetical order is wrong.
+ */
+function compareTransactionDates(
+  a: PeriodTransaction,
+  b: PeriodTransaction,
+  direction: 1 | -1,
+): number {
+  const left = transactionDateSortKey(a.date, a.issuerId);
+  const right = transactionDateSortKey(b.date, b.issuerId);
+  if (left === right) return 0;
+  // Undated rows always sort last regardless of direction.
+  if (!Number.isFinite(left)) return 1;
+  if (!Number.isFinite(right)) return -1;
+  return (left - right) * direction;
 }
 
 export function sortPeriodTransactions(
@@ -106,9 +116,9 @@ export function sortPeriodTransactions(
   copy.sort((a, b) => {
     switch (sort) {
       case "date_asc":
-        return compareDateStrings(a.date, b.date);
+        return compareTransactionDates(a, b, 1);
       case "date_desc":
-        return compareDateStrings(b.date, a.date);
+        return compareTransactionDates(a, b, -1);
       case "amount_asc":
         return parseTransactionAmount(a.amount) - parseTransactionAmount(b.amount);
       case "amount_desc":

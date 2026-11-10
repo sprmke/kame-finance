@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import PDFDocument from "pdfkit";
 import type { SoaRow, TransactionLine } from "@/lib/soa/types";
+import { parseTransactionDate } from "@/lib/soa/transaction-dates";
 
 type PdfDoc = InstanceType<typeof PDFDocument>;
 
@@ -64,6 +65,16 @@ export type RangeMonthSection = {
   rows: SoaRow[];
 };
 
+/** Stored `posted / transacted` pair → display text, matching the dashboard. */
+function formatPdfTransactionDate(
+  raw: string,
+  issuerId?: string | null,
+): string {
+  const { posted, transacted } = parseTransactionDate(raw, issuerId);
+  if (!posted) return raw;
+  return transacted ? `${posted} / ${transacted}` : posted;
+}
+
 type ConsolidatedFeeRow = {
   periodLabel: string;
   bankLabel: string;
@@ -90,7 +101,7 @@ function collectConsolidatedFeeRows(
             bankLabel: overviewBankLabel(r),
             cardLast4: r.cardLast4,
             cardDisplay,
-            date: t.date,
+            date: formatPdfTransactionDate(t.date, r.issuerId),
             description: t.description,
             amount: t.amount,
           });
@@ -491,7 +502,8 @@ export async function writeSummaryPdf(
       const wDate = 95;
       const wDesc = 305;
       const wAmt = 90;
-      const hDate = doc.heightOfString(t.date, { width: wDate });
+      const dateText = formatPdfTransactionDate(t.date, r.issuerId);
+      const hDate = doc.heightOfString(dateText, { width: wDate });
       const hDesc = doc.heightOfString(t.description, { width: wDesc });
       const hAmt = doc.heightOfString(t.amount, { width: wAmt });
       const innerH = Math.max(hDate, hDesc, hAmt, 10);
@@ -509,7 +521,7 @@ export async function writeSummaryPdf(
       }
 
       doc.fontSize(8).fillColor(feeHighlight ? CHARGE_ALERT_FG : "#000000");
-      doc.text(t.date, MARGIN, vCenterTop(rowTop, rowH, hDate), {
+      doc.text(dateText, MARGIN, vCenterTop(rowTop, rowH, hDate), {
         width: wDate,
       });
       doc.text(t.description, 150, vCenterTop(rowTop, rowH, hDesc), {
@@ -643,7 +655,8 @@ function appendTransactionBreakdownUnlimited(
       const wDate = 95;
       const wDesc = 305;
       const wAmt = 90;
-      const hDate = doc.heightOfString(t.date, { width: wDate });
+      const dateText = formatPdfTransactionDate(t.date, r.issuerId);
+      const hDate = doc.heightOfString(dateText, { width: wDate });
       const hDesc = doc.heightOfString(t.description, { width: wDesc });
       const hAmt = doc.heightOfString(t.amount, { width: wAmt });
       const innerH = Math.max(hDate, hDesc, hAmt, 10);
@@ -661,7 +674,7 @@ function appendTransactionBreakdownUnlimited(
       }
 
       doc.fontSize(8).fillColor(feeHighlight ? CHARGE_ALERT_FG : "#000000");
-      doc.text(t.date, MARGIN, vCenterTop(rowTop, rowH, hDate), {
+      doc.text(dateText, MARGIN, vCenterTop(rowTop, rowH, hDate), {
         width: wDate,
       });
       doc.text(t.description, 150, vCenterTop(rowTop, rowH, hDesc), {
