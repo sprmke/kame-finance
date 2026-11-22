@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api/client";
 import {
   CANNOT_ANALYZE_SLUG,
@@ -43,7 +44,8 @@ export function TransactionCategorySelect({
 }: TransactionCategorySelectProps) {
   const utils = api.useUtils();
   const [open, setOpen] = useState(false);
-  const { data: options } = api.transactionCategories.listOptions.useQuery();
+  const { data: options, isLoading: optionsLoading } =
+    api.transactionCategories.listOptions.useQuery();
 
   const update =
     api.transactionCategories.updateTransactionCategory.useMutation({
@@ -63,6 +65,19 @@ export function TransactionCategorySelect({
       categorySlug: slug,
       learn,
     });
+  }
+
+  if (optionsLoading && !options) {
+    return (
+      <Skeleton
+        className={cn(
+          "h-8 rounded-md",
+          editable ? TRANSACTION_CATEGORY_SELECT_WIDTH_CLASS : "w-20",
+          className,
+        )}
+        aria-hidden
+      />
+    );
   }
 
   if (!editable) {

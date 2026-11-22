@@ -6,6 +6,7 @@ import { FileText } from "lucide-react";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ViewPaymentReceiptButton } from "@/components/shared/ViewPaymentReceiptButton";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils/cn";
 
 export function StatementPaidBadge({ paid }: { paid: boolean }) {
@@ -97,12 +98,14 @@ const eyebrowClass =
 export function StatementSettlementRow({
   paid,
   paidReady = true,
+  paymentsReady = true,
   onPreviewSoa,
   onPreviewPayment,
   paymentCount,
 }: {
   paid: boolean;
   paidReady?: boolean;
+  paymentsReady?: boolean;
   onPreviewSoa?: () => void;
   onPreviewPayment?: () => void;
   paymentCount: number;
@@ -114,9 +117,7 @@ export function StatementSettlementRow({
         {paidReady ? (
           <StatementPaidBadge paid={paid} />
         ) : (
-          <p className="flex h-11 items-center text-sm text-muted-foreground">
-            —
-          </p>
+          <Skeleton className="h-5 w-14 rounded-full" />
         )}
       </div>
       <div className="min-w-0 space-y-1.5">
@@ -142,7 +143,9 @@ export function StatementSettlementRow({
       </div>
       <div className="min-w-0 space-y-1.5">
         <p className={eyebrowClass}>Payment</p>
-        {paymentCount > 0 && onPreviewPayment ? (
+        {!paymentsReady ? (
+          <Skeleton className="h-11 w-full rounded-lg" />
+        ) : paymentCount > 0 && onPreviewPayment ? (
           <ViewPaymentReceiptButton
             count={paymentCount}
             label="View"

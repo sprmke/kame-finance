@@ -38,6 +38,7 @@ type SoaStatementCardProps = {
   onPreviewPayment?: () => void;
   paymentCount?: number;
   paidReady?: boolean;
+  paymentsReady?: boolean;
 };
 
 export function SoaStatementCard({
@@ -52,6 +53,7 @@ export function SoaStatementCard({
   onPreviewPayment,
   paymentCount = 0,
   paidReady = true,
+  paymentsReady = true,
 }: SoaStatementCardProps) {
   const accent = resolveCardAccent(statement.issuerId, statement.cardColor);
   const days = daysUntilDue(statement.dueDateYmd);
@@ -143,6 +145,7 @@ export function SoaStatementCard({
         <StatementSettlementRow
           paid={isPaid}
           paidReady={paidReady}
+          paymentsReady={paymentsReady}
           onPreviewSoa={hasPdf ? onPreviewSource : undefined}
           onPreviewPayment={
             paymentCount > 0 ? onPreviewPayment : undefined

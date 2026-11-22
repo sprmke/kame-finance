@@ -1,17 +1,12 @@
-import { DashboardPageHeader } from "@/components/shared/DashboardPageHeader";
-import {
-  CreditCardsContentSkeleton,
-  SkeletonPageActions,
-} from "@/components/shared/skeletons";
+"use client";
 
-export function CreditCardsLoadingView() {
-  return (
-    <div className="space-y-4">
-      <DashboardPageHeader
-        title="Credit cards"
-        actions={<SkeletonPageActions count={1} />}
-      />
-      <CreditCardsContentSkeleton />
-    </div>
-  );
+import { CreditCardsPageSkeleton } from "@/components/shared/skeletons";
+import type { ViewMode } from "@/components/shared/ViewToggle";
+
+export function CreditCardsLoadingView({
+  viewMode,
+}: {
+  viewMode?: ViewMode;
+}) {
+  return <CreditCardsPageSkeleton viewMode={viewMode} />;
 }

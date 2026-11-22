@@ -17,7 +17,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { GoogleAccountSelect } from "@/components/shared/GoogleAccountSelect";
 import { ListViewToolbar } from "@/components/shared/ListViewToolbar";
 import { ViewModeLayout } from "@/components/shared/ViewModeLayout";
-import { CardFormSkeleton } from "@/components/shared/skeletons";
+import { CreditCardFormDialogSkeleton } from "@/components/shared/skeletons";
 import { MissingSoaBadge } from "@/components/shared/MissingSoaBadge";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -420,7 +420,7 @@ export function CreditCardsPage() {
   }, []);
 
   if (!hasHydrated || (isLoading && cards === undefined)) {
-    return <CreditCardsLoadingView />;
+    return <CreditCardsLoadingView viewMode={viewMode} />;
   }
 
   return (
@@ -704,9 +704,7 @@ export function CreditCardsPage() {
               />
             )
           ) : (
-            <div className="py-2">
-              <CardFormSkeleton />
-            </div>
+            <CreditCardFormDialogSkeleton />
           )}
         </DialogContent>
       </Dialog>

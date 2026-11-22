@@ -13,7 +13,10 @@ function defaultViewModeForViewport(): ViewMode {
 
 export function usePersistedViewMode(storageKey: string) {
   const isMobile = useMediaQuery(MOBILE_MEDIA_QUERY);
-  const [storedViewMode, setStoredViewMode] = useState<ViewMode>("grid");
+  // Desktop defaults to the table view; mobile always renders cards via
+  // `ViewModeLayout`, so this initial value avoids a table→grid skeleton flash
+  // for the common case before localStorage is read.
+  const [storedViewMode, setStoredViewMode] = useState<ViewMode>("table");
 
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);

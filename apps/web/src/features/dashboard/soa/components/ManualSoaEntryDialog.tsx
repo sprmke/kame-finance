@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -66,6 +67,7 @@ type ManualSoaEntryDialogProps = {
   periodId: string;
   period: ManualEntryPeriod;
   cards: ManualEntryCard[];
+  cardsLoading?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -107,14 +109,15 @@ export function ManualSoaEntryDialog({
   periodId,
   period,
   cards,
+  cardsLoading = false,
   open,
   onOpenChange,
 }: ManualSoaEntryDialogProps) {
   const utils = api.useUtils();
-  const { data: categories } = api.transactionCategories.listOptions.useQuery(
-    undefined,
-    { enabled: open },
-  );
+  const { data: categories, isLoading: categoriesLoading } =
+    api.transactionCategories.listOptions.useQuery(undefined, {
+      enabled: open,
+    });
   const months = enumerateCalendarMonths(
     { month: period.fromMonth, year: period.fromYear },
     { month: period.toMonth, year: period.toYear },
@@ -254,7 +257,18 @@ export function ManualSoaEntryDialog({
           <DialogTitle className="font-display">Add statement</DialogTitle>
         </DialogHeader>
 
-        {cards.length === 0 ? (
+        {cardsLoading && cards.length === 0 ? (
+          <div className="space-y-4 py-2" aria-busy="true">
+            <span className="sr-only">Loading credit cards</span>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+            ))}
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </div>
+        ) : cards.length === 0 ? (
           <div className="space-y-3 py-2">
             <p className="text-sm text-muted-foreground">No credit cards yet.</p>
             <Button asChild variant="outline" size="sm">
@@ -410,24 +424,28 @@ export function ManualSoaEntryDialog({
                       <Label htmlFor={`manual-tx-category-${line.id}`}>
                         Category
                       </Label>
-                      <Select
-                        value={line.categorySlug}
-                        onValueChange={(categorySlug) =>
-                          updateLine(line.id, { categorySlug })
-                        }
-                      >
-                        <SelectTrigger id={`manual-tx-category-${line.id}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={AUTO_CATEGORY}>Auto</SelectItem>
-                          {categoryOptions.map((option) => (
-                            <SelectItem key={option.slug} value={option.slug}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {categoriesLoading && !categories ? (
+                        <Skeleton className="h-10 w-full rounded-md" />
+                      ) : (
+                        <Select
+                          value={line.categorySlug}
+                          onValueChange={(categorySlug) =>
+                            updateLine(line.id, { categorySlug })
+                          }
+                        >
+                          <SelectTrigger id={`manual-tx-category-${line.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={AUTO_CATEGORY}>Auto</SelectItem>
+                            {categoryOptions.map((option) => (
+                              <SelectItem key={option.slug} value={option.slug}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 pb-2">
                       <Label

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -73,13 +74,10 @@ export function GoogleAccountSelect({
 
   if (isLoading) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-2" aria-busy="true">
         <Label htmlFor={id}>Gmail account</Label>
-        <Select disabled>
-          <SelectTrigger id={id}>
-            <SelectValue placeholder="Loading…" />
-          </SelectTrigger>
-        </Select>
+        <Skeleton className="h-10 w-full rounded-md" />
+        <span className="sr-only">Loading Gmail accounts</span>
       </div>
     );
   }

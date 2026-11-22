@@ -1,9 +1,5 @@
-import { SoaPeriodDetailContentSkeleton } from "@/components/shared/skeletons";
+import { SoaPeriodLoadingView } from "@/features/dashboard/soa/components/SoaPeriodLoadingView";
 
 export default function SoaPeriodLoading() {
-  return (
-    <div className="space-y-4">
-      <SoaPeriodDetailContentSkeleton />
-    </div>
-  );
+  return <SoaPeriodLoadingView />;
 }

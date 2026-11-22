@@ -147,7 +147,7 @@ export function SoaListPage() {
       />
 
       {isLoading ? (
-        <SoaListContentSkeleton />
+        <SoaListContentSkeleton viewMode={viewMode} />
       ) : !periods?.length ? (
         <EmptyState
           icon={<FileText className="h-6 w-6 text-muted-foreground" />}

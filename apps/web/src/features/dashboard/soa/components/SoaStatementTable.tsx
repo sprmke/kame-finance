@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ROUTES } from "@/config/routes";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { CardBankLabel } from "@/lib/credit-cards/CardBankLabel";
 import { resolveCardAccent } from "@/lib/credit-cards/card-accent";
@@ -51,6 +52,7 @@ type SoaStatementTableProps = {
   onPreviewPayment?: (statement: SoaStatement) => void;
   paymentCountFor?: (statement: SoaStatement) => number;
   paidReady?: boolean;
+  paymentsReady?: boolean;
   showPeriodColumn?: boolean;
   isMissingSoa?: (statement: SoaStatement) => boolean;
 };
@@ -66,6 +68,7 @@ export function SoaStatementTable({
   onPreviewPayment,
   paymentCountFor,
   paidReady = true,
+  paymentsReady = true,
   showPeriodColumn = false,
   isMissingSoa,
 }: SoaStatementTableProps) {
@@ -170,9 +173,11 @@ export function SoaStatementTable({
                     onKeyDown={(event) => event.stopPropagation()}
                   >
                     <span>{statement.dueDate ?? "—"}</span>
-                    {paidReady && countdown && !paid && (
+                    {!paidReady ? (
+                      <Skeleton className="h-5 w-20 rounded-full" />
+                    ) : countdown && !paid ? (
                       <StatusBadge label={countdown} variant={urgencyVariant} />
-                    )}
+                    ) : null}
                     {paidReady && payNow.show && payNow.dueEntryId && onPayNow ? (
                       <StatementPayNowButton
                         onClick={() => onPayNow(payNow.dueEntryId!)}
@@ -185,7 +190,7 @@ export function SoaStatementTable({
                   {paidReady ? (
                     <StatementPaidBadge paid={paid} />
                   ) : (
-                    <span className="text-muted-foreground">—</span>
+                    <Skeleton className="h-5 w-14 rounded-full" />
                   )}
                 </TableCell>
                 {hasPdf ? (
@@ -199,7 +204,11 @@ export function SoaStatementTable({
                     <StatementSoaButton />
                   </TableCell>
                 )}
-                {paymentCount > 0 && onPreviewPayment ? (
+                {!paymentsReady ? (
+                  <TableCell className="text-center">
+                    <Skeleton className="mx-auto h-11 w-11 rounded-lg" />
+                  </TableCell>
+                ) : paymentCount > 0 && onPreviewPayment ? (
                   <TableRowActions className="text-center">
                     <StatementPaymentButton
                       count={paymentCount}

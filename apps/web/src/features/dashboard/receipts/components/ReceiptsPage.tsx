@@ -69,7 +69,8 @@ export function ReceiptsPage() {
   );
   const { data: cards, isLoading: cardsLoading } =
     api.creditCards.list.useQuery();
-  const { data: statements } = api.soa.list.useQuery();
+  const { data: statements, isLoading: statementsLoading } =
+    api.soa.list.useQuery();
   const { data: integrations } = api.integrations.list.useQuery();
 
   const connected = useMemo(
@@ -435,7 +436,7 @@ export function ReceiptsPage() {
         fields={cardInfoFields}
       />
 
-      {isLoading || cardsLoading || duesLoading ? (
+      {isLoading || cardsLoading || duesLoading || statementsLoading ? (
         <ReceiptsContentSkeleton />
       ) : !hasBoard ? (
         <EmptyState

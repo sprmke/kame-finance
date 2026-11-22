@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { SoaWorkflowSettingsSkeleton } from "@/components/shared/skeletons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,10 @@ export function SoaWorkflowSettings() {
 
   const parsed = Number(day);
   const valid = Number.isInteger(parsed) && parsed >= 1 && parsed <= 31;
+
+  if (isLoading) {
+    return <SoaWorkflowSettingsSkeleton />;
+  }
 
   return (
     <Card>

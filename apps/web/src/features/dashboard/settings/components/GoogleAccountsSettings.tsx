@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import {
+  CreditCardChecklistSkeleton,
+  GoogleAccountsListSkeleton,
+} from "@/components/shared/skeletons";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,7 +76,8 @@ function CreditCardLinkChecklist({
   idPrefix,
   lockLinkedToOtherAccounts = false,
 }: CreditCardLinkChecklistProps) {
-  const { data: cards } = api.creditCards.list.useQuery();
+  const { data: cards, isLoading: cardsLoading } =
+    api.creditCards.list.useQuery();
 
   const activeCards = useMemo(
     () => (cards ?? []).filter((c) => c.isActive),
@@ -91,6 +96,10 @@ function CreditCardLinkChecklist({
     }
     return map;
   }, [googleAccounts]);
+
+  if (cardsLoading) {
+    return <CreditCardChecklistSkeleton />;
+  }
 
   if (activeCards.length === 0) {
     return (
@@ -416,7 +425,7 @@ export function GoogleAccountsSettings() {
     <>
       <div className="space-y-3">
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <GoogleAccountsListSkeleton />
         ) : hasAccounts ? (
           <ul className="space-y-2">
             {googleAccounts!.map((account) => (

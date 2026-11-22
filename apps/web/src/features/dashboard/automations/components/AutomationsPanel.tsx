@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import type { inferRouterOutputs } from "@trpc/server";
 
-import { AutomationCardSkeleton } from "@/components/shared/skeletons";
+import { AutomationsContentSkeleton } from "@/components/shared/skeletons";
 import { DashboardSection } from "@/components/shared/DashboardSection";
 import type { AutomationJobType } from "@/lib/automations/job-types";
 import { api } from "@/lib/api/client";
@@ -121,10 +121,7 @@ export function AutomationsPanel() {
       />
 
       {isLoading ? (
-        <div className="grid gap-3 lg:grid-cols-2">
-          <AutomationCardSkeleton />
-          <AutomationCardSkeleton />
-        </div>
+        <AutomationsContentSkeleton />
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {sortedJobs.map((job) => (

@@ -22,6 +22,7 @@ import { StatCard, statGridClassName } from '@/components/shared/StatCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { ViewPaymentReceiptButton } from '@/components/shared/ViewPaymentReceiptButton';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader } from '@/components/ui/card';
 import { ROUTES } from '@/config/routes';
 import { api } from '@/lib/api/client';
@@ -137,11 +138,7 @@ export function SoaStatementDetailPage({
       : null);
 
   if (isLoading && !statement) {
-    return (
-      <div className="space-y-4">
-        <SoaStatementDetailContentSkeleton />
-      </div>
-    );
+    return <SoaStatementDetailContentSkeleton />;
   }
 
   if (!period || !statement) {
@@ -377,7 +374,11 @@ function SoaStatementDetailBody({
             <span className="text-xs text-muted-foreground">
               {stmtMonthLabel}
             </span>
-            {dues ? <StatementPaidBadge paid={paid} /> : null}
+            {dues ? (
+              <StatementPaidBadge paid={paid} />
+            ) : (
+              <Skeleton className="h-5 w-14 rounded-full" />
+            )}
             {countdown && !paid && (
               <StatusBadge label={countdown} variant={urgencyVariant} />
             )}

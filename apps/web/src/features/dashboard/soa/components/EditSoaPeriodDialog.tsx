@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Calendar, MessageCircle, Slack } from "lucide-react";
 import { toast } from "sonner";
 
+import { EditSoaPeriodFormSkeleton } from "@/components/shared/skeletons";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,7 +29,7 @@ export function EditSoaPeriodDialog({
   onOpenChange,
 }: EditSoaPeriodDialogProps) {
   const utils = api.useUtils();
-  const { data: period } = api.soa.getPeriod.useQuery(
+  const { data: period, isLoading: periodLoading } = api.soa.getPeriod.useQuery(
     { periodId: periodId! },
     { enabled: !!periodId && open },
   );
@@ -60,57 +61,66 @@ export function EditSoaPeriodDialog({
         <DialogHeader>
           <DialogTitle className="font-display">Edit SOA run</DialogTitle>
         </DialogHeader>
-        {period && (
-          <p className="text-sm text-muted-foreground">{period.label}</p>
+        {periodLoading && !period ? (
+          <EditSoaPeriodFormSkeleton />
+        ) : (
+          <>
+            {period && (
+              <p className="text-sm text-muted-foreground">{period.label}</p>
+            )}
+            <div className="space-y-4 py-2">
+              <div className="flex items-center justify-between gap-3">
+                <Label className="flex items-center gap-2 font-normal">
+                  <MessageCircle className="h-4 w-4" />
+                  Telegram on next run
+                </Label>
+                <Switch
+                  checked={notifyTelegram}
+                  onCheckedChange={setNotifyTelegram}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <Label className="flex items-center gap-2 font-normal">
+                  <Slack className="h-4 w-4" />
+                  Slack on next run
+                </Label>
+                <Switch
+                  checked={notifySlack}
+                  onCheckedChange={setNotifySlack}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <Label className="flex items-center gap-2 font-normal">
+                  <Calendar className="h-4 w-4" />
+                  Google Calendar on next run
+                </Label>
+                <Switch
+                  checked={createCalendar}
+                  onCheckedChange={setCreateCalendar}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={!periodId || update.isPending}
+                onClick={() =>
+                  periodId &&
+                  update.mutate({
+                    periodId,
+                    notifyTelegram,
+                    notifySlack,
+                    createCalendar,
+                  })
+                }
+              >
+                Save
+              </Button>
+            </DialogFooter>
+          </>
         )}
-        <div className="space-y-4 py-2">
-          <div className="flex items-center justify-between gap-3">
-            <Label className="flex items-center gap-2 font-normal">
-              <MessageCircle className="h-4 w-4" />
-              Telegram on next run
-            </Label>
-            <Switch
-              checked={notifyTelegram}
-              onCheckedChange={setNotifyTelegram}
-            />
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <Label className="flex items-center gap-2 font-normal">
-              <Slack className="h-4 w-4" />
-              Slack on next run
-            </Label>
-            <Switch checked={notifySlack} onCheckedChange={setNotifySlack} />
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <Label className="flex items-center gap-2 font-normal">
-              <Calendar className="h-4 w-4" />
-              Google Calendar on next run
-            </Label>
-            <Switch
-              checked={createCalendar}
-              onCheckedChange={setCreateCalendar}
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            disabled={!periodId || update.isPending}
-            onClick={() =>
-              periodId &&
-              update.mutate({
-                periodId,
-                notifyTelegram,
-                notifySlack,
-                createCalendar,
-              })
-            }
-          >
-            Save
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

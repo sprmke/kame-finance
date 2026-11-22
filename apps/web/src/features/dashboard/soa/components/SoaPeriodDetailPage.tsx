@@ -90,13 +90,11 @@ type CategorizeTransactionInput = {
 
 export function SoaPeriodDetailPage({ periodId }: { periodId: string }) {
   const { data: period, isLoading } = api.soa.getPeriod.useQuery({ periodId });
+  const searchParams = useSearchParams();
+  const { tab: initialTab } = parseSoaPeriodQuery(searchParams);
 
   if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <SoaPeriodDetailContentSkeleton />
-      </div>
-    );
+    return <SoaPeriodDetailContentSkeleton tab={initialTab} />;
   }
 
   if (!period) {
@@ -182,8 +180,10 @@ function SoaPeriodDetailBody({
   const { data: dues, isSuccess: duesReady } = api.reminders.listDue.useQuery({
     unpaidOnly: false,
   });
-  const { data: receipts } = api.receipts.list.useQuery();
-  const { data: cards } = api.creditCards.list.useQuery();
+  const { data: receipts, isFetched: receiptsFetched } =
+    api.receipts.list.useQuery();
+  const { data: cards, isLoading: cardsLoading } =
+    api.creditCards.list.useQuery();
   const { data: integrations } = api.integrations.list.useQuery();
   const categorize = useCategorizeWithAiActions();
 
@@ -401,6 +401,7 @@ function SoaPeriodDetailBody({
           label: card.label,
           isActive: card.isActive,
         }))}
+        cardsLoading={cardsLoading}
         open={manualEntryOpen}
         onOpenChange={setManualEntryOpen}
       />
@@ -556,6 +557,7 @@ function SoaPeriodDetailBody({
                       0
                     }
                     paidReady={duesReady}
+                    paymentsReady={receiptsFetched}
                     showPeriodColumn={statementGroups.length > 1}
                     isMissingSoa={showMissingSoaNudge}
                   />
@@ -612,6 +614,7 @@ function SoaPeriodDetailBody({
                               0
                             }
                             paidReady={duesReady}
+                            paymentsReady={receiptsFetched}
                           />
                         ))}
                       </div>
