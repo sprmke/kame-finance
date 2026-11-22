@@ -1,0 +1,16 @@
+# Orca worktree lifecycle for Kame Finance.
+# Sticky per-worktree web port (3500-3599) and a UI tab.
+
+scripts:
+  setup: |
+    bun install
+    cp -n "$ORCA_ROOT_PATH/apps/web/.env.local" apps/web/.env.local 2>/dev/null || true
+    cp -n "$ORCA_ROOT_PATH/.env.local" .env.local 2>/dev/null || true
+  archive: |
+    bash scripts/dev/archive-worktree-ui.sh
+
+setupAgentStartupPolicy: wait-for-setup
+
+defaultTabs:
+  - title: UI
+    command: bun run ui

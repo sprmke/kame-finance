@@ -13,6 +13,8 @@
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "dev": "turbo run dev",
+    "ui": "./scripts/dev/ui-web-worktree.sh",
+    "ui:port": "./scripts/dev/ui-web-worktree.sh --print-port",
     "ci:quality": "turbo run type-check lint test",
     "build": "turbo run build",
     "start": "turbo run start",
