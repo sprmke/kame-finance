@@ -522,7 +522,7 @@ export function CreditCardsPage() {
               />
             }
             grid={
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {pagination.items.map((card) => {
                   const accent = resolveCardAccent(card.issuer, card.color);
                   return (

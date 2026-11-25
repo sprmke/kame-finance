@@ -179,7 +179,7 @@ export function AiApiKeysSettings() {
           <CardTitle className="text-base">Receipt AI</CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="grid gap-6 sm:grid-cols-2">
+      <CardContent className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <ProviderKeysField
           provider="gemini"
           label="Gemini"

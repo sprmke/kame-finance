@@ -211,7 +211,7 @@ export function SoaListPage() {
               />
             }
             grid={
-              <div className="grid auto-rows-fr gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 auto-rows-fr gap-3 md:grid-cols-2 xl:grid-cols-3">
                 {pagination.items.map((period) => (
                   <SoaPeriodCard
                     key={period.id}

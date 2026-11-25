@@ -94,6 +94,7 @@ export function DueEntryCard({
           </p>
         </div>
         <StatusBadge
+          className="shrink-0 whitespace-nowrap"
           label={
             soaMissing
               ? MISSING_SOA_LABEL

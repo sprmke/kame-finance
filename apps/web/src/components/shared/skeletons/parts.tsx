@@ -311,7 +311,7 @@ export function OverviewPeriodMissionSkeleton() {
           <Skeleton className="h-9 w-[5.75rem] shrink-0 rounded-lg" />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <OverviewMetricSkeleton label="Paid vs statement" valueWidth="w-8" />
           <OverviewMetricSkeleton label="Minimum met" valueWidth="w-14" />
           <OverviewMetricSkeleton label="Cards" valueWidth="w-8" />
@@ -513,7 +513,7 @@ export function DueEntryCardSkeleton() {
 
 export function DueEntryGridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid items-stretch gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
         <DueEntryCardSkeleton key={i} />
       ))}
@@ -631,7 +631,7 @@ export function ReceiptGridSkeleton({
   variant?: "slot" | "receipt";
 }) {
   return (
-    <div className="grid gap-3 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       {Array.from({ length: count }).map((_, i) =>
         variant === "receipt" ? (
           <ReceiptCardSkeleton key={i} />
@@ -696,7 +696,7 @@ export function CreditCardCardSkeleton() {
 
 export function CreditCardGridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
         <CreditCardCardSkeleton key={i} />
       ))}
@@ -801,7 +801,7 @@ export function SoaPeriodCardSkeleton() {
 
 export function SoaPeriodGridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid auto-rows-fr gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 auto-rows-fr gap-3 md:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
         <SoaPeriodCardSkeleton key={i} />
       ))}
@@ -921,7 +921,7 @@ export function SoaStatementCardSkeleton() {
 
 export function SoaStatementGridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: count }).map((_, i) => (
         <SoaStatementCardSkeleton key={i} />
       ))}
@@ -1235,7 +1235,7 @@ export function AiKeysCardSkeleton() {
           <CardTitle className="text-base">Receipt AI</CardTitle>
         </div>
       </CardHeader>
-      <CardContent className="grid gap-6 sm:grid-cols-2">
+      <CardContent className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         {Array.from({ length: 2 }).map((_, i) => (
           <div key={i} className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">

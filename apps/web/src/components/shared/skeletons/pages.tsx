@@ -84,7 +84,7 @@ export function OverviewContentSkeleton() {
     <SkeletonShell label="Loading overview">
       <div className="space-y-4">
         <OverviewPeriodMissionSkeleton />
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <SpendByCategoryCardSkeleton />
           <PeriodSummaryCardSkeleton className="hidden border-border/80 shadow-card lg:block" />
         </div>
@@ -151,7 +151,7 @@ export function RemindersHubContentSkeleton() {
         </DashboardSection>
 
         <DashboardSection title="Schedule">
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <AutomationCardSkeleton />
             <AutomationCardSkeleton />
           </div>
@@ -221,7 +221,7 @@ export function CreditCardsContentSkeleton({
               <CreditCardsTableSkeleton rows={5} />
             </div>
             <div className="md:hidden">
-              <div className="grid gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <CreditCardCardSkeleton key={i} />
                 ))}
@@ -229,7 +229,7 @@ export function CreditCardsContentSkeleton({
             </div>
           </>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <CreditCardCardSkeleton key={i} />
             ))}
@@ -278,7 +278,7 @@ export function SoaListContentSkeleton({
               <SoaPeriodTableSkeleton rows={4} />
             </div>
             <div className="md:hidden">
-              <div className="grid auto-rows-fr gap-3">
+              <div className="grid grid-cols-1 auto-rows-fr gap-3">
                 {Array.from({ length: 4 }).map((_, i) => (
                   <SoaPeriodCardSkeleton key={i} />
                 ))}
@@ -328,7 +328,7 @@ function SoaOverviewTabSkeleton() {
       <StatCardsRowSkeleton
         titles={["Spend tracked", "Transactions", "Categories", "Cannot analyze"]}
       />
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <SpendByCategoryCardSkeleton />
         <PeriodSummaryCardSkeleton />
       </div>
@@ -377,7 +377,7 @@ function SoaTransactionsTabSkeleton() {
 function SoaAnalyticsTabSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
         <Card className="border-border/80 xl:col-span-3">
           <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-4">
             <Skeleton className="h-5 w-40" />
@@ -554,7 +554,7 @@ export function SoaStatementPageSkeleton() {
 export function AutomationsContentSkeleton() {
   return (
     <SkeletonShell label="Loading automations">
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <AutomationCardSkeleton />
         <AutomationCardSkeleton />
       </div>
@@ -578,7 +578,7 @@ function FieldRowSkeleton({ labelWidth = "w-20" }: { labelWidth?: string }) {
 export function IntegrationsSettingsSkeleton() {
   return (
     <SkeletonShell label="Loading integrations">
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-3">
