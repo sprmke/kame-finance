@@ -113,7 +113,7 @@ export function SoaPeriodOverviewTab({
         <StatCard title="Cannot analyze" value={unanalyzed} />
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <SoaPeriodSpendByCategoryCard
           rows={analyzedRows}
           spendTotal={spendTotal}
@@ -235,7 +235,7 @@ export function SoaPeriodAnalyticsTab({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-5">
         <Card className="border-border/80 xl:col-span-3">
           <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-4">
             <div className="flex min-w-0 items-center gap-1">

@@ -374,7 +374,7 @@ export function ReminderDueEntriesPanel() {
                       : undefined
                   }
                 />
-                <div className="grid items-stretch gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 items-stretch gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {group.items.map((entry) => (
                     <DueEntryCard
                       key={entry.id}

@@ -144,7 +144,7 @@ export function OverviewPage({ grain, year, month }: OverviewPageProps) {
             unanalyzedCount={showingPeriod.unanalyzed}
           />
 
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <SoaPeriodSpendByCategoryCard
               rows={showingPeriod.analyzedCategoryRows}
               spendTotal={showingPeriod.spendTotal}

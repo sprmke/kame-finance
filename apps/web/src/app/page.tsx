@@ -106,7 +106,7 @@ export default async function HomePage() {
           ))}
         </section>
 
-        <section className="mt-20 grid gap-6 sm:grid-cols-2">
+        <section className="mt-20 grid grid-cols-1 gap-6 sm:grid-cols-2">
           {FEATURES.map((f, index) => (
             <div
               key={f.title}

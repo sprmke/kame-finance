@@ -123,7 +123,7 @@ export function AutomationsPanel() {
       {isLoading ? (
         <AutomationsContentSkeleton />
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {sortedJobs.map((job) => (
             <AutomationJobCard
               key={job.id}

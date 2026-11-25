@@ -474,7 +474,7 @@ export function ReceiptsPage() {
                     : undefined
                 }
               />
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {group.slots.map((slot) =>
                   slot.receipts.length > 0 ? (
                     renderReceiptStack(
